@@ -84,6 +84,8 @@ class UserProfileSerializer(serializers.ModelSerializer):
     """Serializer for user profile viewing and updating."""
     member_since = serializers.SerializerMethodField()
     days_since_joined = serializers.SerializerMethodField()
+    can_change_display_name = serializers.SerializerMethodField()
+    next_display_name_change = serializers.SerializerMethodField()
     
     class Meta:
         model = User
@@ -92,6 +94,9 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'email',
             'username',
             'display_name',
+            'last_display_name_change',
+            'can_change_display_name',
+            'next_display_name_change',
             'avatar',
             'bio',
             'is_email_verified',
@@ -103,6 +108,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'level',
             'current_hearts',
             'max_hearts',
+            'last_heart_update',
             'current_streak',
             'longest_streak',
         ]
@@ -116,6 +122,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'level',
             'current_hearts',
             'max_hearts',
+            'last_heart_update',
             'current_streak',
             'longest_streak',
         ]
@@ -129,6 +136,16 @@ class UserProfileSerializer(serializers.ModelSerializer):
         from django.utils import timezone
         delta = timezone.now() - obj.date_joined
         return delta.days
+    
+    def get_can_change_display_name(self, obj):
+        """Check if user can change display name."""
+        can_change, _ = obj.can_change_display_name()
+        return can_change
+    
+    def get_next_display_name_change(self, obj):
+        """Return when user can next change display name."""
+        _, next_allowed = obj.can_change_display_name()
+        return next_allowed.isoformat() if next_allowed else None
 
 
 class ChangePasswordSerializer(serializers.Serializer):

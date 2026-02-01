@@ -1,0 +1,91 @@
+"use client";
+
+import Link from "next/link";
+import { Code2 } from "lucide-react";
+
+export default function Footer() {
+  return (
+    <footer
+      className="border-t py-12 mt-auto"
+      style={{ borderColor: "var(--border-color)" }}
+    >
+      <div className="max-w-7xl mx-auto px-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+          {/* Brand */}
+          <div className="col-span-1 md:col-span-2">
+            <Link href="/" className="flex items-center gap-2 mb-4">
+              <div
+                className="w-10 h-10 flex items-center justify-center pixel-box"
+                style={{ background: "var(--gradient-purple)" }}
+              >
+                <Code2 className="w-6 h-6 text-white" />
+              </div>
+              <span className="text-xl font-bold text-white">CodeLogic</span>
+            </Link>
+            <p className="text-sm max-w-xs" style={{ color: "var(--muted)" }}>
+              Learn to code through gamified quizzes. Earn XP, maintain streaks,
+              and level up your programming skills.
+            </p>
+          </div>
+
+          {/* Quick Links */}
+          <div>
+            <h4 className="text-white font-medium mb-4">Quick Links</h4>
+            <ul className="space-y-2">
+              {[
+                { href: "/how-to-play", label: "How to Play" },
+                { href: "/learn", label: "Learn" },
+                { href: "/leaderboard", label: "Leaderboard" },
+                { href: "/about", label: "About Us" },
+              ].map((link) => (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    className="text-sm transition-colors hover:text-white"
+                    style={{ color: "var(--muted)" }}
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Account */}
+          <div>
+            <h4 className="text-white font-medium mb-4">Account</h4>
+            <ul className="space-y-2">
+              {[
+                { href: "/login", label: "Login" },
+                { href: "/register", label: "Register" },
+                { href: "/forgot-password", label: "Reset Password" },
+              ].map((link) => (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    className="text-sm transition-colors hover:text-white"
+                    style={{ color: "var(--muted)" }}
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        <div
+          className="border-t pt-8 text-center text-sm"
+          style={{
+            borderColor: "var(--border-color)",
+            color: "var(--muted)",
+          }}
+        >
+          <p>
+            &copy; {new Date().getFullYear()} CodeLogic. All rights reserved.
+          </p>
+        </div>
+      </div>
+    </footer>
+  );
+}

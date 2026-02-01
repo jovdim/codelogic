@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import Footer from "./Footer";
 import {
   Code2,
   BookOpen,
@@ -36,21 +37,30 @@ export default function Navbar({ children }: NavbarProps) {
   const { user, isAuthenticated, isLoading } = useAuth();
 
   return (
-    <div className="min-h-screen bg-[#0f0f1a]">
-      {/* Animated Background Grid */}
-      <div className="fixed inset-0 bg-[linear-gradient(rgba(139,92,246,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(139,92,246,0.03)_1px,transparent_1px)] bg-[size:50px_50px] pointer-events-none" />
-
+    <div className="min-h-screen flex flex-col">
       {/* Header/Navbar */}
-      <header className="sticky top-0 z-50 border-b border-[#2d2d44] bg-[#0f0f1a]/95 backdrop-blur-sm">
+      <header
+        className="sticky top-0 z-50 border-b backdrop-blur-sm"
+        style={{
+          borderColor: "var(--navbar-border)",
+          background: "var(--navbar-bg)",
+        }}
+      >
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 group">
-            <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-purple-800 flex items-center justify-center pixel-box group-hover:scale-105 transition-transform">
+            <div
+              className="w-10 h-10 flex items-center justify-center pixel-box group-hover:scale-105 transition-transform"
+              style={{ background: "var(--gradient-purple)" }}
+            >
               <Code2 className="w-6 h-6 text-white" />
             </div>
             <div className="flex flex-col">
               <span className="text-xl font-bold text-white">CodeLogic</span>
-              <span className="text-[10px] text-purple-400 -mt-1">
+              <span
+                className="text-[10px] -mt-1"
+                style={{ color: "var(--primary-light)" }}
+              >
                 Level Up Your Code
               </span>
             </div>
@@ -67,9 +77,17 @@ export default function Navbar({ children }: NavbarProps) {
                   href={item.href}
                   className={`px-4 py-2 rounded-lg transition-all flex items-center gap-2 text-sm ${
                     isActive
-                      ? "bg-purple-500/20 text-purple-400"
-                      : "text-gray-400 hover:text-white hover:bg-white/5"
+                      ? "text-primary"
+                      : "hover:text-white hover:bg-white/5"
                   }`}
+                  style={
+                    isActive
+                      ? {
+                          background: "rgba(var(--primary-rgb), 0.2)",
+                          color: "var(--primary-light)",
+                        }
+                      : { color: "var(--muted)" }
+                  }
                 >
                   <Icon className="w-4 h-4" />
                   {item.label}
@@ -81,28 +99,71 @@ export default function Navbar({ children }: NavbarProps) {
           {/* Auth Buttons / User Info */}
           <div className="hidden md:flex items-center gap-3">
             {isLoading ? (
-              <div className="w-20 h-10 bg-[#1a1a2e] animate-pulse rounded-lg" />
+              <div
+                className="w-20 h-10 animate-pulse rounded-lg"
+                style={{ background: "var(--card-bg)" }}
+              />
             ) : isAuthenticated && user ? (
               <Link
                 href="/dashboard"
-                className="flex items-center gap-3 px-4 py-2 bg-gradient-to-r from-purple-600/20 to-purple-800/20 border border-purple-500/30 rounded-lg hover:border-purple-500 transition-all group"
+                className="flex items-center gap-3 px-4 py-2 rounded-lg transition-all group"
+                style={{
+                  background:
+                    "linear-gradient(to right, rgba(var(--primary-rgb), 0.2), rgba(var(--primary-rgb), 0.1))",
+                  border: "1px solid rgba(var(--primary-rgb), 0.3)",
+                }}
               >
+                {/* Avatar */}
+                <div
+                  className="w-8 h-8 rounded-lg overflow-hidden"
+                  style={{ border: "1px solid rgba(var(--primary-rgb), 0.5)" }}
+                >
+                  <img
+                    src={`/avatars/avatar-${user.avatar || 1}.png`}
+                    alt="Avatar"
+                    className="w-full h-full object-cover object-top scale-150"
+                  />
+                </div>
+                <div
+                  className="w-px h-4"
+                  style={{ background: "var(--border-color)" }}
+                />
                 <div className="flex items-center gap-2 text-sm">
-                  <Flame className="w-4 h-4 text-orange-500" />
-                  <span className="text-orange-400">
-                    {user.current_streak || 0}
+                  <Flame
+                    className="w-4 h-4"
+                    style={{ color: "var(--streak-color)" }}
+                  />
+                  <span style={{ color: "var(--streak-color)" }}>
+                    {Math.max(user.current_streak || 0, 1)}
                   </span>
                 </div>
-                <div className="w-px h-4 bg-[#2d2d44]" />
+                <div
+                  className="w-px h-4"
+                  style={{ background: "var(--border-color)" }}
+                />
                 <div className="flex items-center gap-2 text-sm">
-                  <Zap className="w-4 h-4 text-yellow-500" />
-                  <span className="text-yellow-400">{user.xp || 0}</span>
+                  <Zap
+                    className="w-4 h-4"
+                    style={{ color: "var(--xp-text)" }}
+                  />
+                  <span style={{ color: "var(--xp-text)" }}>
+                    {user.xp || 0}
+                  </span>
                 </div>
-                <div className="w-px h-4 bg-[#2d2d44]" />
-                <span className="text-white font-medium group-hover:text-purple-400 transition-colors">
+                <div
+                  className="w-px h-4"
+                  style={{ background: "var(--border-color)" }}
+                />
+                <span
+                  className="text-white font-medium transition-colors"
+                  style={{ "--tw-text-opacity": 1 } as React.CSSProperties}
+                >
                   {user.display_name || user.username}
                 </span>
-                <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-purple-400 group-hover:translate-x-1 transition-all" />
+                <ChevronRight
+                  className="w-4 h-4 group-hover:translate-x-1 transition-all"
+                  style={{ color: "var(--muted)" }}
+                />
               </Link>
             ) : (
               <>
@@ -114,7 +175,8 @@ export default function Navbar({ children }: NavbarProps) {
                 </Link>
                 <Link
                   href="/register"
-                  className="px-5 py-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white font-medium rounded-lg hover:from-purple-500 hover:to-purple-600 transition-all flex items-center gap-2 group"
+                  className="px-5 py-2 text-white font-medium rounded-lg transition-all flex items-center gap-2 group hover:opacity-90"
+                  style={{ background: "var(--gradient-purple)" }}
                 >
                   <Gamepad2 className="w-4 h-4" />
                   Start Playing
@@ -139,7 +201,13 @@ export default function Navbar({ children }: NavbarProps) {
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t border-[#2d2d44] bg-[#0f0f1a] px-4 py-4 space-y-2">
+          <div
+            className="md:hidden border-t px-4 py-4 space-y-2"
+            style={{
+              borderColor: "var(--border-color)",
+              background: "var(--background)",
+            }}
+          >
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.href;
@@ -148,10 +216,16 @@ export default function Navbar({ children }: NavbarProps) {
                   key={item.href}
                   href={item.href}
                   className={`block px-4 py-3 rounded-lg transition-all ${
-                    isActive
-                      ? "bg-purple-500/20 text-purple-400"
-                      : "text-gray-400 hover:text-white hover:bg-white/5"
+                    isActive ? "" : "hover:text-white hover:bg-white/5"
                   }`}
+                  style={
+                    isActive
+                      ? {
+                          background: "rgba(var(--primary-rgb), 0.2)",
+                          color: "var(--primary-light)",
+                        }
+                      : { color: "var(--muted)" }
+                  }
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   <Icon className="w-4 h-4 inline mr-2" />
@@ -159,7 +233,10 @@ export default function Navbar({ children }: NavbarProps) {
                 </Link>
               );
             })}
-            <div className="pt-4 border-t border-[#2d2d44] flex gap-3">
+            <div
+              className="pt-4 border-t flex gap-3"
+              style={{ borderColor: "var(--border-color)" }}
+            >
               {isAuthenticated ? (
                 <Link
                   href="/dashboard"
@@ -192,7 +269,10 @@ export default function Navbar({ children }: NavbarProps) {
       </header>
 
       {/* Main Content */}
-      <main className="relative">{children}</main>
+      <main className="relative flex-1">{children}</main>
+
+      {/* Footer */}
+      <Footer />
     </div>
   );
 }

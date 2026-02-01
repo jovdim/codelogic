@@ -23,7 +23,11 @@ import {
   Gamepad2,
   Play,
   Award,
+  Clock,
 } from "lucide-react";
+
+// Heart regeneration time in minutes (must match backend)
+const HEART_REGEN_MINUTES = 2;
 
 interface SidebarProps {
   children: React.ReactNode;
@@ -47,8 +51,10 @@ const publicNavItems = [
 export default function Sidebar({ children }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [heartRegenTime, setHeartRegenTime] = useState<string | null>(null);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const pathname = usePathname();
-  const { user, logout, isAuthenticated } = useAuth();
+  const { user, logout, isAuthenticated, refreshUser } = useAuth();
 
   // Close mobile menu on route change
   useEffect(() => {
@@ -66,32 +72,128 @@ export default function Sidebar({ children }: SidebarProps) {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  // Heart regeneration timer
+  useEffect(() => {
+    if (!user || user.current_hearts >= user.max_hearts) {
+      setHeartRegenTime(null);
+      return;
+    }
+
+    let isRefreshing = false;
+
+    const calculateTimeToNextHeart = () => {
+      if (!user.last_heart_update)
+        return { timeString: null, shouldRefresh: false };
+
+      const lastUpdate = new Date(user.last_heart_update).getTime();
+      const now = Date.now();
+      const elapsed = now - lastUpdate;
+      const regenMs = HEART_REGEN_MINUTES * 60 * 1000;
+
+      // Check if a heart should have regenerated
+      const heartsToRegen = Math.floor(elapsed / regenMs);
+      if (heartsToRegen > 0) {
+        return { timeString: "0:00", shouldRefresh: true };
+      }
+
+      const timeToNext = regenMs - (elapsed % regenMs);
+      const minutes = Math.floor(timeToNext / 60000);
+      const seconds = Math.floor((timeToNext % 60000) / 1000);
+
+      return {
+        timeString: `${minutes}:${seconds.toString().padStart(2, "0")}`,
+        shouldRefresh: false,
+      };
+    };
+
+    const updateTimer = async () => {
+      const { timeString, shouldRefresh } = calculateTimeToNextHeart();
+      setHeartRegenTime(timeString);
+
+      // Refresh user data if a heart should have regenerated (only once)
+      if (shouldRefresh && !isRefreshing) {
+        isRefreshing = true;
+        await refreshUser();
+        // Reset after a short delay to allow state to update
+        setTimeout(() => {
+          isRefreshing = false;
+        }, 2000);
+      }
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+
+    return () => clearInterval(interval);
+  }, [user, refreshUser]);
+
   const handleLogout = async () => {
     await logout();
+    setShowLogoutConfirm(false);
     window.location.href = "/";
   };
 
   return (
     <div className="min-h-screen flex">
+      {/* Logout Confirmation Popup */}
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100]">
+          <div className="pixel-box p-6 max-w-sm w-full mx-4 animate-in fade-in zoom-in duration-200 shadow-2xl shadow-black/50">
+            <div className="text-center mb-4">
+              <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                <LogOut className="w-6 h-6 text-red-400" />
+              </div>
+              <h3 className="text-lg font-bold text-white mb-2">Log Out?</h3>
+              <p className="text-gray-400 text-sm">
+                Are you sure you want to log out of your account?
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleLogout}
+                className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
+              >
+                Log Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Mobile Overlay */}
       {isMobileOpen && (
         <div
-          className="fixed inset-0 bg-black/60 z-40 md:hidden"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden"
           onClick={() => setIsMobileOpen(false)}
         />
       )}
 
       {/* Sidebar */}
       <aside
-        className={`fixed md:sticky top-0 left-0 h-screen bg-[#1a1a2e] border-r border-[#2d2d44] z-50 transition-all duration-300 flex flex-col
+        className={`fixed md:sticky top-0 left-0 h-screen z-50 transition-all duration-300 flex flex-col
           ${isCollapsed ? "w-20" : "w-64"}
           ${isMobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
         `}
+        style={{
+          background: "var(--sidebar-bg)",
+          borderRight: "1px solid var(--sidebar-border)",
+        }}
       >
         {/* Logo */}
-        <div className="p-4 border-b border-[#2d2d44]">
+        <div
+          className="p-4"
+          style={{ borderBottom: "1px solid var(--border-color)" }}
+        >
           <Link href="/" className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-purple-600 flex items-center justify-center pixel-box flex-shrink-0">
+            <div
+              className="w-10 h-10 flex items-center justify-center pixel-box flex-shrink-0"
+              style={{ background: "var(--primary)" }}
+            >
               <Code2 className="w-6 h-6 text-white" />
             </div>
             {!isCollapsed && (
@@ -103,12 +205,16 @@ export default function Sidebar({ children }: SidebarProps) {
         {/* User Stats (if logged in) */}
         {isAuthenticated && user && (
           <div
-            className={`p-4 border-b border-[#2d2d44] ${isCollapsed ? "space-y-3" : ""}`}
+            className={`p-4 ${isCollapsed ? "space-y-3" : ""}`}
+            style={{ borderBottom: "1px solid var(--border-color)" }}
           >
             {isCollapsed ? (
               <div className="flex flex-col items-center gap-3">
                 {/* Avatar - Collapsed */}
-                <div className="w-10 h-10 rounded-lg overflow-hidden border-2 border-purple-500/50">
+                <div
+                  className="w-10 h-10 rounded-lg overflow-hidden"
+                  style={{ border: "2px solid rgba(var(--primary-rgb), 0.5)" }}
+                >
                   <img
                     src={`/avatars/avatar-${user.avatar || 1}.png`}
                     alt="Avatar"
@@ -116,28 +222,45 @@ export default function Sidebar({ children }: SidebarProps) {
                   />
                 </div>
                 <div
-                  className="flex items-center gap-1"
-                  title={`${user.current_hearts}/${user.max_hearts} Hearts`}
+                  className="flex flex-col items-center gap-0.5"
+                  title={`${user.current_hearts}/${user.max_hearts} Hearts${heartRegenTime ? ` (next in ${heartRegenTime})` : ""}`}
                 >
-                  <Heart className="w-4 h-4 text-red-500 fill-red-500" />
+                  <Heart
+                    className="w-4 h-4"
+                    style={{
+                      color: "var(--heart-color)",
+                      fill: "var(--heart-color)",
+                    }}
+                  />
                   <span className="text-white text-xs">
                     {user.current_hearts}
                   </span>
+                  {heartRegenTime && (
+                    <span className="text-gray-500 text-[10px]">
+                      {heartRegenTime}
+                    </span>
+                  )}
                 </div>
                 <div
                   className="flex items-center gap-1"
-                  title={`${user.current_streak} Day Streak`}
+                  title={`${user.current_streak || 1} Day Streak`}
                 >
-                  <Flame className="w-4 h-4 text-orange-500" />
+                  <Flame
+                    className="w-4 h-4"
+                    style={{ color: "var(--streak-color)" }}
+                  />
                   <span className="text-white text-xs">
-                    {user.current_streak}
+                    {user.current_streak || 1}
                   </span>
                 </div>
                 <div
                   className="flex items-center gap-1"
                   title={`${user.xp} XP`}
                 >
-                  <Star className="w-4 h-4 text-yellow-500" />
+                  <Star
+                    className="w-4 h-4"
+                    style={{ color: "var(--xp-text)" }}
+                  />
                   <span className="text-white text-xs">{user.xp}</span>
                 </div>
               </div>
@@ -145,7 +268,12 @@ export default function Sidebar({ children }: SidebarProps) {
               <div className="space-y-3">
                 {/* Avatar + Username - Expanded */}
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="w-12 h-12 rounded-lg overflow-hidden border-2 border-purple-500/50 flex-shrink-0">
+                  <div
+                    className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0"
+                    style={{
+                      border: "2px solid rgba(var(--primary-rgb), 0.5)",
+                    }}
+                  >
                     <img
                       src={`/avatars/avatar-${user.avatar || 1}.png`}
                       alt="Avatar"
@@ -163,26 +291,53 @@ export default function Sidebar({ children }: SidebarProps) {
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Heart className="w-4 h-4 text-red-500 fill-red-500" />
-                    <span className="text-gray-400 text-sm">Hearts</span>
+                    <Heart
+                      className="w-4 h-4"
+                      style={{
+                        color: "var(--heart-color)",
+                        fill: "var(--heart-color)",
+                      }}
+                    />
+                    <span className="text-sm" style={{ color: "var(--muted)" }}>
+                      Hearts
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-white font-medium text-sm">
+                      {user.current_hearts}/{user.max_hearts}
+                    </span>
+                    {heartRegenTime && (
+                      <div className="flex items-center gap-1 text-xs text-gray-500">
+                        <Clock className="w-3 h-3" />
+                        <span>{heartRegenTime}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Flame
+                      className="w-4 h-4"
+                      style={{ color: "var(--streak-color)" }}
+                    />
+                    <span className="text-sm" style={{ color: "var(--muted)" }}>
+                      Streak
+                    </span>
                   </div>
                   <span className="text-white font-medium text-sm">
-                    {user.current_hearts}/{user.max_hearts}
+                    {user.current_streak || 1}{" "}
+                    {(user.current_streak || 1) === 1 ? "day" : "days"}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Flame className="w-4 h-4 text-orange-500" />
-                    <span className="text-gray-400 text-sm">Streak</span>
-                  </div>
-                  <span className="text-white font-medium text-sm">
-                    {user.current_streak} days
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Star className="w-4 h-4 text-yellow-500" />
-                    <span className="text-gray-400 text-sm">XP</span>
+                    <Star
+                      className="w-4 h-4"
+                      style={{ color: "var(--xp-text)" }}
+                    />
+                    <span className="text-sm" style={{ color: "var(--muted)" }}>
+                      XP
+                    </span>
                   </div>
                   <span className="text-white font-medium text-sm">
                     {user.xp}
@@ -208,17 +363,24 @@ export default function Sidebar({ children }: SidebarProps) {
                     <Link
                       href={item.href}
                       className={`flex items-center gap-3 px-3 py-3 transition-all duration-200 group
-                        ${
-                          isActive
-                            ? "bg-purple-500/20 text-purple-400 border-l-4 border-purple-500"
-                            : "text-gray-400 hover:text-white hover:bg-white/5"
-                        }
                         ${isCollapsed ? "justify-center px-2" : ""}
                       `}
+                      style={
+                        isActive
+                          ? {
+                              background: "rgba(var(--primary-rgb), 0.2)",
+                              color: "var(--primary-light)",
+                              borderLeft: "4px solid var(--primary)",
+                            }
+                          : { color: "var(--muted)" }
+                      }
                       title={isCollapsed ? item.label : undefined}
                     >
                       <Icon
-                        className={`w-5 h-5 shrink-0 ${isActive ? "text-purple-400" : "group-hover:text-white"}`}
+                        className={`w-5 h-5 shrink-0 ${!isActive ? "group-hover:text-white" : ""}`}
+                        style={
+                          isActive ? { color: "var(--primary-light)" } : {}
+                        }
                       />
                       {!isCollapsed && (
                         <span className="font-medium">{item.label}</span>
@@ -232,7 +394,10 @@ export default function Sidebar({ children }: SidebarProps) {
 
           {/* Divider */}
           {isAuthenticated && (
-            <div className="border-t border-[#2d2d44] my-2" />
+            <div
+              className="my-2"
+              style={{ borderTop: "1px solid var(--border-color)" }}
+            />
           )}
 
           {/* Public Nav Items */}
@@ -245,17 +410,22 @@ export default function Sidebar({ children }: SidebarProps) {
                   <Link
                     href={item.href}
                     className={`flex items-center gap-3 px-3 py-3 transition-all duration-200 group
-                      ${
-                        isActive
-                          ? "bg-purple-500/20 text-purple-400 border-l-4 border-purple-500"
-                          : "text-gray-400 hover:text-white hover:bg-white/5"
-                      }
                       ${isCollapsed ? "justify-center px-2" : ""}
                     `}
+                    style={
+                      isActive
+                        ? {
+                            background: "rgba(var(--primary-rgb), 0.2)",
+                            color: "var(--primary-light)",
+                            borderLeft: "4px solid var(--primary)",
+                          }
+                        : { color: "var(--muted)" }
+                    }
                     title={isCollapsed ? item.label : undefined}
                   >
                     <Icon
-                      className={`w-5 h-5 shrink-0 ${isActive ? "text-purple-400" : "group-hover:text-white"}`}
+                      className={`w-5 h-5 shrink-0 ${!isActive ? "group-hover:text-white" : ""}`}
+                      style={isActive ? { color: "var(--primary-light)" } : {}}
                     />
                     {!isCollapsed && (
                       <span className="font-medium">{item.label}</span>
@@ -268,25 +438,44 @@ export default function Sidebar({ children }: SidebarProps) {
         </nav>
 
         {/* Bottom Section */}
-        <div className="p-4 border-t border-[#2d2d44] space-y-2">
+        <div
+          className="p-4 space-y-2"
+          style={{ borderTop: "1px solid var(--border-color)" }}
+        >
           {isAuthenticated ? (
             <>
               <Link
                 href="/settings"
-                className={`flex items-center gap-3 px-3 py-3 text-gray-400 hover:text-white hover:bg-white/5 transition-all duration-200
+                className={`flex items-center gap-3 px-3 py-3 hover:text-white hover:bg-white/5 transition-all duration-200
                   ${isCollapsed ? "justify-center px-2" : ""}
-                  ${pathname === "/settings" ? "bg-purple-500/20 text-purple-400" : ""}
                 `}
+                style={
+                  pathname === "/settings"
+                    ? {
+                        background: "rgba(var(--primary-rgb), 0.2)",
+                        color: "var(--primary-light)",
+                      }
+                    : { color: "var(--muted)" }
+                }
                 title={isCollapsed ? "Settings" : undefined}
               >
                 <Settings className="w-5 h-5 shrink-0" />
                 {!isCollapsed && <span className="font-medium">Settings</span>}
               </Link>
               <button
-                onClick={handleLogout}
-                className={`flex items-center gap-3 px-3 py-3 text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all duration-200 w-full
+                onClick={() => setShowLogoutConfirm(true)}
+                className={`flex items-center gap-3 px-3 py-3 transition-all duration-200 w-full
                   ${isCollapsed ? "justify-center px-2" : ""}
                 `}
+                style={{ color: "var(--muted)" }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = "var(--danger)";
+                  e.currentTarget.style.background = "rgba(239, 68, 68, 0.1)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = "var(--muted)";
+                  e.currentTarget.style.background = "transparent";
+                }}
                 title={isCollapsed ? "Logout" : undefined}
               >
                 <LogOut className="w-5 h-5 flex-shrink-0" />
@@ -297,9 +486,10 @@ export default function Sidebar({ children }: SidebarProps) {
             <>
               <Link
                 href="/login"
-                className={`flex items-center gap-3 px-3 py-3 text-gray-400 hover:text-white hover:bg-white/5 transition-all duration-200
+                className={`flex items-center gap-3 px-3 py-3 hover:text-white hover:bg-white/5 transition-all duration-200
                   ${isCollapsed ? "justify-center px-2" : ""}
                 `}
+                style={{ color: "var(--muted)" }}
                 title={isCollapsed ? "Login" : undefined}
               >
                 <Gamepad2 className="w-5 h-5 flex-shrink-0" />
@@ -311,7 +501,8 @@ export default function Sidebar({ children }: SidebarProps) {
           {/* Collapse Toggle */}
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="hidden md:flex items-center justify-center w-full px-3 py-2 text-gray-500 hover:text-white transition-colors"
+            className="hidden md:flex items-center justify-center w-full px-3 py-2 hover:text-white transition-colors"
+            style={{ color: "var(--muted)" }}
           >
             {isCollapsed ? (
               <ChevronRight className="w-5 h-5" />
@@ -328,7 +519,13 @@ export default function Sidebar({ children }: SidebarProps) {
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-h-screen">
         {/* Mobile Header */}
-        <header className="md:hidden sticky top-0 z-30 bg-[#1a1a2e] border-b border-[#2d2d44] px-4 py-3 flex items-center justify-between">
+        <header
+          className="md:hidden sticky top-0 z-30 px-4 py-3 flex items-center justify-between"
+          style={{
+            background: "var(--card-bg)",
+            borderBottom: "1px solid var(--border-color)",
+          }}
+        >
           <button
             onClick={() => setIsMobileOpen(true)}
             className="p-2 text-gray-400 hover:text-white transition-colors"
@@ -339,14 +536,20 @@ export default function Sidebar({ children }: SidebarProps) {
             href={isAuthenticated ? "/dashboard" : "/"}
             className="flex items-center gap-2"
           >
-            <div className="w-8 h-8 bg-purple-600 flex items-center justify-center pixel-box">
+            <div
+              className="w-8 h-8 flex items-center justify-center pixel-box"
+              style={{ background: "var(--primary)" }}
+            >
               <Code2 className="w-5 h-5 text-white" />
             </div>
             <span className="font-bold text-white">CodeLogic</span>
           </Link>
           {isAuthenticated && user ? (
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg overflow-hidden border-2 border-purple-500/50">
+              <div
+                className="w-8 h-8 rounded-lg overflow-hidden"
+                style={{ border: "2px solid rgba(var(--primary-rgb), 0.5)" }}
+              >
                 <img
                   src={`/avatars/avatar-${user.avatar || 1}.png`}
                   alt="Avatar"
@@ -355,7 +558,11 @@ export default function Sidebar({ children }: SidebarProps) {
               </div>
             </div>
           ) : (
-            <Link href="/login" className="text-purple-400 text-sm font-medium">
+            <Link
+              href="/login"
+              className="text-sm font-medium"
+              style={{ color: "var(--primary-light)" }}
+            >
               Login
             </Link>
           )}
@@ -365,7 +572,8 @@ export default function Sidebar({ children }: SidebarProps) {
         {isMobileOpen && (
           <button
             onClick={() => setIsMobileOpen(false)}
-            className="fixed top-4 right-4 z-50 md:hidden p-2 bg-[#1a1a2e] rounded-full text-gray-400 hover:text-white"
+            className="fixed top-4 right-4 z-50 md:hidden p-2 rounded-full hover:text-white"
+            style={{ background: "var(--card-bg)", color: "var(--muted)" }}
           >
             <X className="w-6 h-6" />
           </button>

@@ -1,237 +1,468 @@
 "use client";
 
+import Link from "next/link";
+import Image from "next/image";
 import Navbar from "@/components/layout/Navbar";
 import {
+  ScrollReveal,
+  ScrollProgressBar,
+  ScrollToTop,
+} from "@/components/ui/ScrollAnimations";
+import {
   Code2,
-  Github,
-  Linkedin,
   Mail,
-  Heart,
   Target,
   Users,
+  Rocket,
+  BookOpen,
+  Gamepad2,
+  Trophy,
+  Heart,
+  Zap,
+  ChevronRight,
+  GraduationCap,
+  Globe,
+  Shield,
   Sparkles,
+  Palette,
+  Database,
+  Layout,
+  Linkedin,
+  Github,
+  Twitter,
 } from "lucide-react";
 
-// Team members data
-const teamMembers = [
-  {
-    name: "Alex Johnson",
-    role: "Project Lead & Full-Stack Developer",
-    bio: "Passionate about creating educational technology that makes learning fun and accessible for everyone.",
-    avatar: "AJ",
-    color: "from-purple-500 to-pink-500",
-    github: "#",
-    linkedin: "#",
-    email: "alex@codelogic.com",
-  },
-  {
-    name: "Sarah Chen",
-    role: "Frontend Developer",
-    bio: "UI/UX enthusiast who loves pixel art and creating delightful user experiences.",
-    avatar: "SC",
-    color: "from-blue-500 to-cyan-500",
-    github: "#",
-    linkedin: "#",
-    email: "sarah@codelogic.com",
-  },
-  {
-    name: "Marcus Williams",
-    role: "Backend Developer",
-    bio: "Systems architect with a focus on building scalable and reliable backend solutions.",
-    avatar: "MW",
-    color: "from-green-500 to-teal-500",
-    github: "#",
-    linkedin: "#",
-    email: "marcus@codelogic.com",
-  },
-  {
-    name: "Emily Rodriguez",
-    role: "Content Creator",
-    bio: "Technical writer and educator dedicated to making complex topics easy to understand.",
-    avatar: "ER",
-    color: "from-yellow-500 to-orange-500",
-    github: "#",
-    linkedin: "#",
-    email: "emily@codelogic.com",
-  },
-  {
-    name: "David Kim",
-    role: "Game Designer",
-    bio: "Game enthusiast who designs engaging quiz mechanics and progression systems.",
-    avatar: "DK",
-    color: "from-red-500 to-pink-500",
-    github: "#",
-    linkedin: "#",
-    email: "david@codelogic.com",
-  },
-  {
-    name: "Lisa Thompson",
-    role: "Quality Assurance",
-    bio: "Detail-oriented tester ensuring every feature works flawlessly for our users.",
-    avatar: "LT",
-    color: "from-indigo-500 to-purple-500",
-    github: "#",
-    linkedin: "#",
-    email: "lisa@codelogic.com",
-  },
-];
-
 export default function AboutPage() {
+  const team = [
+    {
+      name: "Alex Chen",
+      role: "Project Lead",
+      image: "/avatars/team-1.jpg",
+      socials: { linkedin: "#", github: "#", twitter: "#" },
+    },
+    {
+      name: "Jordan Lee",
+      role: "Backend Developer",
+      image: "/avatars/team-2.jpg",
+      socials: { linkedin: "#", github: "#" },
+    },
+    {
+      name: "Sam Rivera",
+      role: "Frontend Developer",
+      image: "/avatars/team-3.jpg",
+      socials: { linkedin: "#", github: "#", twitter: "#" },
+    },
+    {
+      name: "Morgan Park",
+      role: "UI/UX Designer",
+      image: "/avatars/team-4.jpg",
+      socials: { linkedin: "#", twitter: "#" },
+    },
+    {
+      name: "Taylor Kim",
+      role: "Content & QA",
+      image: "/avatars/team-5.jpg",
+      socials: { linkedin: "#", github: "#" },
+    },
+  ];
+
+  const values = [
+    {
+      icon: GraduationCap,
+      title: "Learning First",
+      description:
+        "Every feature is designed to help you truly understand programming concepts.",
+      color: "#3b82f6",
+    },
+    {
+      icon: Gamepad2,
+      title: "Fun & Engaging",
+      description:
+        "Quizzes, XP, streaks, and leaderboards keep you motivated to learn more.",
+      color: "#8b5cf6",
+    },
+    {
+      icon: Globe,
+      title: "Accessible",
+      description:
+        "Free to use, works on any device, available to learners everywhere.",
+      color: "#22c55e",
+    },
+    {
+      icon: Shield,
+      title: "Quality Content",
+      description:
+        "Carefully crafted questions that test real programming knowledge.",
+      color: "#f59e0b",
+    },
+  ];
+
+  const features = [
+    {
+      icon: Heart,
+      label: "Lives System",
+      desc: "10 hearts to keep you challenged",
+    },
+    { icon: Zap, label: "XP & Levels", desc: "Earn points and level up" },
+    { icon: Trophy, label: "Leaderboard", desc: "Compete with others" },
+    {
+      icon: BookOpen,
+      label: "6 Topics",
+      desc: "HTML, CSS, JS, Python, React, SQL",
+    },
+  ];
+
   return (
     <Navbar>
-      <div className="min-h-screen pb-8">
-        <div className="max-w-6xl mx-auto px-4 py-8">
-          {/* Hero Section */}
-          <div className="text-center mb-16">
-            <div className="w-20 h-20 bg-purple-600 mx-auto mb-6 flex items-center justify-center pixel-box">
-              <Code2 className="w-12 h-12 text-white" />
-            </div>
-            <h1 className="text-4xl font-bold text-white mb-4">
-              Welcome to <span className="text-purple-400">CodeLogic</span>
-            </h1>
-            <p className="text-xl text-gray-400 max-w-2xl mx-auto">
-              We&apos;re on a mission to make learning programming fun,
-              engaging, and accessible to everyone through gamification.
-            </p>
-          </div>
+      <ScrollProgressBar />
+      <ScrollToTop />
+      <div className="min-h-screen pb-16">
+        {/* Hero Section */}
+        <section className="relative overflow-hidden border-b border-[#2d2d44]">
+          <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-5" />
+          <div
+            className="absolute top-20 right-1/4 w-48 h-48 rounded-full blur-3xl"
+            style={{ background: "rgba(124, 58, 237, 0.15)" }}
+          />
 
-          {/* Mission Section */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
-            <div className="pixel-box p-6 text-center">
-              <div className="w-14 h-14 bg-purple-500/20 mx-auto mb-4 flex items-center justify-center">
-                <Target className="w-8 h-8 text-purple-400" />
-              </div>
-              <h3 className="text-lg font-bold text-white mb-2">Our Mission</h3>
-              <p className="text-gray-400 text-sm">
-                To revolutionize programming education by combining the thrill
-                of gaming with the power of structured learning.
-              </p>
-            </div>
-
-            <div className="pixel-box p-6 text-center">
-              <div className="w-14 h-14 bg-pink-500/20 mx-auto mb-4 flex items-center justify-center">
-                <Heart className="w-8 h-8 text-pink-400" />
-              </div>
-              <h3 className="text-lg font-bold text-white mb-2">Our Values</h3>
-              <p className="text-gray-400 text-sm">
-                We believe in accessibility, continuous improvement, and
-                creating a supportive community for learners worldwide.
-              </p>
-            </div>
-
-            <div className="pixel-box p-6 text-center">
-              <div className="w-14 h-14 bg-cyan-500/20 mx-auto mb-4 flex items-center justify-center">
-                <Sparkles className="w-8 h-8 text-cyan-400" />
-              </div>
-              <h3 className="text-lg font-bold text-white mb-2">Our Vision</h3>
-              <p className="text-gray-400 text-sm">
-                To become the go-to platform for anyone looking to learn
-                programming through an engaging, game-like experience.
-              </p>
-            </div>
-          </div>
-
-          {/* Team Section */}
-          <div className="mb-16">
-            <div className="text-center mb-10">
-              <div className="flex items-center justify-center gap-2 mb-2">
-                <Users className="w-6 h-6 text-purple-400" />
-                <h2 className="text-2xl font-bold text-white">Meet Our Team</h2>
-              </div>
-              <p className="text-gray-400">
-                The passionate people behind CodeLogic
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {teamMembers.map((member, index) => (
+          <div className="relative max-w-4xl mx-auto px-4 py-16 md:py-20">
+            <ScrollReveal animation="fade-up">
+              <div className="text-center">
                 <div
-                  key={index}
-                  className="pixel-box p-6 hover:border-purple-500/50 transition-colors group"
+                  className="inline-flex items-center gap-2 px-4 py-2 border rounded-full mb-6"
+                  style={{
+                    background: "rgba(124, 58, 237, 0.15)",
+                    borderColor: "rgba(124, 58, 237, 0.3)",
+                    color: "var(--primary-light)",
+                  }}
                 >
-                  {/* Avatar */}
-                  <div
-                    className={`w-20 h-20 bg-gradient-to-br ${member.color} mx-auto mb-4 flex items-center justify-center text-2xl font-bold text-white`}
-                  >
-                    {member.avatar}
-                  </div>
+                  <Users className="w-4 h-4" />
+                  <span className="font-medium text-sm">About Us</span>
+                </div>
 
-                  {/* Info */}
-                  <div className="text-center">
-                    <h3 className="text-lg font-bold text-white group-hover:text-purple-400 transition-colors">
-                      {member.name}
-                    </h3>
-                    <p className="text-purple-400 text-sm font-medium mb-3">
-                      {member.role}
-                    </p>
-                    <p className="text-gray-400 text-sm mb-4">{member.bio}</p>
+                <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
+                  Learn to Code,{" "}
+                  <span style={{ color: "var(--primary-light)" }}>
+                    Level Up
+                  </span>
+                </h1>
+                <p className="text-lg text-gray-400 max-w-xl mx-auto">
+                  CodeLogic is a gamified quiz platform that makes learning
+                  programming fun, engaging, and rewarding
+                </p>
+              </div>
+            </ScrollReveal>
+          </div>
+        </section>
 
-                    {/* Social Links */}
-                    <div className="flex justify-center gap-3">
-                      <a
-                        href={member.github}
-                        className="w-8 h-8 bg-[#0f0f1a] flex items-center justify-center text-gray-400 hover:text-white hover:bg-purple-500/20 transition-colors"
-                      >
-                        <Github className="w-4 h-4" />
-                      </a>
-                      <a
-                        href={member.linkedin}
-                        className="w-8 h-8 bg-[#0f0f1a] flex items-center justify-center text-gray-400 hover:text-white hover:bg-purple-500/20 transition-colors"
-                      >
-                        <Linkedin className="w-4 h-4" />
-                      </a>
-                      <a
-                        href={`mailto:${member.email}`}
-                        className="w-8 h-8 bg-[#0f0f1a] flex items-center justify-center text-gray-400 hover:text-white hover:bg-purple-500/20 transition-colors"
-                      >
-                        <Mail className="w-4 h-4" />
-                      </a>
+        <div className="max-w-4xl mx-auto px-4 py-12">
+          {/* What We Do */}
+          <ScrollReveal animation="fade-up">
+            <div className="pixel-box p-6 md:p-8 mb-16">
+              <div className="flex flex-col md:flex-row items-center gap-6">
+                <div
+                  className="w-20 h-20 flex-shrink-0 rounded-xl flex items-center justify-center"
+                  style={{ background: "rgba(124, 58, 237, 0.15)" }}
+                >
+                  <Code2
+                    className="w-10 h-10"
+                    style={{ color: "var(--primary-light)" }}
+                  />
+                </div>
+                <div className="text-center md:text-left">
+                  <h2 className="text-xl font-bold text-white mb-2">
+                    What is CodeLogic?
+                  </h2>
+                  <p className="text-gray-400">
+                    A quiz-based learning platform where you test your
+                    programming knowledge, earn XP for correct answers, maintain
+                    daily streaks, and compete on leaderboards. Think of it as a
+                    game where the prize is real coding skills.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </ScrollReveal>
+
+          {/* Meet the Team */}
+          <ScrollReveal animation="fade-up">
+            <div className="text-center mb-10">
+              <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">
+                Meet the Team
+              </h2>
+              <p className="text-gray-400 max-w-lg mx-auto">
+                The passionate developers behind CodeLogic
+              </p>
+            </div>
+          </ScrollReveal>
+
+          {/* Team Grid */}
+          <div className="mb-16">
+            {/* Top Row - 3 members */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+              {team.slice(0, 3).map((member, index) => (
+                <ScrollReveal
+                  key={member.name}
+                  animation="fade-up"
+                  delay={index * 100}
+                >
+                  <div className="pixel-box p-6 h-full group hover:border-purple-500/50 transition-all duration-300">
+                    <div className="flex flex-col items-center text-center h-full">
+                      {/* Profile Image */}
+                      <div className="relative mb-4">
+                        <div className="w-32 h-32 rounded-2xl overflow-hidden border-2 border-[#2d2d44] group-hover:border-purple-500/50 transition-all duration-300 bg-[#1a1a2e]">
+                          <Image
+                            src={member.image}
+                            alt={member.name}
+                            width={128}
+                            height={128}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = "none";
+                              target.parentElement!.innerHTML = `<div class="w-full h-full flex items-center justify-center text-3xl font-bold text-purple-400 bg-purple-500/10">${member.name
+                                .split(" ")
+                                .map((n) => n[0])
+                                .join("")}</div>`;
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Info */}
+                      <h3 className="font-bold text-white text-lg mb-1">
+                        {member.name}
+                      </h3>
+                      <p className="text-sm text-purple-400 mb-4">
+                        {member.role}
+                      </p>
+
+                      {/* Social Links - pushed to bottom */}
+                      <div className="flex items-center gap-2 mt-auto">
+                        {member.socials.linkedin && (
+                          <a
+                            href={member.socials.linkedin}
+                            className="w-9 h-9 rounded-lg flex items-center justify-center text-gray-400 hover:text-purple-400 hover:bg-purple-500/10 transition-all"
+                            style={{ background: "rgba(255,255,255,0.05)" }}
+                          >
+                            <Linkedin className="w-4 h-4" />
+                          </a>
+                        )}
+                        {member.socials.github && (
+                          <a
+                            href={member.socials.github}
+                            className="w-9 h-9 rounded-lg flex items-center justify-center text-gray-400 hover:text-purple-400 hover:bg-purple-500/10 transition-all"
+                            style={{ background: "rgba(255,255,255,0.05)" }}
+                          >
+                            <Github className="w-4 h-4" />
+                          </a>
+                        )}
+                        {member.socials.twitter && (
+                          <a
+                            href={member.socials.twitter}
+                            className="w-9 h-9 rounded-lg flex items-center justify-center text-gray-400 hover:text-purple-400 hover:bg-purple-500/10 transition-all"
+                            style={{ background: "rgba(255,255,255,0.05)" }}
+                          >
+                            <Twitter className="w-4 h-4" />
+                          </a>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
+                </ScrollReveal>
+              ))}
+            </div>
+
+            {/* Bottom Row - 2 members centered */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mx-auto">
+              {team.slice(3, 5).map((member, index) => (
+                <ScrollReveal
+                  key={member.name}
+                  animation="fade-up"
+                  delay={(index + 3) * 100}
+                >
+                  <div className="pixel-box p-6 h-full group hover:border-purple-500/50 transition-all duration-300">
+                    <div className="flex flex-col items-center text-center h-full">
+                      {/* Profile Image */}
+                      <div className="relative mb-4">
+                        <div className="w-32 h-32 rounded-2xl overflow-hidden border-2 border-[#2d2d44] group-hover:border-purple-500/50 transition-all duration-300 bg-[#1a1a2e]">
+                          <Image
+                            src={member.image}
+                            alt={member.name}
+                            width={128}
+                            height={128}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = "none";
+                              target.parentElement!.innerHTML = `<div class="w-full h-full flex items-center justify-center text-3xl font-bold text-purple-400 bg-purple-500/10">${member.name
+                                .split(" ")
+                                .map((n) => n[0])
+                                .join("")}</div>`;
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Info */}
+                      <h3 className="font-bold text-white text-lg mb-1">
+                        {member.name}
+                      </h3>
+                      <p className="text-sm text-purple-400 mb-4">
+                        {member.role}
+                      </p>
+
+                      {/* Social Links - pushed to bottom */}
+                      <div className="flex items-center gap-2 mt-auto">
+                        {member.socials.linkedin && (
+                          <a
+                            href={member.socials.linkedin}
+                            className="w-9 h-9 rounded-lg flex items-center justify-center text-gray-400 hover:text-purple-400 hover:bg-purple-500/10 transition-all"
+                            style={{ background: "rgba(255,255,255,0.05)" }}
+                          >
+                            <Linkedin className="w-4 h-4" />
+                          </a>
+                        )}
+                        {member.socials.github && (
+                          <a
+                            href={member.socials.github}
+                            className="w-9 h-9 rounded-lg flex items-center justify-center text-gray-400 hover:text-purple-400 hover:bg-purple-500/10 transition-all"
+                            style={{ background: "rgba(255,255,255,0.05)" }}
+                          >
+                            <Github className="w-4 h-4" />
+                          </a>
+                        )}
+                        {member.socials.twitter && (
+                          <a
+                            href={member.socials.twitter}
+                            className="w-9 h-9 rounded-lg flex items-center justify-center text-gray-400 hover:text-purple-400 hover:bg-purple-500/10 transition-all"
+                            style={{ background: "rgba(255,255,255,0.05)" }}
+                          >
+                            <Twitter className="w-4 h-4" />
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </ScrollReveal>
               ))}
             </div>
           </div>
 
-          {/* Stats Section */}
-          <div className="pixel-box p-8 mb-16">
-            <h2 className="text-xl font-bold text-white text-center mb-8">
-              Our Impact
+          {/* Our Values */}
+          <ScrollReveal animation="fade-up">
+            <h2 className="text-2xl font-bold text-white mb-8 flex items-center gap-3">
+              <Target
+                className="w-6 h-6"
+                style={{ color: "var(--primary-light)" }}
+              />
+              What We Believe
             </h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              <div className="text-center">
-                <p className="text-3xl font-bold text-purple-400">10K+</p>
-                <p className="text-gray-400 text-sm">Active Learners</p>
-              </div>
-              <div className="text-center">
-                <p className="text-3xl font-bold text-purple-400">500+</p>
-                <p className="text-gray-400 text-sm">Quiz Questions</p>
-              </div>
-              <div className="text-center">
-                <p className="text-3xl font-bold text-purple-400">8</p>
-                <p className="text-gray-400 text-sm">Programming Languages</p>
-              </div>
-              <div className="text-center">
-                <p className="text-3xl font-bold text-purple-400">95%</p>
-                <p className="text-gray-400 text-sm">Satisfaction Rate</p>
-              </div>
-            </div>
+          </ScrollReveal>
+
+          <div className="grid sm:grid-cols-2 gap-4 mb-16">
+            {values.map((value, index) => (
+              <ScrollReveal
+                key={value.title}
+                animation="fade-up"
+                delay={index * 50}
+              >
+                <div className="pixel-box p-5 h-full hover:border-purple-500/40 transition-colors">
+                  <div className="flex items-start gap-4">
+                    <div
+                      className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0"
+                      style={{ background: `${value.color}20` }}
+                    >
+                      <value.icon
+                        className="w-6 h-6"
+                        style={{ color: value.color }}
+                      />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-white mb-1">
+                        {value.title}
+                      </h3>
+                      <p className="text-gray-400 text-sm">
+                        {value.description}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </ScrollReveal>
+            ))}
           </div>
 
-          {/* Contact Section */}
-          <div className="pixel-box p-8 text-center border-purple-500/30 bg-purple-500/5">
-            <h2 className="text-xl font-bold text-white mb-2">Get in Touch</h2>
-            <p className="text-gray-400 mb-4">
-              Have questions or suggestions? We&apos;d love to hear from you!
-            </p>
-            <a
-              href="mailto:hello@codelogic.com"
-              className="btn-primary px-6 py-3 inline-flex items-center gap-2"
-            >
-              <Mail className="w-4 h-4" />
-              Contact Us
-            </a>
-          </div>
+          {/* Platform Features */}
+          <ScrollReveal animation="fade-up">
+            <h2 className="text-2xl font-bold text-white mb-8 flex items-center gap-3">
+              <Sparkles
+                className="w-6 h-6"
+                style={{ color: "var(--primary-light)" }}
+              />
+              Platform Features
+            </h2>
+          </ScrollReveal>
+
+          <ScrollReveal animation="fade-up" delay={100}>
+            <div className="pixel-box p-6 md:p-8 mb-16">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                {features.map((feature) => (
+                  <div key={feature.label} className="text-center">
+                    <div
+                      className="w-14 h-14 mx-auto mb-3 rounded-xl flex items-center justify-center"
+                      style={{ background: "rgba(124, 58, 237, 0.15)" }}
+                    >
+                      <feature.icon
+                        className="w-7 h-7"
+                        style={{ color: "var(--primary-light)" }}
+                      />
+                    </div>
+                    <h4 className="font-bold text-white text-sm">
+                      {feature.label}
+                    </h4>
+                    <p className="text-gray-400 text-xs mt-1">{feature.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </ScrollReveal>
+
+          {/* CTA */}
+          <ScrollReveal animation="fade-up">
+            <div className="pixel-box p-6 md:p-8 text-center">
+              <Mail
+                className="w-12 h-12 mx-auto mb-4"
+                style={{ color: "var(--primary-light)" }}
+              />
+              <h3 className="text-xl font-bold text-white mb-2">
+                Questions or Feedback?
+              </h3>
+              <p className="text-gray-400 mb-6 max-w-md mx-auto">
+                We'd love to hear from you. Reach out anytime!
+              </p>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                <a
+                  href="mailto:hello@codelogic.com"
+                  className="inline-flex items-center gap-2 px-6 py-3 text-white font-bold rounded-xl transition-all hover:scale-105"
+                  style={{
+                    background: "var(--gradient-purple)",
+                    boxShadow: "0 4px 20px rgba(124, 58, 237, 0.3)",
+                  }}
+                >
+                  <Mail className="w-5 h-5" />
+                  Contact Us
+                  <ChevronRight className="w-5 h-5" />
+                </a>
+                <Link
+                  href="/play"
+                  className="inline-flex items-center gap-2 px-6 py-3 text-gray-300 font-medium rounded-xl border border-[#2d2d44] hover:border-purple-500/50 hover:text-white transition-all"
+                >
+                  <Gamepad2 className="w-5 h-5" />
+                  Start Playing
+                </Link>
+              </div>
+            </div>
+          </ScrollReveal>
         </div>
       </div>
     </Navbar>

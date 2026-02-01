@@ -53,6 +53,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     
     # Profile fields
     display_name = models.CharField(max_length=100, blank=True)
+    last_display_name_change = models.DateTimeField(null=True, blank=True)
     avatar = models.PositiveIntegerField(default=1, choices=[(i, f'Avatar {i}') for i in range(1, 6)])  # 1-5 preset avatars
     bio = models.TextField(max_length=500, blank=True)
     
@@ -70,8 +71,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     level = models.PositiveIntegerField(default=1)
     
     # Hearts/Lives system
-    max_hearts = models.PositiveIntegerField(default=5)
-    current_hearts = models.PositiveIntegerField(default=5)
+    max_hearts = models.PositiveIntegerField(default=10)
+    current_hearts = models.PositiveIntegerField(default=10)
     last_heart_update = models.DateTimeField(default=timezone.now)
     
     # Streak system
@@ -95,11 +96,25 @@ class User(AbstractBaseUser, PermissionsMixin):
     def get_display_name(self):
         return self.display_name or self.username
     
+    def can_change_display_name(self):
+        """Check if user can change display name (3-day cooldown)."""
+        if self.last_display_name_change is None:
+            return True, None
+        
+        from datetime import timedelta
+        cooldown = timedelta(days=3)
+        next_change_allowed = self.last_display_name_change + cooldown
+        
+        if timezone.now() >= next_change_allowed:
+            return True, None
+        
+        return False, next_change_allowed
+    
     def calculate_level(self):
         """Calculate user level based on XP."""
-        # Simple formula: level = 1 + (xp // 1000)
+        # Simple formula: level = 1 + (xp // 500)
         # Can be adjusted for more complex progression
-        return 1 + (self.xp // 1000)
+        return 1 + (self.xp // 500)
     
     def save(self, *args, **kwargs):
         self.level = self.calculate_level()

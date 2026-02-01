@@ -90,8 +90,7 @@ export const authAPI = {
   updateProfile: (data: { display_name?: string; bio?: string }) =>
     api.patch("/auth/profile/", data),
 
-  updateAvatar: (avatar: number) =>
-    api.patch("/auth/avatar/", { avatar }),
+  updateAvatar: (avatar: number) => api.patch("/auth/avatar/", { avatar }),
 
   changePassword: (data: {
     current_password: string;
@@ -118,4 +117,62 @@ export const authAPI = {
     api.get(`/auth/check-username/?username=${username}`),
 
   checkEmail: (email: string) => api.get(`/auth/check-email/?email=${email}`),
+};
+
+// Game API functions
+export const gameAPI = {
+  // Get topic details and user progress
+  getTopic: (categorySlug: string, topicSlug: string) =>
+    api.get(`/game/topics/${categorySlug}/${topicSlug}/`),
+
+  // Get quiz questions for a level
+  getQuizQuestions: (categorySlug: string, topicSlug: string, level: number) =>
+    api.get(`/game/quiz/${categorySlug}/${topicSlug}/${level}/`),
+
+  // Submit an answer
+  submitAnswer: (data: {
+    question_id: string;
+    answer: number;
+    attempt_id: string;
+  }) => api.post("/game/answer/", data),
+
+  // Complete a quiz
+  completeQuiz: (data: {
+    category_slug: string;
+    topic_slug: string;
+    level: number;
+    score: number;
+    total_questions: number;
+    hearts_lost: number;
+  }) => api.post("/game/complete/", data),
+
+  // Get leaderboard
+  getLeaderboard: () => api.get("/game/leaderboard/"),
+
+  // Get user stats
+  getUserStats: () => api.get("/game/stats/"),
+
+  // Get daily stats and challenges
+  getDailyStats: () => api.get("/game/daily-stats/"),
+
+  // Get user certificates (completed topics)
+  getCertificates: () => api.get("/game/certificates/"),
+
+  // Learning resources
+  getResources: (params?: {
+    search?: string;
+    category?: string;
+    difficulty?: string;
+    language?: string;
+  }) => {
+    const queryParams = new URLSearchParams();
+    if (params?.search) queryParams.append("search", params.search);
+    if (params?.category) queryParams.append("category", params.category);
+    if (params?.difficulty) queryParams.append("difficulty", params.difficulty);
+    if (params?.language) queryParams.append("language", params.language);
+    const queryString = queryParams.toString();
+    return api.get(`/game/resources/${queryString ? `?${queryString}` : ""}`);
+  },
+
+  getResource: (slug: string) => api.get(`/game/resources/${slug}/`),
 };

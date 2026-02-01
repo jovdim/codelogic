@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/auth/RouteGuards";
+import { gameAPI } from "@/lib/api";
 import Sidebar from "@/components/layout/Sidebar";
 import {
   Star,
@@ -12,92 +13,278 @@ import {
   Zap,
   ChevronLeft,
   CheckCircle2,
+  CheckCircle,
   Play,
   Award,
   Download,
 } from "lucide-react";
+import {
+  FaHtml5,
+  FaPython,
+  FaJs,
+  FaDatabase,
+  FaTerminal,
+  FaCss3Alt,
+  FaReact,
+  FaJava,
+} from "react-icons/fa";
+import { SiCplusplus } from "react-icons/si";
+import { IconType } from "react-icons";
 
 // Topic data
 const topicData: {
   [key: string]: {
     name: string;
-    icon: string;
+    Icon: IconType;
+    iconColor: string;
     accentColor: string;
     totalLevels: number;
   };
 } = {
   javascript: {
     name: "JavaScript",
-    icon: "⚡",
+    Icon: FaJs,
+    iconColor: "#f7df1e",
     accentColor: "#eab308",
     totalLevels: 15,
   },
   html: {
     name: "HTML",
-    icon: "🌐",
+    Icon: FaHtml5,
+    iconColor: "#e34f26",
     accentColor: "#f97316",
-    totalLevels: 10,
+    totalLevels: 15,
   },
   css: {
     name: "CSS",
-    icon: "🎨",
+    Icon: FaCss3Alt,
+    iconColor: "#264de4",
     accentColor: "#3b82f6",
-    totalLevels: 12,
-  },
-  python: {
-    name: "Python",
-    icon: "🐍",
-    accentColor: "#22c55e",
     totalLevels: 15,
   },
   react: {
     name: "React",
-    icon: "⚛️",
+    Icon: FaReact,
+    iconColor: "#61dafb",
     accentColor: "#06b6d4",
-    totalLevels: 12,
+    totalLevels: 15,
   },
-  nodejs: {
-    name: "Node.js",
-    icon: "💚",
-    accentColor: "#84cc16",
-    totalLevels: 12,
+  python: {
+    name: "Python",
+    Icon: FaPython,
+    iconColor: "#3776ab",
+    accentColor: "#3b82f6",
+    totalLevels: 15,
+  },
+  sql: {
+    name: "SQL",
+    Icon: FaDatabase,
+    iconColor: "#00758f",
+    accentColor: "#06b6d4",
+    totalLevels: 15,
+  },
+  bash: {
+    name: "Bash",
+    Icon: FaTerminal,
+    iconColor: "#4eaa25",
+    accentColor: "#22c55e",
+    totalLevels: 15,
+  },
+  java: {
+    name: "Java",
+    Icon: FaJava,
+    iconColor: "#f89820",
+    accentColor: "#f97316",
+    totalLevels: 15,
+  },
+  cpp: {
+    name: "C++",
+    Icon: SiCplusplus,
+    iconColor: "#00599C",
+    accentColor: "#6366f1",
+    totalLevels: 15,
   },
 };
 
-// Level titles
-const levelTitles = [
-  "Basics",
-  "Variables",
-  "Data Types",
-  "Operators",
-  "Checkpoint",
-  "Functions",
-  "Arrays",
-  "Objects",
-  "Loops",
-  "Checkpoint",
-  "DOM",
-  "Events",
-  "Async",
-  "Promises",
-  "Final",
-];
+// Level titles for each topic
+const topicLevelTitles: { [key: string]: string[] } = {
+  javascript: [
+    "Basics",
+    "Variables",
+    "Data Types",
+    "Operators",
+    "Arrays",
+    "Functions",
+    "Higher-Order",
+    "Objects",
+    "Loops",
+    "Closures",
+    "DOM Basics",
+    "Events",
+    "Async Intro",
+    "Promises",
+    "Final Boss",
+  ],
+  html: [
+    "Basics",
+    "Text & Headings",
+    "Links & Navigation",
+    "Images & Media",
+    "Lists",
+    "Tables",
+    "Forms Basics",
+    "Form Controls",
+    "Semantic HTML",
+    "Meta & SEO",
+    "Accessibility",
+    "Audio & Video",
+    "Canvas & SVG",
+    "Web Components",
+    "Final Boss",
+  ],
+  css: [
+    "Basics",
+    "Selectors",
+    "Colors & Backgrounds",
+    "Text Styling",
+    "Box Model",
+    "Display & Visibility",
+    "Positioning",
+    "Flexbox Basics",
+    "Flexbox Advanced",
+    "Grid Basics",
+    "Grid Advanced",
+    "Responsive Design",
+    "Transitions",
+    "Animations",
+    "Final Boss",
+  ],
+  react: [
+    "Basics",
+    "Components",
+    "Props",
+    "State",
+    "Events",
+    "Conditionals",
+    "Lists & Keys",
+    "useEffect",
+    "Forms",
+    "Context API",
+    "Custom Hooks",
+    "Refs & DOM",
+    "Performance",
+    "Error Handling",
+    "Final Boss",
+  ],
+  python: [
+    "Basics",
+    "Variables",
+    "Data Types",
+    "Operators",
+    "Strings",
+    "Lists",
+    "Dictionaries",
+    "Conditionals",
+    "Loops",
+    "Functions",
+    "Comprehensions",
+    "Exceptions",
+    "OOP Basics",
+    "Modules",
+    "Final Boss",
+  ],
+  sql: [
+    "Basics",
+    "SELECT Queries",
+    "Filtering",
+    "Sorting",
+    "Aggregates",
+    "Grouping",
+    "Joins Basics",
+    "Advanced Joins",
+    "Subqueries",
+    "CRUD",
+    "Table Design",
+    "Constraints",
+    "Indexes",
+    "Transactions",
+    "Final Boss",
+  ],
+  bash: [
+    "Basics",
+    "Navigation",
+    "File Operations",
+    "File Content",
+    "Variables",
+    "Input/Output",
+    "Conditionals",
+    "Loops",
+    "Functions",
+    "Text Processing",
+    "Permissions",
+    "Processes",
+    "Environment",
+    "Scripting",
+    "Final Boss",
+  ],
+  java: [
+    "Basics",
+    "Variables",
+    "Operators",
+    "Strings",
+    "Arrays",
+    "Control Flow",
+    "Loops",
+    "Methods",
+    "OOP Basics",
+    "Inheritance",
+    "Interfaces",
+    "Exceptions",
+    "Collections",
+    "Generics",
+    "Final Boss",
+  ],
+  cpp: [
+    "Basics",
+    "Variables",
+    "Operators",
+    "Strings",
+    "Arrays & Vectors",
+    "Control Flow",
+    "Loops",
+    "Functions",
+    "Pointers",
+    "Classes",
+    "Inheritance",
+    "Memory",
+    "Smart Pointers",
+    "Templates",
+    "Final Boss",
+  ],
+};
 
 // Generate level data
-const generateLevels = (totalLevels: number, userProgress: number = 1) => {
+const generateLevels = (
+  topicId: string,
+  totalLevels: number,
+  userProgress: number = 1,
+) => {
+  const titles =
+    topicLevelTitles[topicId] ||
+    Array.from({ length: totalLevels }, (_, i) => `Level ${i + 1}`);
+
   return Array.from({ length: totalLevels }, (_, i) => {
     const level = i + 1;
     const isCompleted = level < userProgress;
     const isCurrent = level === userProgress;
     const isLocked = level > userProgress;
 
-    let type: "normal" | "checkpoint" | "boss" = "normal";
-    if (level % 5 === 0 && level !== totalLevels) type = "checkpoint";
+    // Only boss level at final level, all others are normal
+    let type: "normal" | "boss" = "normal";
     if (level === totalLevels) type = "boss";
 
     const baseXP = 50;
-    const xpReward =
-      type === "boss" ? baseXP * 3 : type === "checkpoint" ? baseXP * 2 : baseXP;
+    const xpReward = type === "boss" ? baseXP * 3 : baseXP;
 
     const stars = isCompleted ? ((level * 7) % 3) + 1 : 0;
 
@@ -109,7 +296,7 @@ const generateLevels = (totalLevels: number, userProgress: number = 1) => {
       isLocked,
       xpReward,
       stars,
-      title: levelTitles[i] || `Level ${level}`,
+      title: titles[i] || `Level ${level}`,
     };
   });
 };
@@ -129,10 +316,51 @@ export default function TopicLevelPage() {
     totalLevels: 15,
   };
 
-  const [userProgress] = useState(5);
-  const levels = generateLevels(topic.totalLevels, userProgress);
+  const [userProgress, setUserProgress] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [certificateData, setCertificateData] = useState<{
+    totalStars: number;
+    levelStars: Record<number, number>;
+    completionDate: string | null;
+    totalXpEarned: number;
+  }>({
+    totalStars: 0,
+    levelStars: {},
+    completionDate: null,
+    totalXpEarned: 0,
+  });
+
+  // Fetch user progress from API
+  useEffect(() => {
+    const fetchProgress = async () => {
+      try {
+        const response = await gameAPI.getTopic(categoryId, topicId);
+        const progress = response.data.user_progress;
+        if (progress) {
+          setUserProgress(progress.current_level || 1);
+          setCertificateData({
+            totalStars: progress.total_stars || 0,
+            levelStars: progress.level_stars || {},
+            completionDate: progress.completion_date || null,
+            totalXpEarned: progress.total_xp_earned || 0,
+          });
+        }
+      } catch (err) {
+        console.error("Failed to fetch progress:", err);
+        // Default to level 1 for new users
+        setUserProgress(1);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProgress();
+  }, [categoryId, topicId]);
+
+  const levels = generateLevels(topicId, topic.totalLevels, userProgress);
   const completedLevels = levels.filter((l) => l.isCompleted).length;
-  const totalStars = levels.reduce((acc, l) => acc + l.stars, 0);
+  const totalStars =
+    certificateData.totalStars || levels.reduce((acc, l) => acc + l.stars, 0);
   const isAllCompleted = completedLevels === topic.totalLevels;
 
   const [selectedLevel, setSelectedLevel] = useState<number | null>(null);
@@ -182,19 +410,19 @@ export default function TopicLevelPage() {
               />
             ))}
           </div>
-          
+
           {/* Pixel grid overlay */}
-          <div 
+          <div
             className="fixed inset-0 pointer-events-none opacity-[0.02]"
             style={{
               backgroundImage: `
                 linear-gradient(to right, #ffffff 1px, transparent 1px),
                 linear-gradient(to bottom, #ffffff 1px, transparent 1px)
               `,
-              backgroundSize: '8px 8px',
+              backgroundSize: "8px 8px",
             }}
           />
-          
+
           {/* Header */}
           <div className="sticky top-0 z-40 bg-[#0f0f1a]/95 backdrop-blur-sm border-b border-[#2d2d44]">
             <div className="max-w-lg mx-auto px-4 py-4">
@@ -207,17 +435,24 @@ export default function TopicLevelPage() {
                     <ChevronLeft className="w-5 h-5" />
                   </Link>
                   <div
-                    className="w-10 h-10 rounded-lg flex items-center justify-center text-xl"
-                    style={{ backgroundColor: `${topic.accentColor}20` }}
+                    className="w-10 h-10 rounded-lg flex items-center justify-center"
+                    style={{
+                      backgroundColor: `${topic.accentColor}20`,
+                    }}
                   >
-                    {topic.icon}
+                    <topic.Icon
+                      className="w-6 h-6"
+                      style={{ color: topic.iconColor }}
+                    />
                   </div>
                   <div>
                     <h1 className="text-lg font-bold text-white">
                       {topic.name}
                     </h1>
-                    <p className="text-xs text-gray-400">
-                      Level {userProgress} of {topic.totalLevels}
+                    <p className="text-xs text-green-500">
+                      {isAllCompleted
+                        ? "All levels completed!"
+                        : `Level ${userProgress} of ${topic.totalLevels}`}
                     </p>
                   </div>
                 </div>
@@ -259,14 +494,17 @@ export default function TopicLevelPage() {
           {/* Level Path */}
           <div className="max-w-md mx-auto px-6 py-6 overflow-hidden relative z-10">
             <div className="relative">
-              {/* Main vertical line - thicker */}
-              <div className="absolute left-1/2 top-0 bottom-0 w-1 bg-[#2d2d44] -translate-x-1/2 rounded-full" />
+              {/* Main vertical line - stops at certificate branch */}
+              <div
+                className="absolute left-1/2 top-0 w-1 bg-[#2d2d44] -translate-x-1/2 rounded-full"
+                style={{ height: `calc(100% - 56px)` }}
+              />
 
               {/* Colored progress line - thicker */}
               <div
                 className="absolute left-1/2 top-0 w-1 -translate-x-1/2 transition-all duration-500 rounded-full"
                 style={{
-                  height: `${((userProgress - 0.5) / topic.totalLevels) * 100}%`,
+                  height: `${((userProgress - 0.5) / (topic.totalLevels + 1)) * 100}%`,
                   backgroundColor: topic.accentColor,
                   boxShadow: `0 0 10px ${topic.accentColor}40`,
                 }}
@@ -310,10 +548,9 @@ export default function TopicLevelPage() {
                             level.isCompleted || level.isCurrent
                               ? topic.accentColor
                               : "#2d2d44",
-                          boxShadow:
-                            level.isCurrent
-                              ? `0 0 12px ${topic.accentColor}`
-                              : "none",
+                          boxShadow: level.isCurrent
+                            ? `0 0 12px ${topic.accentColor}`
+                            : "none",
                           transform: "rotate(45deg)",
                         }}
                       />
@@ -349,16 +586,18 @@ export default function TopicLevelPage() {
                               : undefined,
                           }}
                         >
-                          {/* Checkpoint/Boss badge */}
-                          {level.type !== "normal" && (
+                          {/* Boss badge */}
+                          {level.type === "boss" && (
                             <div
                               className="absolute -top-2 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded text-[8px] font-bold uppercase"
                               style={{
-                                backgroundColor: level.isLocked ? "#2d2d44" : topic.accentColor,
+                                backgroundColor: level.isLocked
+                                  ? "#2d2d44"
+                                  : topic.accentColor,
                                 color: level.isLocked ? "#6b7280" : "#0f0f1a",
                               }}
                             >
-                              {level.type === "boss" ? "Final" : "Check"}
+                              Final
                             </div>
                           )}
 
@@ -367,7 +606,9 @@ export default function TopicLevelPage() {
                             className="w-9 h-9 mx-auto mb-1 rounded-lg flex items-center justify-center text-sm font-bold"
                             style={{
                               backgroundColor: `${topic.accentColor}20`,
-                              color: level.isLocked ? "#4b5563" : topic.accentColor,
+                              color: level.isLocked
+                                ? "#4b5563"
+                                : topic.accentColor,
                             }}
                           >
                             {level.isLocked ? (
@@ -440,92 +681,79 @@ export default function TopicLevelPage() {
                 );
               })}
 
-              {/* Certificate at the end */}
-              <div className="relative h-44 flex flex-col items-center justify-end pb-4">
-                {/* Line to certificate - thicker */}
+              {/* Certificate at the end - with branch like levels */}
+              <div className="relative h-28">
+                {/* Branch line to certificate */}
                 <div
-                  className="absolute top-0 left-1/2 h-12 w-1 -translate-x-1/2 rounded-full"
+                  className="absolute top-1/2 h-1 -translate-y-1/2 rounded-full"
                   style={{
-                    backgroundColor: isAllCompleted ? topic.accentColor : "#2d2d44",
-                    boxShadow: isAllCompleted ? `0 0 10px ${topic.accentColor}40` : "none",
+                    left: "50%",
+                    right: "0",
+                    backgroundColor: isAllCompleted
+                      ? topic.accentColor
+                      : "#2d2d44",
+                    boxShadow: isAllCompleted
+                      ? `0 0 8px ${topic.accentColor}40`
+                      : "none",
                   }}
                 />
-                
-                {/* Diamond connector */}
-                <div
-                  className="absolute top-10 left-1/2 -translate-x-1/2 w-4 h-4"
-                  style={{
-                    backgroundColor: isAllCompleted ? topic.accentColor : "#2d2d44",
-                    transform: "translateX(-50%) rotate(45deg)",
-                  }}
-                />
-                
-                <button
-                  onClick={() => isAllCompleted && setShowCertificate(true)}
-                  disabled={!isAllCompleted}
-                  className={`relative ${!isAllCompleted ? "cursor-not-allowed" : "hover:scale-110 cursor-pointer"} transition-all duration-300`}
-                >
-                  {/* Glow effect when completed */}
-                  {isAllCompleted && (
-                    <>
-                      <div
-                        className="absolute inset-0 rounded-2xl blur-2xl opacity-60 animate-pulse"
-                        style={{ backgroundColor: topic.accentColor }}
-                      />
-                      <div
-                        className="absolute -inset-2 rounded-3xl opacity-30 animate-ping"
-                        style={{ backgroundColor: topic.accentColor }}
-                      />
-                    </>
-                  )}
-                  
-                  {/* Certificate box - bigger */}
+
+                {/* Center dot - end of main line */}
+                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
                   <div
-                    className="relative w-24 h-24 rounded-2xl flex flex-col items-center justify-center border-3 gap-1"
+                    className="w-4 h-4 rounded-sm"
                     style={{
-                      backgroundColor: isAllCompleted ? `${topic.accentColor}20` : "#1a1a2e",
-                      borderColor: isAllCompleted ? topic.accentColor : "#2d2d44",
-                      borderWidth: "3px",
+                      backgroundColor: isAllCompleted
+                        ? topic.accentColor
+                        : "#2d2d44",
+                      transform: "rotate(45deg)",
                     }}
+                  />
+                </div>
+
+                {/* Certificate Card */}
+                <div
+                  className="absolute top-1/2 -translate-y-1/2 right-0"
+                  style={{ width: "calc(50% - 20px)" }}
+                >
+                  <button
+                    onClick={() => isAllCompleted && setShowCertificate(true)}
+                    disabled={!isAllCompleted}
+                    className={`relative w-full transition-all duration-200 ${!isAllCompleted ? "cursor-not-allowed" : "hover:scale-[1.02] cursor-pointer"}`}
                   >
-                    {isAllCompleted ? (
-                      <>
-                        <Award
-                          className="w-10 h-10"
-                          style={{ color: topic.accentColor }}
-                        />
-                        <span className="text-lg">🎉</span>
-                      </>
-                    ) : (
-                      <>
-                        <Lock className="w-8 h-8 text-gray-500" />
-                        <span className="text-[10px] text-gray-500 font-medium">LOCKED</span>
-                      </>
-                    )}
-                  </div>
-                  
-                  {/* Label */}
-                  <div className="mt-2 text-center">
-                    <p
-                      className="text-sm font-bold"
+                    <div
+                      className="p-3 rounded-xl border-2 bg-[#1a1a2e] flex flex-col items-center justify-center gap-1"
                       style={{
-                        color: isAllCompleted ? topic.accentColor : "#6b7280",
+                        borderColor: isAllCompleted
+                          ? topic.accentColor
+                          : "#2d2d44",
                       }}
                     >
-                      Certificate
-                    </p>
-                    {!isAllCompleted && (
-                      <p className="text-[10px] text-gray-600">
-                        Complete all {topic.totalLevels} levels
+                      {isAllCompleted ? (
+                        <Award
+                          className="w-8 h-8"
+                          style={{ color: topic.accentColor }}
+                        />
+                      ) : (
+                        <Lock className="w-6 h-6 text-gray-500" />
+                      )}
+                      <p
+                        className="text-xs font-bold"
+                        style={{
+                          color: isAllCompleted ? topic.accentColor : "#6b7280",
+                        }}
+                      >
+                        Certificate
                       </p>
-                    )}
-                    {isAllCompleted && (
-                      <p className="text-[10px] text-green-400 font-medium">
-                        ✓ Ready to claim!
-                      </p>
-                    )}
-                  </div>
-                </button>
+                      {isAllCompleted && (
+                        <p className="text-[9px] text-green-400 font-medium flex items-center gap-1">
+                          <CheckCircle className="w-2.5 h-2.5" /> Ready to
+                          claim!
+                        </p>
+                      )}
+                    </div>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -533,11 +761,11 @@ export default function TopicLevelPage() {
           {/* Level Modal */}
           {selectedLevel && (
             <div
-              className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
               onClick={() => setSelectedLevel(null)}
             >
               <div
-                className="bg-[#1a1a2e] rounded-2xl p-6 max-w-xs w-full border border-[#2d2d44]"
+                className="bg-[#1a1a2e]/95 backdrop-blur-xl rounded-2xl p-6 max-w-xs w-full border border-[#2d2d44] shadow-2xl shadow-black/50"
                 onClick={(e) => e.stopPropagation()}
               >
                 {(() => {
@@ -548,10 +776,13 @@ export default function TopicLevelPage() {
                     <>
                       <div className="text-center mb-4">
                         <div
-                          className="w-16 h-16 mx-auto mb-3 rounded-xl flex items-center justify-center text-3xl"
+                          className="w-16 h-16 mx-auto mb-3 rounded-xl flex items-center justify-center"
                           style={{ backgroundColor: `${topic.accentColor}20` }}
                         >
-                          {topic.icon}
+                          <topic.Icon
+                            className="w-8 h-8"
+                            style={{ color: topic.iconColor }}
+                          />
                         </div>
                         <h2 className="text-xl font-bold text-white">
                           Level {level.level}
@@ -577,21 +808,13 @@ export default function TopicLevelPage() {
                         <div className="flex justify-between text-sm px-3 py-2 bg-[#0f0f1a] rounded-lg">
                           <span className="text-gray-400">Type</span>
                           <span className="text-white">
-                            {level.type === "boss"
-                              ? "Final"
-                              : level.type === "checkpoint"
-                                ? "Checkpoint"
-                                : "Lesson"}
+                            {level.type === "boss" ? "Final" : "Lesson"}
                           </span>
                         </div>
                         <div className="flex justify-between text-sm px-3 py-2 bg-[#0f0f1a] rounded-lg">
                           <span className="text-gray-400">Questions</span>
                           <span className="text-white">
-                            {level.type === "boss"
-                              ? "10"
-                              : level.type === "checkpoint"
-                                ? "7"
-                                : "5"}
+                            {level.type === "boss" ? "5" : "5"}
                           </span>
                         </div>
                         <div className="flex justify-between text-sm px-3 py-2 bg-[#0f0f1a] rounded-lg">
@@ -628,15 +851,20 @@ export default function TopicLevelPage() {
           {/* Certificate Modal */}
           {showCertificate && (
             <div
-              className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
               onClick={() => setShowCertificate(false)}
             >
               <div
-                className="bg-[#fefefe] rounded-xl p-6 max-w-sm w-full text-center"
+                className="bg-[#fefefe] rounded-xl p-6 max-w-sm w-full text-center shadow-2xl"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="border-4 border-double border-yellow-600/30 p-5 rounded-lg">
-                  <div className="text-4xl mb-3">{topic.icon}</div>
+                  <div className="flex justify-center mb-3">
+                    <topic.Icon
+                      className="w-12 h-12"
+                      style={{ color: topic.iconColor }}
+                    />
+                  </div>
                   <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">
                     Certificate of Completion
                   </p>
@@ -647,20 +875,39 @@ export default function TopicLevelPage() {
                     has been successfully completed by
                   </p>
                   <p className="text-lg font-bold text-gray-800 mb-3">
-                    {user?.username || "Student"}
+                    {user?.display_name || user?.username || "Student"}
                   </p>
                   <div className="flex justify-center gap-1 mb-3">
-                    {[1, 2, 3].map((star) => (
-                      <Star
-                        key={star}
-                        className="w-5 h-5 fill-yellow-400 text-yellow-400"
-                      />
-                    ))}
+                    {[1, 2, 3].map((star) => {
+                      // Calculate average stars (totalStars / totalLevels)
+                      const avgStars = totalStars / topic.totalLevels;
+                      const filled = star <= Math.round(avgStars);
+                      return (
+                        <Star
+                          key={star}
+                          className={`w-5 h-5 ${filled ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`}
+                        />
+                      );
+                    })}
                   </div>
                   <div className="flex justify-between text-[10px] text-gray-400 pt-3 border-t">
-                    <span>Stars: {totalStars}/{topic.totalLevels * 3}</span>
-                    <span>Levels: {topic.totalLevels}</span>
+                    <span>
+                      Stars: {totalStars}/{topic.totalLevels * 3}
+                    </span>
+                    <span>XP Earned: {certificateData.totalXpEarned}</span>
                   </div>
+                  {certificateData.completionDate && (
+                    <p className="text-[9px] text-gray-400 mt-2">
+                      Completed on{" "}
+                      {new Date(
+                        certificateData.completionDate,
+                      ).toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      })}
+                    </p>
+                  )}
                 </div>
 
                 <div className="flex gap-2 mt-4">
@@ -672,6 +919,23 @@ export default function TopicLevelPage() {
                   </button>
                   <button
                     onClick={() => {
+                      const avgStars = totalStars / topic.totalLevels;
+                      const displayStars =
+                        "★".repeat(Math.round(avgStars)) +
+                        "☆".repeat(3 - Math.round(avgStars));
+                      const completionDateStr = certificateData.completionDate
+                        ? new Date(
+                            certificateData.completionDate,
+                          ).toLocaleDateString("en-US", {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                          })
+                        : new Date().toLocaleDateString("en-US", {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                          });
                       const certContent = `
                         <html>
                           <head>
@@ -747,18 +1011,19 @@ export default function TopicLevelPage() {
                           <body>
                             <div class="certificate">
                               <div class="border-frame">
-                                <div class="icon">${topic.icon}</div>
+                                <div class="icon" style="font-size: 48px; color: ${topic.iconColor};">🏆</div>
                                 <div class="title">Certificate of Completion</div>
                                 <div class="topic">${topic.name}</div>
                                 <div class="subtitle">has been successfully completed by</div>
-                                <div class="name">${user?.username || "Student"}</div>
-                                <div class="stars">★ ★ ★</div>
+                                <div class="name">${user?.display_name || user?.username || "Student"}</div>
+                                <div class="stars">${displayStars}</div>
                                 <div class="stats">
                                   <span>Stars: ${totalStars}/${topic.totalLevels * 3}</span>
+                                  <span>XP Earned: ${certificateData.totalXpEarned}</span>
                                   <span>Levels: ${topic.totalLevels}</span>
                                 </div>
                               </div>
-                              <div class="date">Completed: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+                              <div class="date">Completed: ${completionDateStr}</div>
                             </div>
                           </body>
                         </html>

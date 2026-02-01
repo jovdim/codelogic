@@ -14,6 +14,8 @@ from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 
+from django.utils import timezone
+
 from .models import EmailVerificationToken, PasswordResetToken
 from .serializers import (
     UserRegistrationSerializer,
@@ -299,21 +301,52 @@ class LogoutView(APIView):
             }, status=status.HTTP_400_BAD_REQUEST)
 
 
+HEART_REGEN_MINUTES = 2  # Same as game/views.py
+
+
 class ProfileView(APIView):
     """Get and update user profile."""
     permission_classes = [IsAuthenticated]
     
+    def _regenerate_hearts(self, user):
+        """Regenerate hearts based on time passed."""
+        if user.current_hearts >= user.max_hearts:
+            return
+        now = timezone.now()
+        time_diff = now - user.last_heart_update
+        minutes_passed = time_diff.total_seconds() / 60
+        hearts_to_add = int(minutes_passed // HEART_REGEN_MINUTES)
+        if hearts_to_add > 0:
+            user.current_hearts = min(user.max_hearts, user.current_hearts + hearts_to_add)
+            user.last_heart_update = now
+            user.save()
+    
     def get(self, request):
+        # Regenerate hearts before returning profile
+        self._regenerate_hearts(request.user)
         serializer = UserProfileSerializer(request.user)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
     def patch(self, request):
+        # Check if trying to change display_name
+        new_display_name = request.data.get('display_name')
+        if new_display_name is not None and new_display_name != request.user.display_name:
+            can_change, next_allowed = request.user.can_change_display_name()
+            if not can_change:
+                return Response({
+                    'error': 'You can only change your display name once every 3 days.',
+                    'next_change_allowed': next_allowed.isoformat() if next_allowed else None
+                }, status=status.HTTP_400_BAD_REQUEST)
+        
         serializer = UserProfileSerializer(
             request.user,
             data=request.data,
             partial=True
         )
         if serializer.is_valid():
+            # Update last_display_name_change if display name was changed
+            if new_display_name is not None and new_display_name != request.user.display_name:
+                request.user.last_display_name_change = timezone.now()
             serializer.save()
             return Response({
                 'message': 'Profile updated successfully.',

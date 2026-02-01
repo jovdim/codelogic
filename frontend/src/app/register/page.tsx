@@ -202,13 +202,13 @@ export default function RegisterPage() {
               Email
             </label>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
               <input
                 id="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className={`input-field pl-10 pr-10 ${
+                className={`input-field pl-12 pr-12 ${
                   errors.email
                     ? "border-red-500"
                     : emailAvailable === true
@@ -218,7 +218,7 @@ export default function RegisterPage() {
                 placeholder="you@example.com"
                 required
               />
-              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+              <div className="absolute right-4 top-1/2 -translate-y-1/2">
                 {checkingEmail ? (
                   <Loader2 className="w-5 h-5 animate-spin text-gray-500" />
                 ) : emailAvailable === true ? (
@@ -242,13 +242,13 @@ export default function RegisterPage() {
               Username
             </label>
             <div className="relative">
-              <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+              <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
               <input
                 id="username"
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className={`input-field pl-10 pr-10 ${
+                className={`input-field pl-12 pr-12 ${
                   errors.username
                     ? "border-red-500"
                     : usernameAvailable === true
@@ -259,7 +259,7 @@ export default function RegisterPage() {
                 minLength={3}
                 required
               />
-              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+              <div className="absolute right-4 top-1/2 -translate-y-1/2">
                 {checkingUsername ? (
                   <Loader2 className="w-5 h-5 animate-spin text-gray-500" />
                 ) : usernameAvailable === true ? (
@@ -283,25 +283,25 @@ export default function RegisterPage() {
               Password
             </label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
               <input
                 id="password"
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className={`input-field pl-10 pr-10 ${errors.password ? "border-red-500" : ""}`}
+                className={`input-field pl-12 pr-12 ${errors.password ? "border-red-500" : ""}`}
                 placeholder="Create a password"
                 required
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
               >
                 {showPassword ? (
-                  <EyeOff className="w-5 h-5" />
-                ) : (
                   <Eye className="w-5 h-5" />
+                ) : (
+                  <EyeOff className="w-5 h-5" />
                 )}
               </button>
             </div>
@@ -339,25 +339,25 @@ export default function RegisterPage() {
               Confirm Password
             </label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
               <input
                 id="passwordConfirm"
                 type={showPasswordConfirm ? "text" : "password"}
                 value={passwordConfirm}
                 onChange={(e) => setPasswordConfirm(e.target.value)}
-                className={`input-field pl-10 pr-10 ${errors.password_confirm ? "border-red-500" : ""}`}
+                className={`input-field pl-12 pr-12 ${errors.password_confirm ? "border-red-500" : ""}`}
                 placeholder="Confirm your password"
                 required
               />
               <button
                 type="button"
                 onClick={() => setShowPasswordConfirm(!showPasswordConfirm)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
               >
                 {showPasswordConfirm ? (
-                  <EyeOff className="w-5 h-5" />
-                ) : (
                   <Eye className="w-5 h-5" />
+                ) : (
+                  <EyeOff className="w-5 h-5" />
                 )}
               </button>
             </div>

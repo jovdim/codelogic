@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/auth/RouteGuards";
+import { gameAPI } from "@/lib/api";
 import {
   Heart,
   Zap,
@@ -16,7 +17,7 @@ import {
   Clock,
   Star,
   Circle,
-  Minus,
+  Loader2,
 } from "lucide-react";
 
 // Syntax highlighting function
@@ -25,13 +26,24 @@ const highlightCode = (code: string): ReactNode[] => {
   let remaining = code;
 
   const patterns: [RegExp, string][] = [
+    [/^(_{2,})/, "blank"], // Fill-in-the-blank placeholder (two or more underscores)
     [/^(\/\/.*?)(?=\n|$)/, "comment"],
+    [/^(#.*?)(?=\n|$)/, "comment"], // Python comments
     [/^("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\]|\\.)*`)/, "string"],
     [/^(\d+\.?\d*)/, "number"],
-    [/^(const|let|var|function|return|if|else|for|while|class|new|this|typeof|instanceof|try|catch|throw|async|await|import|export|from|default)\b/, "keyword"],
+    [
+      /^(const|let|var|function|return|if|else|for|while|class|new|this|typeof|instanceof|try|catch|throw|async|await|import|export|from|default|def|elif|in|and|or|not|is|None|True|False|with|as|try|except|finally|raise|lambda|yield|pass|break|continue|global|nonlocal)\b/,
+      "keyword",
+    ],
     [/^(true|false|null|undefined|NaN|Infinity)\b/, "boolean"],
-    [/^(console|document|window|Math|Array|Object|String|Number|Boolean|Date|JSON|Promise)\b/, "builtin"],
-    [/^(\.\s*)(log|push|pop|map|filter|reduce|forEach|find|indexOf|slice|splice|join|split|toString|parse|stringify)\b/, "method"],
+    [
+      /^(console|document|window|Math|Array|Object|String|Number|Boolean|Date|JSON|Promise|print|len|range|int|str|float|list|dict|set|tuple|open|input|type|isinstance|hasattr|getattr|setattr)\b/,
+      "builtin",
+    ],
+    [
+      /^(\.\s*)(log|push|pop|map|filter|reduce|forEach|find|indexOf|slice|splice|join|split|toString|parse|stringify|append|extend|remove|insert|sort|reverse|keys|values|items|get|update|read|write|readlines|close|upper|lower|strip|replace|format|startswith|endswith)\b/,
+      "method",
+    ],
     [/^([a-zA-Z_$][a-zA-Z0-9_$]*)\s*(?=\()/, "function"],
     [/^([a-zA-Z_$][a-zA-Z0-9_$]*)/, "identifier"],
     [/^(===|!==|==|!=|<=|>=|=>|&&|\|\||[+\-*/%=<>!&|^~?:])/, "operator"],
@@ -63,6 +75,8 @@ const highlightCode = (code: string): ReactNode[] => {
   }
 
   const colorMap: { [key: string]: string } = {
+    blank:
+      "bg-yellow-500/30 text-yellow-300 px-2 py-0.5 rounded border border-yellow-500/50 font-bold",
     keyword: "text-purple-400",
     string: "text-green-400",
     number: "text-orange-400",
@@ -89,429 +103,29 @@ const highlightCode = (code: string): ReactNode[] => {
 type QuestionType = "multiple-choice" | "find-error" | "fill-blank" | "output";
 
 interface Question {
-  id: number;
-  type: QuestionType;
-  question: string;
-  code?: string;
+  id: string;
+  question_type: QuestionType;
+  question_text: string;
+  code_snippet?: string;
   options: string[];
-  correctAnswer: number;
+  correct_answer: number;
   explanation: string;
-  highlightLine?: number;
+  highlight_line?: number;
 }
-
-// JavaScript questions organized by level
-const levelQuestions: { [key: number]: Question[] } = {
-  1: [
-    // Level 1: Basics
-    {
-      id: 1,
-      type: "multiple-choice",
-      question: "What is JavaScript primarily used for?",
-      options: [
-        "Styling web pages",
-        "Adding interactivity to websites",
-        "Creating databases",
-        "Designing layouts",
-      ],
-      correctAnswer: 1,
-      explanation:
-        "JavaScript is primarily used to add interactivity and dynamic behavior to websites.",
-    },
-    {
-      id: 2,
-      type: "find-error",
-      question: "What is wrong with this code?",
-      code: `console.log("Hello World)`,
-      options: [
-        "Missing semicolon",
-        "Missing closing quote",
-        "Wrong function name",
-        "Nothing is wrong",
-      ],
-      correctAnswer: 1,
-      explanation:
-        'The string is missing a closing quotation mark. It should be: console.log("Hello World")',
-      highlightLine: 1,
-    },
-    {
-      id: 3,
-      type: "output",
-      question: "What will this code output?",
-      code: `console.log(2 + 2);`,
-      options: ["22", "4", '"2 + 2"', "Error"],
-      correctAnswer: 1,
-      explanation:
-        "JavaScript performs arithmetic addition, so 2 + 2 equals 4.",
-    },
-    {
-      id: 4,
-      type: "multiple-choice",
-      question: "Which keyword is used to declare a variable in modern JavaScript?",
-      options: ["var", "let", "const", "Both let and const"],
-      correctAnswer: 3,
-      explanation:
-        "Both 'let' and 'const' are used in modern JavaScript. 'let' for variables that can change, 'const' for constants.",
-    },
-    {
-      id: 5,
-      type: "find-error",
-      question: "Find the syntax error in this code:",
-      code: `let message = "Hello";
-console.log(mesage);`,
-      options: [
-        "Missing semicolon",
-        "Variable name is misspelled",
-        "Wrong quotes used",
-        "console.log is wrong",
-      ],
-      correctAnswer: 1,
-      explanation:
-        'The variable is declared as "message" but called as "mesage" (missing an s).',
-      highlightLine: 2,
-    },
-  ],
-  2: [
-    // Level 2: Variables
-    {
-      id: 1,
-      type: "find-error",
-      question: "What's wrong with this variable declaration?",
-      code: `const age = 25;
-age = 26;`,
-      options: [
-        "Can't use numbers",
-        "const variables cannot be reassigned",
-        "Missing semicolon",
-        "Variable name is invalid",
-      ],
-      correctAnswer: 1,
-      explanation:
-        "Variables declared with 'const' cannot be reassigned. Use 'let' if you need to change the value.",
-      highlightLine: 2,
-    },
-    {
-      id: 2,
-      type: "output",
-      question: "What will this code output?",
-      code: `let x = 10;
-let y = "10";
-console.log(x == y);`,
-      options: ["true", "false", "Error", "undefined"],
-      correctAnswer: 0,
-      explanation:
-        "The == operator performs type coercion, so '10' (string) is converted to 10 (number), making them equal.",
-    },
-    {
-      id: 3,
-      type: "find-error",
-      question: "Find the error in this code:",
-      code: `let 2fast = "car";
-console.log(2fast);`,
-      options: [
-        "Missing quotes",
-        "Variable names cannot start with a number",
-        "Wrong keyword",
-        "Syntax is correct",
-      ],
-      correctAnswer: 1,
-      explanation:
-        "Variable names in JavaScript cannot start with a number. Use: let fast2 or let _2fast instead.",
-      highlightLine: 1,
-    },
-    {
-      id: 4,
-      type: "output",
-      question: "What will be logged?",
-      code: `let name;
-console.log(name);`,
-      options: ["null", "undefined", '""', "Error"],
-      correctAnswer: 1,
-      explanation:
-        "Variables declared but not initialized have the value 'undefined'.",
-    },
-    {
-      id: 5,
-      type: "multiple-choice",
-      question: "Which is the correct way to create a constant?",
-      options: [
-        "constant PI = 3.14",
-        "const PI = 3.14",
-        "let const PI = 3.14",
-        "var const PI = 3.14",
-      ],
-      correctAnswer: 1,
-      explanation: "The 'const' keyword is used to declare constants in JavaScript.",
-    },
-  ],
-  3: [
-    // Level 3: Data Types
-    {
-      id: 1,
-      type: "output",
-      question: "What will typeof return?",
-      code: `console.log(typeof []);`,
-      options: ['"array"', '"object"', '"list"', '"undefined"'],
-      correctAnswer: 1,
-      explanation:
-        "In JavaScript, arrays are technically objects, so typeof [] returns 'object'.",
-    },
-    {
-      id: 2,
-      type: "find-error",
-      question: "What's wrong with this code?",
-      code: `let isActive = "true";
-if (isActive === true) {
-  console.log("Active");
-}`,
-      options: [
-        'Nothing, it will log "Active"',
-        '"true" (string) is not equal to true (boolean)',
-        "if syntax is wrong",
-        "Missing semicolons",
-      ],
-      correctAnswer: 1,
-      explanation:
-        '"true" is a string, not a boolean. Use: let isActive = true; (without quotes)',
-      highlightLine: 1,
-    },
-    {
-      id: 3,
-      type: "output",
-      question: "What will this output?",
-      code: `console.log(typeof null);`,
-      options: ['"null"', '"undefined"', '"object"', '"empty"'],
-      correctAnswer: 2,
-      explanation:
-        "This is a known JavaScript quirk. typeof null returns 'object' even though null is not an object.",
-    },
-    {
-      id: 4,
-      type: "output",
-      question: "What is the result?",
-      code: `console.log("5" + 3);`,
-      options: ["8", '"53"', "Error", "NaN"],
-      correctAnswer: 1,
-      explanation:
-        "When using + with a string, JavaScript converts the number to a string and concatenates them.",
-    },
-    {
-      id: 5,
-      type: "find-error",
-      question: "Find the issue:",
-      code: `let data = {
-  name: "John"
-  age: 30
-};`,
-      options: [
-        "Missing comma between properties",
-        "Wrong brackets",
-        "Invalid property names",
-        "Code is correct",
-      ],
-      correctAnswer: 0,
-      explanation:
-        "Object properties must be separated by commas. Add a comma after \"John\".",
-      highlightLine: 2,
-    },
-  ],
-  4: [
-    // Level 4: Operators
-    {
-      id: 1,
-      type: "output",
-      question: "What will this output?",
-      code: `console.log(5 === "5");`,
-      options: ["true", "false", "Error", "undefined"],
-      correctAnswer: 1,
-      explanation:
-        "The === operator checks both value AND type. 5 (number) is not the same type as '5' (string).",
-    },
-    {
-      id: 2,
-      type: "output",
-      question: "What is the result?",
-      code: `let x = 10;
-console.log(x++);
-console.log(x);`,
-      options: ["10, 10", "11, 11", "10, 11", "11, 12"],
-      correctAnswer: 2,
-      explanation:
-        "x++ returns the value THEN increments. So first log shows 10, then x becomes 11.",
-    },
-    {
-      id: 3,
-      type: "output",
-      question: "What will be logged?",
-      code: `console.log(true && false);`,
-      options: ["true", "false", "1", "0"],
-      correctAnswer: 1,
-      explanation:
-        "The && (AND) operator returns true only if BOTH sides are true. Since false is present, result is false.",
-    },
-    {
-      id: 4,
-      type: "find-error",
-      question: "What's the bug here?",
-      code: `let a = 5;
-let b = 10;
-if (a = b) {
-  console.log("Equal");
-}`,
-      options: [
-        "Nothing wrong",
-        "Using = instead of == or ===",
-        "Missing brackets",
-        "Wrong variable names",
-      ],
-      correctAnswer: 1,
-      explanation:
-        "Using = assigns the value instead of comparing. Use == or === for comparison.",
-      highlightLine: 3,
-    },
-    {
-      id: 5,
-      type: "output",
-      question: "What does this return?",
-      code: `console.log(10 % 3);`,
-      options: ["3", "3.33", "1", "0"],
-      correctAnswer: 2,
-      explanation:
-        "The % (modulo) operator returns the remainder. 10 divided by 3 is 3 remainder 1.",
-    },
-  ],
-  5: [
-    // Level 5: Checkpoint
-    {
-      id: 1,
-      type: "find-error",
-      question: "Fix this code:",
-      code: `const greet = (name) {
-  return "Hello " + name;
-}`,
-      options: [
-        "Missing => for arrow function",
-        "Missing function keyword",
-        "Both A and B could fix it",
-        "Code is correct",
-      ],
-      correctAnswer: 2,
-      explanation:
-        "This needs either 'function' keyword: function greet(name) or arrow syntax: const greet = (name) =>",
-      highlightLine: 1,
-    },
-    {
-      id: 2,
-      type: "output",
-      question: "What will this log?",
-      code: `let arr = [1, 2, 3];
-console.log(arr[3]);`,
-      options: ["3", "null", "undefined", "Error"],
-      correctAnswer: 2,
-      explanation:
-        "Array index 3 doesn't exist (arrays are 0-indexed). Accessing non-existent indices returns undefined.",
-    },
-    {
-      id: 3,
-      type: "find-error",
-      question: "What's wrong here?",
-      code: `for (let i = 0, i < 5, i++) {
-  console.log(i);
-}`,
-      options: [
-        "Wrong variable name",
-        "Commas should be semicolons",
-        "Missing brackets",
-        "i++ is wrong",
-      ],
-      correctAnswer: 1,
-      explanation:
-        "for loop parts must be separated by semicolons, not commas: for (let i = 0; i < 5; i++)",
-      highlightLine: 1,
-    },
-    {
-      id: 4,
-      type: "output",
-      question: "What's the output?",
-      code: `const obj = { a: 1, b: 2 };
-const { a, c = 3 } = obj;
-console.log(c);`,
-      options: ["undefined", "2", "3", "Error"],
-      correctAnswer: 2,
-      explanation:
-        "Destructuring with default value: since 'c' doesn't exist in obj, it uses the default value 3.",
-    },
-    {
-      id: 5,
-      type: "find-error",
-      question: "Find the bug:",
-      code: `function add(a, b) {
-  a + b;
-}
-console.log(add(2, 3));`,
-      options: [
-        "Missing return statement",
-        "Wrong function syntax",
-        "Parameters are wrong",
-        "Code is correct",
-      ],
-      correctAnswer: 0,
-      explanation:
-        "The function calculates a + b but doesn't return it. Add: return a + b;",
-      highlightLine: 2,
-    },
-    {
-      id: 6,
-      type: "output",
-      question: "What does this return?",
-      code: `console.log([1, 2] + [3, 4]);`,
-      options: ["[1, 2, 3, 4]", '"1,23,4"', "Error", "[1, 2, [3, 4]]"],
-      correctAnswer: 1,
-      explanation:
-        "Arrays are converted to strings when using +. [1,2] becomes '1,2' and [3,4] becomes '3,4'.",
-    },
-    {
-      id: 7,
-      type: "find-error",
-      question: "What's the issue?",
-      code: `const nums = [1, 2, 3];
-nums.push(4);
-nums = [5, 6];`,
-      options: [
-        "Can't use push on const",
-        "Can't reassign const variable",
-        "push syntax is wrong",
-        "Array syntax is wrong",
-      ],
-      correctAnswer: 1,
-      explanation:
-        "const prevents reassignment, but you CAN modify the array contents. Line 3 tries to reassign, which fails.",
-      highlightLine: 3,
-    },
-  ],
-};
-
-// Default questions for levels without specific data
-const defaultQuestions: Question[] = [
-  {
-    id: 1,
-    type: "multiple-choice",
-    question: "This level's questions are coming soon!",
-    options: ["Got it!", "Okay!", "Can't wait!", "Awesome!"],
-    correctAnswer: 0,
-    explanation: "More questions are being added. Check back soon!",
-  },
-];
 
 export default function LevelQuizPage() {
   const params = useParams();
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, refreshUser, updateUserHearts } = useAuth();
   const categoryId = params.category as string;
   const topicId = params.topic as string;
   const levelId = parseInt(params.level as string) || 1;
 
-  const questions = levelQuestions[levelId] || defaultQuestions;
-
+  // State
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [attemptId, setAttemptId] = useState<string>("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [isAnswered, setIsAnswered] = useState(false);
@@ -521,88 +135,262 @@ export default function LevelQuizPage() {
   const [showResult, setShowResult] = useState(false);
   const [streak, setStreak] = useState(0);
   const [timeLeft, setTimeLeft] = useState(30);
+  const [heartsLost, setHeartsLost] = useState(0);
+  const [quizSubmitted, setQuizSubmitted] = useState(false);
+  const [heartShake, setHeartShake] = useState(false);
+
+  // Generate a unique key for this quiz session's timer
+  const timerStorageKey = `quiz_timer_${categoryId}_${topicId}_${levelId}`;
+
+  // Helper to get remaining time from stored timestamp
+  const getRemainingTime = useCallback(
+    (questionIndex: number): number => {
+      const stored = sessionStorage.getItem(timerStorageKey);
+      if (stored) {
+        const data = JSON.parse(stored);
+        if (data.questionIndex === questionIndex) {
+          const elapsed = Math.floor((Date.now() - data.startTime) / 1000);
+          const remaining = Math.max(0, 30 - elapsed);
+          return remaining;
+        }
+      }
+      return 30;
+    },
+    [timerStorageKey],
+  );
+
+  // Helper to save timer start time
+  const saveTimerStart = useCallback(
+    (questionIndex: number) => {
+      sessionStorage.setItem(
+        timerStorageKey,
+        JSON.stringify({
+          questionIndex,
+          startTime: Date.now(),
+        }),
+      );
+    },
+    [timerStorageKey],
+  );
+
+  // Clear timer storage when quiz ends
+  const clearTimerStorage = useCallback(() => {
+    sessionStorage.removeItem(timerStorageKey);
+  }, [timerStorageKey]);
+
+  // Fetch questions from API
+  useEffect(() => {
+    const fetchQuestions = async () => {
+      try {
+        setLoading(true);
+        const response = await gameAPI.getQuizQuestions(
+          categoryId,
+          topicId,
+          levelId,
+        );
+        setQuestions(response.data.questions);
+        setAttemptId(response.data.attempt_id);
+        setHearts(response.data.hearts);
+        setError(null);
+
+        // Initialize timer from storage or start fresh
+        const remaining = getRemainingTime(0);
+        setTimeLeft(remaining);
+        if (remaining === 30) {
+          // Fresh start - save the timestamp
+          saveTimerStart(0);
+        }
+      } catch (err: unknown) {
+        const errorMessage =
+          err instanceof Error ? err.message : "Failed to load questions";
+        if (typeof err === "object" && err !== null && "response" in err) {
+          const axiosError = err as {
+            response?: { data?: { error?: string } };
+          };
+          setError(axiosError.response?.data?.error || errorMessage);
+        } else {
+          setError(errorMessage);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchQuestions();
+  }, [categoryId, topicId, levelId]);
 
   const question = questions[currentQuestion];
   const totalQuestions = questions.length;
-  const progress = ((currentQuestion + 1) / totalQuestions) * 100;
+  const progress =
+    totalQuestions > 0 ? ((currentQuestion + 1) / totalQuestions) * 100 : 0;
 
-  // Timer
+  // Handle timeout - defined before timer effect to avoid reference issues
+  const handleTimeout = useCallback(() => {
+    if (!isAnswered) {
+      // Deduct a heart with animation
+      const newHearts = Math.max(0, hearts - 1);
+      setHearts(newHearts);
+      setHeartsLost((prev) => prev + 1);
+      setStreak(0);
+
+      // Trigger heart shake animation
+      setHeartShake(true);
+      setTimeout(() => setHeartShake(false), 500);
+
+      // If no hearts left, show result
+      if (newHearts <= 0) {
+        setShowResult(true);
+        clearTimerStorage();
+        return;
+      }
+
+      // Stay on the same question, just reset the timer
+      // Timer will automatically reset to 30 in the interval
+    }
+  }, [isAnswered, hearts, clearTimerStorage]);
+
+  // Timer - uses stored timestamp to prevent reload abuse
   useEffect(() => {
-    if (isAnswered || showResult) return;
+    if (isAnswered || showResult || loading || !question) return;
 
     const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          handleTimeout();
-          return 30;
-        }
-        return prev - 1;
-      });
+      // Calculate remaining time from stored start timestamp
+      const remaining = getRemainingTime(currentQuestion);
+
+      if (remaining <= 0) {
+        handleTimeout();
+        // Reset timer for retry on same question
+        saveTimerStart(currentQuestion);
+        setTimeLeft(30);
+      } else {
+        setTimeLeft(remaining);
+      }
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [isAnswered, showResult, currentQuestion]);
+  }, [
+    isAnswered,
+    showResult,
+    currentQuestion,
+    loading,
+    question,
+    getRemainingTime,
+    saveTimerStart,
+    handleTimeout,
+  ]);
 
-  const handleTimeout = useCallback(() => {
-    if (!isAnswered) {
-      setIsAnswered(true);
-      setSelectedAnswer(-1);
-      setHearts((prev) => Math.max(0, prev - 1));
-      setStreak(0);
-    }
-  }, [isAnswered]);
-
-  const handleAnswer = (answerIndex: number) => {
-    if (isAnswered) return;
+  const handleAnswer = async (answerIndex: number) => {
+    if (isAnswered || !question) return;
 
     setSelectedAnswer(answerIndex);
     setIsAnswered(true);
 
-    if (answerIndex === question.correctAnswer) {
-      const baseXP = 50;
-      const streakBonus = streak * 5;
-      const timeBonus = Math.floor(timeLeft / 3) * 2;
-      const earnedXP = baseXP + streakBonus + timeBonus;
+    const isCorrect = answerIndex === question.correct_answer;
 
+    if (isCorrect) {
+      // XP: 10 base per correct answer (matching backend)
+      const baseXP = 10;
       setScore((prev) => prev + 1);
-      setXpEarned((prev) => prev + earnedXP);
+      setXpEarned((prev) => prev + baseXP);
       setStreak((prev) => prev + 1);
     } else {
       setHearts((prev) => Math.max(0, prev - 1));
+      setHeartsLost((prev) => prev + 1);
       setStreak(0);
+    }
+
+    // Sync with backend to deduct hearts in database
+    try {
+      const response = await gameAPI.submitAnswer({
+        question_id: question.id,
+        answer: answerIndex,
+        attempt_id: attemptId,
+      });
+      // Update hearts from backend response for accuracy
+      if (response.data.hearts_remaining !== undefined) {
+        setHearts(response.data.hearts_remaining);
+        // Update sidebar hearts in real-time
+        updateUserHearts(response.data.hearts_remaining);
+      }
+    } catch (err) {
+      console.error("Failed to submit answer to backend:", err);
     }
   };
 
   const nextQuestion = () => {
     if (hearts <= 0) {
       setShowResult(true);
+      clearTimerStorage();
       return;
     }
 
     if (currentQuestion < totalQuestions - 1) {
-      setCurrentQuestion((prev) => prev + 1);
+      const nextIndex = currentQuestion + 1;
+      setCurrentQuestion(nextIndex);
       setSelectedAnswer(null);
       setIsAnswered(false);
+      // Save new timer start for next question
+      saveTimerStart(nextIndex);
       setTimeLeft(30);
     } else {
       setShowResult(true);
+      clearTimerStorage();
     }
   };
 
-  const restartQuiz = () => {
-    setCurrentQuestion(0);
-    setSelectedAnswer(null);
-    setIsAnswered(false);
-    setScore(0);
-    setHearts(5);
-    setXpEarned(0);
-    setShowResult(false);
-    setStreak(0);
-    setTimeLeft(30);
+  const [noHeartsError, setNoHeartsError] = useState(false);
+
+  const restartQuiz = async () => {
+    // First refresh user to get latest heart count
+    await refreshUser();
+
+    // Refetch questions to start fresh
+    try {
+      setLoading(true);
+      setNoHeartsError(false);
+      const response = await gameAPI.getQuizQuestions(
+        categoryId,
+        topicId,
+        levelId,
+      );
+      setQuestions(response.data.questions);
+      setAttemptId(response.data.attempt_id);
+      setHearts(response.data.hearts);
+      setCurrentQuestion(0);
+      setSelectedAnswer(null);
+      setIsAnswered(false);
+      setScore(0);
+      setXpEarned(0);
+      setShowResult(false);
+      setStreak(0);
+      setTimeLeft(30);
+      setHeartsLost(0);
+      setQuizSubmitted(false); // Allow new submission for restarted quiz
+      // Save fresh timer start for restarted quiz
+      saveTimerStart(0);
+    } catch (err: unknown) {
+      console.error("Failed to restart quiz:", err);
+      // Check if it's a "no hearts" error
+      if (typeof err === "object" && err !== null && "response" in err) {
+        const axiosError = err as {
+          response?: { status?: number; data?: { error?: string } };
+        };
+        if (
+          axiosError.response?.status === 403 ||
+          axiosError.response?.data?.error?.includes("hearts")
+        ) {
+          setNoHeartsError(true);
+          setShowResult(false); // Hide result screen to show no hearts message
+        }
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Calculate stars
   const getStars = () => {
+    if (totalQuestions === 0) return 0;
     const percentage = (score / totalQuestions) * 100;
     if (percentage >= 90) return 3;
     if (percentage >= 70) return 2;
@@ -610,44 +398,191 @@ export default function LevelQuizPage() {
     return 0;
   };
 
-  // Out of hearts
-  if (hearts <= 0 && !showResult) {
+  // Submit quiz results when quiz is completed (only once)
+  useEffect(() => {
+    if (showResult && totalQuestions > 0 && !quizSubmitted) {
+      setQuizSubmitted(true); // Prevent duplicate submissions
+      const submitQuizResult = async () => {
+        try {
+          const response = await gameAPI.completeQuiz({
+            category_slug: categoryId,
+            topic_slug: topicId,
+            level: levelId,
+            score: score,
+            total_questions: totalQuestions,
+            hearts_lost: heartsLost,
+          });
+          // Update XP earned with actual value from backend (includes bonuses)
+          if (response.data.xp_earned !== undefined) {
+            setXpEarned(response.data.xp_earned);
+          }
+          // Refresh user data to update XP/hearts in context and sidebar
+          await refreshUser();
+        } catch (err) {
+          console.error("Failed to submit quiz result:", err);
+        }
+      };
+      submitQuizResult();
+    }
+  }, [showResult, quizSubmitted]);
+
+  // Loading state
+  if (loading) {
     return (
       <ProtectedRoute>
-        <div className="min-h-screen bg-[#0f0f1a] flex items-center justify-center p-4">
-          <div className="bg-[#1a1a2e] rounded-2xl p-8 max-w-sm w-full text-center border border-[#2d2d44]">
-            <div className="w-16 h-16 mx-auto mb-4 bg-red-500/20 rounded-full flex items-center justify-center">
-              <Heart className="w-8 h-8 text-red-500" />
+        <div className="min-h-screen bg-gradient-to-b from-[#0f0f1a] to-[#1a1a2e] flex items-center justify-center">
+          <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-5" />
+          <div className="relative text-center">
+            <div className="w-16 h-16 mx-auto mb-4 bg-purple-500/20 rounded-2xl flex items-center justify-center border border-purple-500/30">
+              <Loader2 className="w-8 h-8 text-purple-400 animate-spin" />
             </div>
-            <h2 className="text-xl font-bold text-white mb-2">Out of Hearts!</h2>
-            <p className="text-gray-400 text-sm mb-6">
-              You've run out of hearts. Try again later or restart.
-            </p>
-            <div className="bg-[#0f0f1a] rounded-lg p-4 mb-4">
-              <div className="flex justify-between text-sm mb-2">
-                <span className="text-gray-400">Score</span>
-                <span className="text-white">
-                  {score}/{totalQuestions}
-                </span>
+            <p className="text-gray-400">Loading questions...</p>
+          </div>
+        </div>
+      </ProtectedRoute>
+    );
+  }
+
+  // Error state - check if it's a "no hearts" error
+  const isNoHeartsError = error?.toLowerCase().includes("heart");
+
+  if (error) {
+    return (
+      <ProtectedRoute>
+        <div className="min-h-screen bg-gradient-to-b from-[#0f0f1a] to-[#1a1a2e]">
+          <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
+          {/* Overlay */}
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-[#1a1a2e] rounded-2xl p-6 max-w-xs w-full text-center border border-[#2d2d44] shadow-2xl shadow-black/50">
+              <div
+                className={`w-16 h-16 mx-auto mb-4 rounded-xl flex items-center justify-center ${isNoHeartsError ? "bg-red-500/20" : "bg-purple-500/20"}`}
+              >
+                {isNoHeartsError ? (
+                  <Heart className="w-8 h-8 text-red-400" />
+                ) : (
+                  <X className="w-8 h-8 text-purple-400" />
+                )}
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-400">XP Earned</span>
-                <span className="text-yellow-400">+{xpEarned}</span>
-              </div>
-            </div>
-            <div className="flex gap-2">
+
+              <h2 className="text-xl font-bold text-white mb-2">
+                {isNoHeartsError ? "No Hearts Remaining" : "Oops!"}
+              </h2>
+              <p className="text-gray-400 text-sm mb-4">
+                {isNoHeartsError ? "You need hearts to start a quiz." : error}
+              </p>
+
+              {isNoHeartsError && (
+                <div className="bg-[#0f0f1a] rounded-lg px-3 py-2 mb-4">
+                  <p className="text-gray-500 text-sm">
+                    Hearts regenerate 1 every 2 minutes
+                  </p>
+                </div>
+              )}
+
               <Link
                 href={`/play/${categoryId}/${topicId}`}
-                className="flex-1 py-2.5 bg-[#2d2d44] text-white rounded-lg font-medium"
+                className="block w-full py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg font-medium transition-colors"
               >
-                Exit
+                Go Back
               </Link>
-              <button
-                onClick={restartQuiz}
-                className="flex-1 py-2.5 bg-purple-500 text-white rounded-lg font-medium"
+            </div>
+          </div>
+        </div>
+      </ProtectedRoute>
+    );
+  }
+
+  // No questions
+  if (!question) {
+    return (
+      <ProtectedRoute>
+        <div className="min-h-screen bg-gradient-to-b from-[#0f0f1a] to-[#1a1a2e]">
+          <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
+          {/* Overlay */}
+          <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4">
+            <div className="bg-[#1a1a2e] rounded-2xl p-6 max-w-xs w-full text-center border border-[#2d2d44] shadow-2xl shadow-black/50">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-xl flex items-center justify-center bg-gray-500/20">
+                <X className="w-8 h-8 text-gray-400" />
+              </div>
+              <h2 className="text-xl font-bold text-white mb-2">
+                No Questions
+              </h2>
+              <p className="text-gray-400 text-sm mb-4">
+                No questions found for this level.
+              </p>
+              <Link
+                href={`/play/${categoryId}/${topicId}`}
+                className="block w-full py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg font-medium transition-colors"
               >
-                Retry
-              </button>
+                Go Back
+              </Link>
+            </div>
+          </div>
+        </div>
+      </ProtectedRoute>
+    );
+  }
+
+  // Out of hearts (either from quiz or from trying to retry)
+  if ((hearts <= 0 && !showResult) || noHeartsError) {
+    return (
+      <ProtectedRoute>
+        <div className="min-h-screen bg-gradient-to-b from-[#0f0f1a] to-[#1a1a2e]">
+          <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
+          {/* Overlay */}
+          <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4">
+            <div className="bg-[#1a1a2e] rounded-2xl p-6 max-w-xs w-full text-center border border-[#2d2d44] shadow-2xl shadow-black/50">
+              {/* Broken heart icon */}
+              <div className="relative w-16 h-16 mx-auto mb-4 rounded-xl flex items-center justify-center bg-red-500/20">
+                <Heart className="w-8 h-8 text-red-400" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-10 h-0.5 bg-red-400 rotate-45 rounded-full" />
+                </div>
+              </div>
+
+              <h2 className="text-xl font-bold text-white mb-2">
+                Out of Hearts!
+              </h2>
+              <p className="text-gray-400 text-sm mb-4">
+                You&apos;ve run out of hearts. Take a short break!
+              </p>
+
+              {/* Regeneration info */}
+              <div className="bg-[#0f0f1a] rounded-lg px-3 py-2 mb-4">
+                <div className="flex items-center justify-center gap-2 text-sm text-gray-400">
+                  <Clock className="w-4 h-4 text-purple-400" />
+                  <span>
+                    Regenerates 1 every{" "}
+                    <span className="text-purple-400 font-medium">
+                      2 minutes
+                    </span>
+                  </span>
+                </div>
+              </div>
+
+              {!noHeartsError && (
+                <div className="space-y-2 mb-4">
+                  <div className="flex justify-between text-sm px-3 py-2 bg-[#0f0f1a] rounded-lg">
+                    <span className="text-gray-400">Your Score</span>
+                    <span className="text-white font-medium">
+                      {score}/{totalQuestions}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm px-3 py-2 bg-[#0f0f1a] rounded-lg">
+                    <span className="text-gray-400">XP Earned</span>
+                    <span className="text-yellow-400 font-medium">
+                      +{xpEarned}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              <Link
+                href={`/play/${categoryId}/${topicId}`}
+                className="block w-full py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg font-medium transition-colors"
+              >
+                Go Back
+              </Link>
             </div>
           </div>
         </div>
@@ -662,66 +597,82 @@ export default function LevelQuizPage() {
 
     return (
       <ProtectedRoute>
-        <div className="min-h-screen bg-[#0f0f1a] flex items-center justify-center p-4">
-          <div className="bg-[#1a1a2e] rounded-2xl p-8 max-w-sm w-full text-center border border-[#2d2d44]">
+        <div className="min-h-screen bg-gradient-to-b from-[#0f0f1a] to-[#1a1a2e] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-5" />
+          <div className="relative bg-[#1a1a2e]/95 backdrop-blur-xl rounded-3xl p-8 max-w-sm w-full text-center border border-[#2d2d44] shadow-2xl shadow-black/50">
+            {/* Decorative glow */}
             <div
-              className={`w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center ${
-                passed ? "bg-yellow-500/20" : "bg-gray-500/20"
+              className={`absolute -top-20 left-1/2 -translate-x-1/2 w-40 h-40 ${passed ? "bg-yellow-500/20" : "bg-gray-500/20"} rounded-full blur-3xl`}
+            />
+
+            <div
+              className={`relative w-20 h-20 mx-auto mb-6 rounded-2xl flex items-center justify-center border ${
+                passed
+                  ? "bg-gradient-to-br from-yellow-500/30 to-yellow-600/10 border-yellow-500/30"
+                  : "bg-gradient-to-br from-gray-500/30 to-gray-600/10 border-gray-500/30"
               }`}
             >
               <Trophy
-                className={`w-8 h-8 ${passed ? "text-yellow-400" : "text-gray-500"}`}
+                className={`w-10 h-10 ${passed ? "text-yellow-400" : "text-gray-400"}`}
               />
             </div>
-            <h2 className="text-xl font-bold text-white mb-1">
+            <h2 className="text-2xl font-bold text-white mb-1">
               {passed ? "Level Complete!" : "Try Again"}
             </h2>
-            <p className="text-gray-400 text-sm mb-4">Level {levelId}</p>
+            <p className="text-gray-400 mb-4">Level {levelId}</p>
 
             {/* Stars */}
-            <div className="flex justify-center gap-2 mb-6">
+            <div className="flex justify-center gap-3 mb-6">
               {[1, 2, 3].map((star) => (
-                <Star
+                <div
                   key={star}
-                  className={`w-8 h-8 ${
+                  className={`w-12 h-12 rounded-xl flex items-center justify-center ${
                     star <= stars
-                      ? "text-yellow-400 fill-yellow-400"
-                      : "text-gray-700"
+                      ? "bg-yellow-500/20 border border-yellow-500/30"
+                      : "bg-[#0f0f1a]/50 border border-[#2d2d44]"
                   }`}
-                />
+                >
+                  <Star
+                    className={`w-6 h-6 ${
+                      star <= stars
+                        ? "text-yellow-400 fill-yellow-400"
+                        : "text-gray-600"
+                    }`}
+                  />
+                </div>
               ))}
             </div>
 
-            <div className="bg-[#0f0f1a] rounded-lg p-4 mb-4 space-y-2">
+            <div className="bg-[#0f0f1a]/80 rounded-xl p-4 mb-6 space-y-3 border border-[#2d2d44]">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-400">Score</span>
-                <span className="text-white">
+                <span className="text-white font-medium">
                   {score}/{totalQuestions}
                 </span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-400">Accuracy</span>
-                <span className="text-white">
+                <span className="text-white font-medium">
                   {Math.round((score / totalQuestions) * 100)}%
                 </span>
               </div>
-              <div className="flex justify-between text-sm pt-2 border-t border-[#2d2d44]">
+              <div className="flex justify-between text-sm pt-3 border-t border-[#2d2d44]">
                 <span className="text-gray-400">XP Earned</span>
                 <span className="text-yellow-400 font-bold">+{xpEarned}</span>
               </div>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex gap-3">
               <button
                 onClick={restartQuiz}
-                className="flex-1 py-2.5 bg-[#2d2d44] text-white rounded-lg font-medium flex items-center justify-center gap-2"
+                className="flex-1 py-3 bg-[#2d2d44] hover:bg-[#3d3d5c] text-white rounded-xl font-semibold flex items-center justify-center gap-2 transition-colors"
               >
                 <RotateCcw className="w-4 h-4" />
                 Retry
               </button>
               <Link
                 href={`/play/${categoryId}/${topicId}`}
-                className="flex-1 py-2.5 bg-purple-500 text-white rounded-lg font-medium flex items-center justify-center gap-2"
+                className="flex-1 py-3 bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white rounded-xl font-semibold flex items-center justify-center gap-2 transition-all shadow-lg shadow-purple-500/25"
               >
                 Continue
                 <ArrowRight className="w-4 h-4" />
@@ -761,20 +712,28 @@ export default function LevelQuizPage() {
                 </div>
 
                 {/* Hearts */}
-                <div className="flex items-center gap-0.5">
-                  {[...Array(5)].map((_, i) => (
-                    <Heart
-                      key={i}
-                      className={`w-5 h-5 ${
-                        i < hearts ? "text-red-500 fill-red-500" : "text-gray-700"
-                      }`}
-                    />
-                  ))}
+                <div
+                  className={`flex items-center gap-1 px-2 py-1 bg-red-500/20 rounded-lg transition-all ${heartShake ? "animate-pulse scale-110" : ""}`}
+                >
+                  <Heart
+                    className={`w-4 h-4 text-red-500 fill-red-500 ${heartShake ? "animate-bounce" : ""}`}
+                  />
+                  <span className="text-red-400 font-bold text-sm">
+                    {hearts}/{user?.max_hearts || 10}
+                  </span>
+                </div>
+
+                {/* Streak */}
+                <div className="flex items-center gap-1 px-2 py-1 bg-orange-500/20 rounded-lg">
+                  <Zap className="w-4 h-4 text-orange-400" />
+                  <span className="text-orange-400 font-bold text-sm">
+                    {streak + 1}
+                  </span>
                 </div>
 
                 {/* XP */}
                 <div className="flex items-center gap-1 px-2 py-1 bg-yellow-500/20 rounded-lg">
-                  <Zap className="w-4 h-4 text-yellow-400" />
+                  <Star className="w-4 h-4 text-yellow-400" />
                   <span className="text-yellow-400 font-bold text-sm">
                     {xpEarned}
                   </span>
@@ -796,17 +755,17 @@ export default function LevelQuizPage() {
         <div className="max-w-2xl mx-auto px-4 py-6">
           <div className="mb-6">
             <div className="flex items-center gap-2 mb-3">
-              {question.type === "find-error" && (
+              {question.question_type === "find-error" && (
                 <span className="px-2 py-1 bg-red-500/20 text-red-400 text-xs rounded-full">
                   Find the Error
                 </span>
               )}
-              {question.type === "output" && (
+              {question.question_type === "output" && (
                 <span className="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs rounded-full">
-                  What's the Output?
+                  What&apos;s the Output?
                 </span>
               )}
-              {question.type === "fill-blank" && (
+              {question.question_type === "fill-blank" && (
                 <span className="px-2 py-1 bg-green-500/20 text-green-400 text-xs rounded-full">
                   Fill in the Blank
                 </span>
@@ -815,11 +774,13 @@ export default function LevelQuizPage() {
                 {currentQuestion + 1} / {totalQuestions}
               </span>
             </div>
-            <h2 className="text-lg font-bold text-white">{question.question}</h2>
+            <h2 className="text-lg font-bold text-white">
+              {question.question_text}
+            </h2>
           </div>
 
           {/* Code Block - Terminal Style */}
-          {question.code && (
+          {question.code_snippet && (
             <div className="mb-6 rounded-xl overflow-hidden border border-[#2d2d44] shadow-2xl">
               {/* Terminal Header */}
               <div className="flex items-center justify-between px-4 py-2.5 bg-[#1e1e2e]">
@@ -831,19 +792,21 @@ export default function LevelQuizPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2 px-3 py-1 bg-[#0d0d14] rounded-md">
-                  <span className="text-xs text-gray-500 font-medium">script.js</span>
+                  <span className="text-xs text-gray-500 font-medium">
+                    script.js
+                  </span>
                 </div>
                 <div className="w-12" />
               </div>
-              
+
               {/* Code Content */}
               <div className="bg-[#0d0d14] p-4 font-mono text-sm overflow-x-auto">
-                {question.code.split("\n").map((line, idx) => (
+                {question.code_snippet.split("\n").map((line, idx) => (
                   <div
                     key={idx}
                     className={`flex items-start leading-6 ${
-                      question.highlightLine === idx + 1 && isAnswered
-                        ? selectedAnswer === question.correctAnswer
+                      question.highlight_line === idx + 1 && isAnswered
+                        ? selectedAnswer === question.correct_answer
                           ? "bg-green-500/10 -mx-4 px-4 border-l-2 border-green-500"
                           : "bg-red-500/10 -mx-4 px-4 border-l-2 border-red-500"
                         : ""
@@ -862,7 +825,7 @@ export default function LevelQuizPage() {
           {/* Options */}
           <div className="space-y-3 mb-6">
             {question.options.map((option, index) => {
-              const isCorrect = index === question.correctAnswer;
+              const isCorrect = index === question.correct_answer;
               const isSelected = selectedAnswer === index;
               const showCorrect = isAnswered && isCorrect;
               const showWrong = isAnswered && isSelected && !isCorrect;
@@ -910,12 +873,12 @@ export default function LevelQuizPage() {
             <div className="bg-[#1a1a2e] rounded-xl p-4 mb-6 border border-[#2d2d44]">
               <h4
                 className={`font-bold mb-1 ${
-                  selectedAnswer === question.correctAnswer
+                  selectedAnswer === question.correct_answer
                     ? "text-green-400"
                     : "text-yellow-400"
                 }`}
               >
-                {selectedAnswer === question.correctAnswer
+                {selectedAnswer === question.correct_answer
                   ? "Correct!"
                   : "Explanation"}
               </h4>
@@ -929,7 +892,9 @@ export default function LevelQuizPage() {
               onClick={nextQuestion}
               className="w-full py-3 bg-purple-500 text-white rounded-xl font-bold hover:bg-purple-600 transition-colors"
             >
-              {currentQuestion < totalQuestions - 1 ? "Next Question" : "See Results"}
+              {currentQuestion < totalQuestions - 1
+                ? "Next Question"
+                : "See Results"}
             </button>
           )}
         </div>

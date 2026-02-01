@@ -20,6 +20,7 @@ import {
   EyeOff,
   X,
   ChevronRight,
+  Clock,
 } from "lucide-react";
 import { AxiosError } from "axios";
 
@@ -103,7 +104,6 @@ interface ProfileSettingsProps {
 
 function ProfileSettings({ user, updateUser }: ProfileSettingsProps) {
   const [displayName, setDisplayName] = useState(user.display_name || "");
-  const [bio, setBio] = useState(user.bio || "");
   const [selectedAvatar, setSelectedAvatar] = useState(user.avatar || 1);
   const [pendingAvatar, setPendingAvatar] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -120,10 +120,10 @@ function ProfileSettings({ user, updateUser }: ProfileSettingsProps) {
 
   const confirmAvatarChange = async () => {
     if (!pendingAvatar) return;
-    
+
     setIsAvatarLoading(true);
     setMessage(null);
-    
+
     try {
       const response = await authAPI.updateAvatar(pendingAvatar);
       setSelectedAvatar(pendingAvatar);
@@ -149,7 +149,6 @@ function ProfileSettings({ user, updateUser }: ProfileSettingsProps) {
     try {
       const response = await authAPI.updateProfile({
         display_name: displayName,
-        bio,
       });
       updateUser(response.data.user);
       setMessage({ type: "success", text: "Profile updated successfully!" });
@@ -194,7 +193,7 @@ function ProfileSettings({ user, updateUser }: ProfileSettingsProps) {
       {/* Avatar Section */}
       <div className="mb-6 pb-6 border-b border-[#2d2d44]">
         <h3 className="text-sm font-medium text-gray-300 mb-4">Your Avatar</h3>
-        
+
         {/* Current Avatar Display */}
         <div className="flex items-center gap-6 mb-6">
           <div className="relative">
@@ -246,10 +245,12 @@ function ProfileSettings({ user, updateUser }: ProfileSettingsProps) {
 
       {/* Avatar Change Confirmation Popup */}
       {pendingAvatar && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-          <div className="pixel-box p-6 max-w-sm w-full mx-4 animate-in fade-in zoom-in duration-200">
-            <h3 className="text-lg font-bold text-white mb-4 text-center">Change Avatar?</h3>
-            
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="pixel-box p-6 max-w-sm w-full mx-4 animate-in fade-in zoom-in duration-200 shadow-2xl shadow-black/50">
+            <h3 className="text-lg font-bold text-white mb-4 text-center">
+              Change Avatar?
+            </h3>
+
             {/* Preview */}
             <div className="flex items-center justify-center gap-4 mb-6">
               <div className="text-center">
@@ -332,39 +333,44 @@ function ProfileSettings({ user, updateUser }: ProfileSettingsProps) {
             type="text"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
-            className="input-field"
+            className={`input-field ${!user.can_change_display_name && displayName !== user.display_name ? "opacity-50" : ""}`}
             placeholder="How should we call you?"
             maxLength={100}
+            disabled={
+              !user.can_change_display_name && displayName !== user.display_name
+            }
           />
-          <p className="text-gray-500 text-sm mt-1">
-            This is the name that will be displayed publicly.
-          </p>
-        </div>
-
-        <div>
-          <label
-            htmlFor="bio"
-            className="block text-sm font-medium text-gray-300 mb-1"
-          >
-            Bio
-          </label>
-          <textarea
-            id="bio"
-            value={bio}
-            onChange={(e) => setBio(e.target.value)}
-            className="input-field min-h-[100px] resize-none"
-            placeholder="Tell us about yourself..."
-            maxLength={500}
-          />
-          <p className="text-gray-500 text-sm mt-1">
-            {bio.length}/500 characters
-          </p>
+          {user.can_change_display_name ? (
+            <p className="text-gray-500 text-sm mt-1">
+              This is the name that will be displayed publicly.
+            </p>
+          ) : (
+            <p className="text-amber-500 text-sm mt-1 flex items-center gap-1">
+              <Clock className="w-4 h-4" />
+              You can change your display name again on{" "}
+              {user.next_display_name_change
+                ? new Date(user.next_display_name_change).toLocaleDateString(
+                    "en-US",
+                    {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    },
+                  )
+                : "soon"}
+            </p>
+          )}
         </div>
 
         <button
           type="submit"
-          disabled={isLoading}
-          className="btn-primary flex items-center gap-2"
+          disabled={
+            isLoading ||
+            (!user.can_change_display_name && displayName !== user.display_name)
+          }
+          className="btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isLoading ? (
             <>
@@ -469,24 +475,24 @@ function PasswordSettings() {
             Current Password
           </label>
           <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
             <input
               id="currentPassword"
               type={showCurrentPassword ? "text" : "password"}
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
-              className="input-field pl-10 pr-10"
+              className="input-field pl-12 pr-12"
               required
             />
             <button
               type="button"
               onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
             >
               {showCurrentPassword ? (
-                <EyeOff className="w-5 h-5" />
-              ) : (
                 <Eye className="w-5 h-5" />
+              ) : (
+                <EyeOff className="w-5 h-5" />
               )}
             </button>
           </div>
@@ -500,24 +506,24 @@ function PasswordSettings() {
             New Password
           </label>
           <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
             <input
               id="newPassword"
               type={showNewPassword ? "text" : "password"}
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              className="input-field pl-10 pr-10"
+              className="input-field pl-12 pr-12"
               required
             />
             <button
               type="button"
               onClick={() => setShowNewPassword(!showNewPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
             >
               {showNewPassword ? (
-                <EyeOff className="w-5 h-5" />
-              ) : (
                 <Eye className="w-5 h-5" />
+              ) : (
+                <EyeOff className="w-5 h-5" />
               )}
             </button>
           </div>
@@ -551,24 +557,24 @@ function PasswordSettings() {
             Confirm New Password
           </label>
           <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
             <input
               id="confirmPassword"
               type={showConfirmPassword ? "text" : "password"}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className="input-field pl-10 pr-10"
+              className="input-field pl-12 pr-12"
               required
             />
             <button
               type="button"
               onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
             >
               {showConfirmPassword ? (
-                <EyeOff className="w-5 h-5" />
-              ) : (
                 <Eye className="w-5 h-5" />
+              ) : (
+                <EyeOff className="w-5 h-5" />
               )}
             </button>
           </div>
@@ -648,8 +654,8 @@ function AccountSettings({ logout, router }: AccountSettingsProps) {
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="pixel-box p-6 max-w-md w-full">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="pixel-box p-6 max-w-md w-full shadow-2xl shadow-black/50">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-bold text-white">Delete Account</h3>
               <button

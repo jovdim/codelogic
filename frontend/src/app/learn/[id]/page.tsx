@@ -6,659 +6,142 @@ import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/layout/Navbar";
 import LoginOverlay from "@/components/auth/LoginOverlay";
+import { ScrollReveal } from "@/components/ui/ScrollAnimations";
+import { gameAPI } from "@/lib/api";
 import {
   BookOpen,
   ChevronLeft,
-  ChevronRight,
-  ZoomIn,
-  ZoomOut,
-  Maximize2,
   Download,
-  Share2,
-  Bookmark,
+  ExternalLink,
+  FileText,
+  Clock,
+  Eye,
+  Loader2,
 } from "lucide-react";
 
-// Mock data for learning resources (same as learn page)
-const learningResources: {
-  [key: string]: {
-    id: string;
-    title: string;
-    description: string;
-    category: string;
-    language: string;
-    difficulty: string;
-    pages: number;
-    readTime: string;
-    views: number;
-    color: string;
-    icon: string;
-    content: { page: number; title: string; content: string }[];
-  };
-} = {
-  "html-basics": {
-    id: "html-basics",
-    title: "HTML Fundamentals",
-    description:
-      "Learn the building blocks of web pages - tags, elements, and structure.",
-    category: "Web Development",
-    language: "HTML",
-    difficulty: "Beginner",
-    pages: 45,
-    readTime: "2 hours",
-    views: 12453,
-    color: "from-orange-500 to-red-500",
-    icon: "🌐",
-    content: [
-      {
-        page: 1,
-        title: "Introduction to HTML",
-        content: `
-# Introduction to HTML
-
-HTML (HyperText Markup Language) is the standard markup language for creating web pages. It describes the structure of a web page semantically.
-
-## What is HTML?
-
-- HTML stands for Hyper Text Markup Language
-- HTML is the standard markup language for creating Web pages
-- HTML describes the structure of a Web page
-- HTML consists of a series of elements
-- HTML elements tell the browser how to display the content
-
-## A Simple HTML Document
-
-\`\`\`html
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Page Title</title>
-</head>
-<body>
-    <h1>My First Heading</h1>
-    <p>My first paragraph.</p>
-</body>
-</html>
-\`\`\`
-
-## Example Explained
-
-- \`<!DOCTYPE html>\` declaration defines that this document is an HTML5 document
-- \`<html>\` element is the root element of an HTML page
-- \`<head>\` element contains meta information about the HTML page
-- \`<title>\` element specifies a title for the HTML page
-- \`<body>\` element defines the document's body
-- \`<h1>\` element defines a large heading
-- \`<p>\` element defines a paragraph
-      `,
-      },
-      {
-        page: 2,
-        title: "HTML Elements",
-        content: `
-# HTML Elements
-
-An HTML element is defined by a start tag, some content, and an end tag.
-
-## HTML Element Structure
-
-\`\`\`
-<tagname>Content goes here...</tagname>
-\`\`\`
-
-## Examples of HTML Elements
-
-### Headings
-\`\`\`html
-<h1>This is heading 1</h1>
-<h2>This is heading 2</h2>
-<h3>This is heading 3</h3>
-\`\`\`
-
-### Paragraphs
-\`\`\`html
-<p>This is a paragraph.</p>
-<p>This is another paragraph.</p>
-\`\`\`
-
-### Links
-\`\`\`html
-<a href="https://www.example.com">This is a link</a>
-\`\`\`
-
-### Images
-\`\`\`html
-<img src="image.jpg" alt="Description">
-\`\`\`
-
-## Nested HTML Elements
-
-HTML elements can be nested (this means that elements can contain other elements).
-
-\`\`\`html
-<div>
-    <h1>Welcome</h1>
-    <p>This is a nested paragraph.</p>
-</div>
-\`\`\`
-      `,
-      },
-      {
-        page: 3,
-        title: "HTML Attributes",
-        content: `
-# HTML Attributes
-
-HTML attributes provide additional information about HTML elements.
-
-## Key Points
-
-- All HTML elements can have attributes
-- Attributes provide additional information about elements
-- Attributes are always specified in the start tag
-- Attributes usually come in name/value pairs like: name="value"
-
-## Common Attributes
-
-### The href Attribute
-\`\`\`html
-<a href="https://www.example.com">Visit Example</a>
-\`\`\`
-
-### The src Attribute
-\`\`\`html
-<img src="image.jpg">
-\`\`\`
-
-### The width and height Attributes
-\`\`\`html
-<img src="image.jpg" width="500" height="600">
-\`\`\`
-
-### The alt Attribute
-\`\`\`html
-<img src="image.jpg" alt="A beautiful sunset">
-\`\`\`
-
-### The style Attribute
-\`\`\`html
-<p style="color:red;">This is a red paragraph.</p>
-\`\`\`
-
-### The id Attribute
-\`\`\`html
-<h1 id="header">My Header</h1>
-\`\`\`
-
-### The class Attribute
-\`\`\`html
-<p class="intro">This is an introduction.</p>
-\`\`\`
-      `,
-      },
-    ],
-  },
-  "css-styling": {
-    id: "css-styling",
-    title: "CSS Mastery",
-    description:
-      "Master styling with selectors, flexbox, grid, and animations.",
-    category: "Web Development",
-    language: "CSS",
-    difficulty: "Beginner",
-    pages: 62,
-    readTime: "3 hours",
-    views: 10892,
-    color: "from-blue-500 to-cyan-500",
-    icon: "🎨",
-    content: [
-      {
-        page: 1,
-        title: "Introduction to CSS",
-        content: `
-# Introduction to CSS
-
-CSS (Cascading Style Sheets) is used to style and layout web pages.
-
-## What is CSS?
-
-- CSS stands for Cascading Style Sheets
-- CSS describes how HTML elements are to be displayed on screen
-- CSS saves a lot of work by controlling the layout of multiple web pages
-- External stylesheets are stored in CSS files
-
-## CSS Syntax
-
-\`\`\`css
-selector {
-    property: value;
-}
-\`\`\`
-
-## Example
-
-\`\`\`css
-body {
-    background-color: lightblue;
+interface LearningResource {
+  id: string;
+  title: string;
+  slug: string;
+  description: string;
+  category: string;
+  language: string;
+  difficulty: string;
+  pages: number;
+  read_time: string;
+  views: number;
+  thumbnail_url: string | null;
+  pdf_url: string | null;
+  is_featured: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
-h1 {
-    color: navy;
-    text-align: center;
-}
-
-p {
-    font-family: verdana;
-    font-size: 20px;
-}
-\`\`\`
-
-## Three Ways to Insert CSS
-
-1. **External CSS** - Using a separate .css file
-2. **Internal CSS** - Using a <style> element in the <head>
-3. **Inline CSS** - Using the style attribute
-      `,
-      },
-      {
-        page: 2,
-        title: "CSS Selectors",
-        content: `
-# CSS Selectors
-
-CSS selectors are used to "find" (or select) the HTML elements you want to style.
-
-## Types of Selectors
-
-### Element Selector
-\`\`\`css
-p {
-    color: red;
-}
-\`\`\`
-
-### ID Selector
-\`\`\`css
-#myId {
-    color: blue;
-}
-\`\`\`
-
-### Class Selector
-\`\`\`css
-.myClass {
-    color: green;
-}
-\`\`\`
-
-### Universal Selector
-\`\`\`css
-* {
-    margin: 0;
-    padding: 0;
-}
-\`\`\`
-
-### Grouping Selector
-\`\`\`css
-h1, h2, p {
-    text-align: center;
-}
-\`\`\`
-
-## Combinator Selectors
-
-\`\`\`css
-/* Descendant selector */
-div p { color: blue; }
-
-/* Child selector */
-div > p { color: red; }
-
-/* Adjacent sibling */
-div + p { color: green; }
-
-/* General sibling */
-div ~ p { color: yellow; }
-\`\`\`
-      `,
-      },
-    ],
-  },
-  "javascript-essentials": {
-    id: "javascript-essentials",
-    title: "JavaScript Essentials",
-    description:
-      "Variables, functions, DOM manipulation, and modern ES6+ features.",
-    category: "Web Development",
-    language: "JavaScript",
-    difficulty: "Intermediate",
-    pages: 120,
-    readTime: "6 hours",
-    views: 18234,
-    color: "from-yellow-400 to-orange-500",
-    icon: "⚡",
-    content: [
-      {
-        page: 1,
-        title: "Introduction to JavaScript",
-        content: `
-# Introduction to JavaScript
-
-JavaScript is the programming language of the Web.
-
-## What is JavaScript?
-
-- JavaScript is the world's most popular programming language
-- JavaScript is the programming language of the Web
-- JavaScript is easy to learn
-- JavaScript can change HTML content, styles, and attributes
-
-## JavaScript Example
-
-\`\`\`javascript
-// Change HTML content
-document.getElementById("demo").innerHTML = "Hello JavaScript!";
-
-// Change HTML attribute
-document.getElementById("image").src = "picture.gif";
-
-// Change CSS style
-document.getElementById("demo").style.fontSize = "35px";
-\`\`\`
-
-## Where To Place JavaScript
-
-JavaScript code must be inserted between <script> tags:
-
-\`\`\`html
-<script>
-document.getElementById("demo").innerHTML = "My First JavaScript";
-</script>
-\`\`\`
-
-Or in external files:
-
-\`\`\`html
-<script src="myScript.js"></script>
-\`\`\`
-      `,
-      },
-      {
-        page: 2,
-        title: "Variables & Data Types",
-        content: `
-# Variables & Data Types
-
-JavaScript variables are containers for storing data values.
-
-## Declaring Variables
-
-\`\`\`javascript
-// Using var (old way)
-var x = 5;
-
-// Using let (block-scoped)
-let y = 10;
-
-// Using const (constant)
-const PI = 3.14159;
-\`\`\`
-
-## Data Types
-
-### Primitive Types
-\`\`\`javascript
-// String
-let name = "John";
-
-// Number
-let age = 25;
-let price = 19.99;
-
-// Boolean
-let isActive = true;
-
-// Undefined
-let x;
-
-// Null
-let y = null;
-
-// Symbol (ES6)
-let sym = Symbol("id");
-
-// BigInt (ES2020)
-let bigNum = 1234567890123456789012345678901234567890n;
-\`\`\`
-
-### Reference Types
-\`\`\`javascript
-// Object
-let person = { name: "John", age: 25 };
-
-// Array
-let colors = ["red", "green", "blue"];
-
-// Function
-function greet() {
-    return "Hello!";
-}
-\`\`\`
-      `,
-      },
-    ],
-  },
-  "python-programming": {
-    id: "python-programming",
-    title: "Python Programming",
-    description:
-      "From basics to advanced concepts - loops, functions, OOP, and more.",
-    category: "Programming",
-    language: "Python",
-    difficulty: "Beginner",
-    pages: 95,
-    readTime: "5 hours",
-    views: 22156,
-    color: "from-green-500 to-teal-500",
-    icon: "🐍",
-    content: [
-      {
-        page: 1,
-        title: "Introduction to Python",
-        content: `
-# Introduction to Python
-
-Python is a popular programming language created by Guido van Rossum in 1991.
-
-## What can Python do?
-
-- Web development (server-side)
-- Software development
-- Mathematics
-- System scripting
-- Data science and machine learning
-
-## Why Python?
-
-- Works on different platforms (Windows, Mac, Linux, etc.)
-- Has a simple syntax similar to English
-- Allows developers to write programs with fewer lines
-- Runs on an interpreter system, meaning code can be executed immediately
-- Can be treated in a procedural, object-oriented, or functional way
-
-## Python Syntax
-
-\`\`\`python
-# This is a comment
-print("Hello, World!")
-
-# Variables
-x = 5
-y = "Hello"
-
-# Print variable
-print(x)
-print(y)
-\`\`\`
-
-## Python Indentation
-
-Python uses indentation to indicate a block of code:
-
-\`\`\`python
-if 5 > 2:
-    print("Five is greater than two!")
-\`\`\`
-      `,
-      },
-      {
-        page: 2,
-        title: "Python Variables",
-        content: `
-# Python Variables
-
-Variables are containers for storing data values.
-
-## Creating Variables
-
-\`\`\`python
-x = 5
-y = "John"
-print(x)
-print(y)
-\`\`\`
-
-## Variable Names
-
-- Must start with a letter or underscore
-- Cannot start with a number
-- Can only contain alphanumeric characters and underscores
-- Are case-sensitive
-
-\`\`\`python
-# Valid variable names
-myvar = "John"
-my_var = "John"
-_my_var = "John"
-myVar = "John"
-MYVAR = "John"
-myvar2 = "John"
-\`\`\`
-
-## Multiple Values
-
-\`\`\`python
-# Many values to multiple variables
-x, y, z = "Orange", "Banana", "Cherry"
-
-# One value to multiple variables
-x = y = z = "Orange"
-
-# Unpack a collection
-fruits = ["apple", "banana", "cherry"]
-x, y, z = fruits
-\`\`\`
-
-## Global Variables
-
-\`\`\`python
-x = "awesome"  # Global variable
-
-def myfunc():
-    print("Python is " + x)
-
-myfunc()
-\`\`\`
-      `,
-      },
-    ],
-  },
+const categoryLabels: { [key: string]: string } = {
+  "web-development": "Web Development",
+  programming: "Programming",
+  data: "Data",
+  mobile: "Mobile Development",
+  devops: "DevOps",
+  other: "Other",
 };
 
-// Default content for resources without detailed content
-const defaultContent = [
-  {
-    page: 1,
-    title: "Coming Soon",
-    content: `
-# Content Coming Soon
-
-This learning resource is currently being developed.
-
-Check back soon for comprehensive content on this topic!
-
-## What to Expect
-
-- Detailed explanations
-- Code examples
-- Practice exercises
-- Quizzes to test your knowledge
-
-Stay tuned! 📚
-  `,
-  },
-];
-
 export default function LearnResourcePage() {
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const params = useParams();
-  const resourceId = params.id as string;
-  const resource = learningResources[resourceId];
-
-  const [currentPage, setCurrentPage] = useState(1);
-  const [zoom, setZoom] = useState(100);
-  const [isBookmarked, setIsBookmarked] = useState(false);
+  const { isAuthenticated } = useAuth();
+  const [resource, setResource] = useState<LearningResource | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showLoginOverlay, setShowLoginOverlay] = useState(false);
 
-  const content = resource?.content || defaultContent;
-  const totalPages = content.length;
-  const currentContent = content[currentPage - 1];
+  const slug = params.id as string;
 
   useEffect(() => {
-    // Reset page when resource changes
-    setCurrentPage(1);
-  }, [resourceId]);
+    const fetchResource = async () => {
+      if (!slug) return;
 
-  // Show login overlay if not authenticated (after loading completes)
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const response = await gameAPI.getResource(slug);
+        setResource(response.data);
+      } catch (err: unknown) {
+        console.error("Failed to fetch resource:", err);
+        if (err && typeof err === "object" && "response" in err) {
+          const axiosError = err as { response?: { status?: number } };
+          if (axiosError.response?.status === 404) {
+            setError("Resource not found");
+          } else {
+            setError("Failed to load resource");
+          }
+        } else {
+          setError("Failed to load resource");
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchResource();
+  }, [slug]);
+
+  // Show login overlay if not authenticated (after loading)
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
+    if (!isLoading && !isAuthenticated) {
       setShowLoginOverlay(true);
     }
-  }, [authLoading, isAuthenticated]);
+  }, [isLoading, isAuthenticated]);
 
-  const nextPage = () => {
-    if (currentPage < totalPages) {
-      setCurrentPage(currentPage + 1);
+  const handleDownload = async () => {
+    if (!resource?.pdf_url) return;
+
+    try {
+      const response = await fetch(resource.pdf_url);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${resource.title}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error("Download failed:", err);
+      // Fallback: open in new tab
+      window.open(resource.pdf_url, "_blank");
     }
   };
 
-  const prevPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage(currentPage - 1);
-    }
-  };
-
-  const zoomIn = () => {
-    if (zoom < 150) setZoom(zoom + 10);
-  };
-
-  const zoomOut = () => {
-    if (zoom > 70) setZoom(zoom - 10);
-  };
-
-  if (!resource) {
+  if (isLoading) {
     return (
       <Navbar>
         <div className="min-h-screen flex items-center justify-center">
-          <div className="pixel-box p-8 text-center">
+          <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />
+        </div>
+      </Navbar>
+    );
+  }
+
+  if (error || !resource) {
+    return (
+      <Navbar>
+        <div className="min-h-screen flex items-center justify-center p-4">
+          <div className="pixel-box p-8 max-w-md text-center">
             <BookOpen className="w-16 h-16 text-gray-600 mx-auto mb-4" />
             <h2 className="text-xl font-bold text-white mb-2">
-              Resource Not Found
+              {error || "Resource Not Found"}
             </h2>
-            <p className="text-gray-400 mb-4">
-              This learning resource doesn&apos;t exist.
+            <p className="text-gray-400 mb-6">
+              The resource you&apos;re looking for doesn&apos;t exist or has
+              been removed.
             </p>
-            <Link href="/learn" className="btn-primary px-6 py-2 inline-block">
+            <Link
+              href="/learn"
+              className="btn-primary inline-flex items-center gap-2"
+            >
+              <ChevronLeft className="w-4 h-4" />
               Back to Library
             </Link>
           </div>
@@ -669,254 +152,173 @@ export default function LearnResourcePage() {
 
   return (
     <Navbar>
-      {/* Login Overlay for unauthenticated users */}
-      <LoginOverlay
-        isOpen={showLoginOverlay}
-        onClose={() => setShowLoginOverlay(false)}
-        message="Sign in to read learning materials and track your progress."
-      />
+      <div className="min-h-screen pb-8">
+        {/* Login Overlay for non-authenticated users */}
+        <LoginOverlay
+          isOpen={showLoginOverlay && !isAuthenticated}
+          onClose={() => setShowLoginOverlay(false)}
+          message="Login to access this learning resource and download the PDF!"
+        />
 
-      <div className="min-h-screen flex flex-col">
-        {/* Header */}
-        <header className="border-b border-[#2d2d44] bg-[#1a1a2e]">
-          <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link
-                href="/learn"
-                className="text-gray-400 hover:text-white transition-colors"
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </Link>
-              <div>
-                <span className="text-sm font-bold text-white block">
-                  {resource.title}
-                </span>
-                <span className="text-xs text-gray-400">
-                  {resource.language}
-                </span>
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setIsBookmarked(!isBookmarked)}
-                className={`p-2 transition-colors ${isBookmarked ? "text-yellow-400" : "text-gray-400 hover:text-white"}`}
-              >
-                <Bookmark
-                  className="w-5 h-5"
-                  fill={isBookmarked ? "currentColor" : "none"}
-                />
-              </button>
-              <button className="p-2 text-gray-400 hover:text-white transition-colors">
-                <Share2 className="w-5 h-5" />
-              </button>
-              <button className="p-2 text-gray-400 hover:text-white transition-colors">
-                <Download className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-        </header>
-
-        {/* Toolbar */}
-        <div className="border-b border-[#2d2d44] bg-[#151525]">
-          <div className="max-w-6xl mx-auto px-4 py-2 flex items-center justify-between">
-            {/* Page Navigation */}
-            <div className="flex items-center gap-2">
-              <button
-                onClick={prevPage}
-                disabled={currentPage === 1}
-                className="p-2 text-gray-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-              <span className="text-sm text-gray-400">
-                Page <span className="text-white">{currentPage}</span> of{" "}
-                <span className="text-white">{totalPages}</span>
-              </span>
-              <button
-                onClick={nextPage}
-                disabled={currentPage === totalPages}
-                className="p-2 text-gray-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <ChevronRight className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Zoom Controls */}
-            <div className="flex items-center gap-2">
-              <button
-                onClick={zoomOut}
-                disabled={zoom <= 70}
-                className="p-2 text-gray-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <ZoomOut className="w-5 h-5" />
-              </button>
-              <span className="text-sm text-gray-400 w-12 text-center">
-                {zoom}%
-              </span>
-              <button
-                onClick={zoomIn}
-                disabled={zoom >= 150}
-                className="p-2 text-gray-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <ZoomIn className="w-5 h-5" />
-              </button>
-              <button className="p-2 text-gray-400 hover:text-white transition-colors ml-2">
-                <Maximize2 className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Content Viewer */}
-        <div className="flex-1 overflow-auto bg-[#0a0a12]">
-          <div className="max-w-4xl mx-auto px-4 py-8">
-            <div
-              className="pixel-box p-8 bg-[#1a1a2e] prose prose-invert max-w-none"
-              style={{ fontSize: `${zoom}%` }}
-            >
-              {/* Chapter Title */}
-              <div className="mb-6 pb-4 border-b border-[#2d2d44]">
-                <span className="text-purple-400 text-sm font-medium">
-                  Chapter {currentPage}
-                </span>
-                <h1 className="text-2xl font-bold text-white mt-1">
-                  {currentContent.title}
-                </h1>
-              </div>
-
-              {/* Content - rendered as formatted text */}
-              <div className="whitespace-pre-wrap font-mono text-sm leading-relaxed text-gray-300">
-                {currentContent.content.split("```").map((part, index) => {
-                  if (index % 2 === 1) {
-                    // Code block
-                    const lines = part.split("\n");
-                    const language = lines[0];
-                    const code = lines.slice(1).join("\n");
-                    return (
-                      <pre
-                        key={index}
-                        className="bg-[#0f0f1a] p-4 my-4 overflow-x-auto border border-[#2d2d44]"
-                      >
-                        <code className="text-green-400">{code}</code>
-                      </pre>
-                    );
-                  }
-                  // Regular text - handle markdown-like formatting
-                  return (
-                    <div key={index}>
-                      {part.split("\n").map((line, lineIndex) => {
-                        if (line.startsWith("# ")) {
-                          return (
-                            <h2
-                              key={lineIndex}
-                              className="text-2xl font-bold text-white mt-6 mb-4"
-                            >
-                              {line.slice(2)}
-                            </h2>
-                          );
-                        }
-                        if (line.startsWith("## ")) {
-                          return (
-                            <h3
-                              key={lineIndex}
-                              className="text-xl font-bold text-white mt-5 mb-3"
-                            >
-                              {line.slice(3)}
-                            </h3>
-                          );
-                        }
-                        if (line.startsWith("### ")) {
-                          return (
-                            <h4
-                              key={lineIndex}
-                              className="text-lg font-bold text-white mt-4 mb-2"
-                            >
-                              {line.slice(4)}
-                            </h4>
-                          );
-                        }
-                        if (line.startsWith("- ")) {
-                          return (
-                            <li key={lineIndex} className="ml-4 text-gray-300">
-                              {line.slice(2)}
-                            </li>
-                          );
-                        }
-                        if (line.includes("`") && !line.includes("```")) {
-                          const parts = line.split("`");
-                          return (
-                            <p key={lineIndex} className="text-gray-300 my-2">
-                              {parts.map((p, i) =>
-                                i % 2 === 1 ? (
-                                  <code
-                                    key={i}
-                                    className="bg-[#0f0f1a] px-1 text-purple-400"
-                                  >
-                                    {p}
-                                  </code>
-                                ) : (
-                                  p
-                                ),
-                              )}
-                            </p>
-                          );
-                        }
-                        if (line.trim() === "") {
-                          return <br key={lineIndex} />;
-                        }
-                        return (
-                          <p key={lineIndex} className="text-gray-300 my-2">
-                            {line}
-                          </p>
-                        );
-                      })}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Bottom Navigation */}
-        <div className="border-t border-[#2d2d44] bg-[#1a1a2e]">
-          <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-            <button
-              onClick={prevPage}
-              disabled={currentPage === 1}
-              className="btn-secondary px-4 py-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+        <div className="max-w-6xl mx-auto px-4 py-8">
+          {/* Back Button */}
+          <ScrollReveal animation="fade-right" delay={0}>
+            <Link
+              href="/learn"
+              className="inline-flex items-center gap-2 text-gray-400 hover:text-white mb-6 transition-colors"
             >
               <ChevronLeft className="w-4 h-4" />
-              Previous
-            </button>
+              Back to Library
+            </Link>
+          </ScrollReveal>
 
-            <div className="flex items-center gap-1">
-              {Array.from({ length: totalPages }, (_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setCurrentPage(i + 1)}
-                  className={`w-8 h-8 text-sm font-medium transition-colors ${
-                    currentPage === i + 1
-                      ? "bg-purple-500 text-white"
-                      : "bg-[#0f0f1a] text-gray-400 hover:text-white"
-                  }`}
-                >
-                  {i + 1}
-                </button>
-              ))}
+          {/* Resource Header */}
+          <ScrollReveal animation="fade-up" delay={100}>
+            <div className="pixel-box overflow-hidden mb-8">
+              {/* Banner */}
+              <div className="h-48 bg-gradient-to-br from-purple-600 to-purple-900 relative overflow-hidden">
+                {resource.thumbnail_url ? (
+                  <img
+                    src={resource.thumbnail_url}
+                    alt={resource.title}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <FileText className="w-24 h-24 text-white/30" />
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-[#1a1a2e] to-transparent" />
+              </div>
+
+              {/* Info */}
+              <div className="p-6 -mt-12 relative">
+                <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+                  <div>
+                    <span className="inline-block px-2 py-1 bg-purple-500/20 text-purple-400 text-xs font-medium rounded mb-2">
+                      {resource.language}
+                    </span>
+                    <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">
+                      {resource.title}
+                    </h1>
+                    <p className="text-gray-400 max-w-2xl">
+                      {resource.description}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Meta */}
+                <div className="flex flex-wrap gap-6 mt-6 text-sm text-gray-400">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-4 h-4" />
+                    <span>{resource.pages} pages</span>
+                  </div>
+                  {resource.read_time && (
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4" />
+                      <span>{resource.read_time}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <Eye className="w-4 h-4" />
+                    <span>{resource.views.toLocaleString()} views</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <BookOpen className="w-4 h-4" />
+                    <span>
+                      {categoryLabels[resource.category] || resource.category}
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
+          </ScrollReveal>
 
-            <button
-              onClick={nextPage}
-              disabled={currentPage === totalPages}
-              className="btn-primary px-4 py-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              Next
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
+          {/* PDF Viewer */}
+          <ScrollReveal animation="fade-up" delay={200}>
+            {resource.pdf_url ? (
+              <div className="pixel-box overflow-hidden">
+                {/* PDF Info Card */}
+                <div className="p-8 text-center">
+                  <div className="w-24 h-32 mx-auto mb-6 bg-gradient-to-br from-red-500 to-red-700 rounded-lg flex items-center justify-center shadow-lg shadow-red-500/20">
+                    <FileText className="w-12 h-12 text-white" />
+                  </div>
+
+                  <h2 className="text-xl font-bold text-white mb-2">
+                    {resource.title}.pdf
+                  </h2>
+
+                  <p className="text-gray-400 mb-6">
+                    {resource.pages} pages • PDF Document
+                  </p>
+
+                  {/* Action Buttons */}
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                    <a
+                      href={resource.pdf_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn-secondary px-6 py-3 flex items-center gap-2 w-full sm:w-auto justify-center"
+                    >
+                      <ExternalLink className="w-5 h-5" />
+                      Open in Browser
+                    </a>
+                    {isAuthenticated ? (
+                      <button
+                        onClick={handleDownload}
+                        className="btn-primary px-6 py-3 flex items-center gap-2 w-full sm:w-auto justify-center"
+                      >
+                        <Download className="w-5 h-5" />
+                        Download PDF
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => setShowLoginOverlay(true)}
+                        className="btn-primary px-6 py-3 flex items-center gap-2 w-full sm:w-auto justify-center"
+                      >
+                        <Download className="w-5 h-5" />
+                        Login to Download
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Additional Info */}
+                <div className="border-t border-[#2d2d44] p-6 bg-[#0f0f1a]/50">
+                  <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-gray-400">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-purple-400" />
+                      <span>PDF Format</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <BookOpen className="w-4 h-4 text-purple-400" />
+                      <span>{resource.pages} Pages</span>
+                    </div>
+                    {resource.read_time && (
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-purple-400" />
+                        <span>{resource.read_time} read</span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <Eye className="w-4 h-4 text-purple-400" />
+                      <span>{resource.views.toLocaleString()} views</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="pixel-box p-12 text-center">
+                <FileText className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+                <h3 className="text-xl font-bold text-white mb-2">
+                  No PDF Available
+                </h3>
+                <p className="text-gray-400">
+                  The PDF for this resource has not been uploaded yet.
+                </p>
+              </div>
+            )}
+          </ScrollReveal>
         </div>
       </div>
     </Navbar>

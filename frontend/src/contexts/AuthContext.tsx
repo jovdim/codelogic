@@ -23,6 +23,7 @@ interface AuthContextType {
     passwordConfirm: string,
   ) => Promise<void>;
   updateUser: (user: User) => void;
+  updateUserHearts: (hearts: number) => void;
   refreshUser: () => Promise<void>;
 }
 
@@ -96,6 +97,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(userData);
   };
 
+  const updateUserHearts = (hearts: number) => {
+    if (user) {
+      setUser({ ...user, current_hearts: hearts });
+    }
+  };
+
   const refreshUser = async () => {
     try {
       const response = await authAPI.getProfile();
@@ -115,6 +122,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logout,
         register,
         updateUser,
+        updateUserHearts,
         refreshUser,
       }}
     >

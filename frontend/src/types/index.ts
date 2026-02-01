@@ -3,6 +3,9 @@ export interface User {
   email: string;
   username: string;
   display_name: string;
+  last_display_name_change: string | null;
+  can_change_display_name: boolean;
+  next_display_name_change: string | null;
   avatar: number; // 1-5 preset avatars
   bio: string;
   is_email_verified: boolean;
@@ -14,6 +17,7 @@ export interface User {
   level: number;
   current_hearts: number;
   max_hearts: number;
+  last_heart_update: string;
   current_streak: number;
   longest_streak: number;
 }

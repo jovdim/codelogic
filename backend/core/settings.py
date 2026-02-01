@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     'corsheaders',
     # Local apps
     'accounts',
+    'game',
 ]
 
 MIDDLEWARE = [
@@ -42,7 +43,7 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # Removed XFrameOptionsMiddleware to allow PDF iframe embedding
 ]
 
 ROOT_URLCONF = 'core.urls'
@@ -104,6 +105,10 @@ USE_TZ = True
 # Static files
 STATIC_URL = 'static/'
 
+# Media files (uploaded files)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -138,6 +143,9 @@ CORS_ALLOWED_ORIGINS = [
 ]
 
 CORS_ALLOW_CREDENTIALS = True
+
+# X-Frame-Options - Allow embedding PDFs in iframe
+X_FRAME_OPTIONS = 'SAMEORIGIN'
 
 # Email settings
 EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')

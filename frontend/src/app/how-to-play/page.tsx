@@ -1,7 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import Link from "next/link";
 import Navbar from "@/components/layout/Navbar";
+import {
+  ScrollReveal,
+  ScrollProgressBar,
+  ScrollToTop,
+} from "@/components/ui/ScrollAnimations";
 import {
   Heart,
   Flame,
@@ -12,358 +18,450 @@ import {
   Zap,
   BookOpen,
   ChevronRight,
-  Sparkles,
-  Shield,
+  ChevronDown,
   Award,
   TrendingUp,
-  Gift,
   Gamepad2,
+  Play,
+  CheckCircle2,
+  XCircle,
+  HelpCircle,
+  FileQuestion,
+  Lightbulb,
 } from "lucide-react";
 
-// Animated pixel heart component
-function PixelHeart({ filled, delay }: { filled: boolean; delay: number }) {
+// FAQ Item Component
+function FAQItem({
+  question,
+  answer,
+  isOpen,
+  onClick,
+}: {
+  question: string;
+  answer: string;
+  isOpen: boolean;
+  onClick: () => void;
+}) {
   return (
-    <div
-      className={`w-8 h-8 transition-all duration-300 ${filled ? "scale-110" : "scale-100 opacity-40"}`}
-      style={{ animationDelay: `${delay}ms` }}
-    >
-      <Heart
-        className={`w-full h-full ${filled ? "text-red-500 fill-red-500 animate-pulse" : "text-gray-600"}`}
-      />
-    </div>
-  );
-}
-
-// XP Counter Animation
-function XPCounter() {
-  const [xp, setXp] = useState(0);
-  const targetXP = 1250;
-
-  useEffect(() => {
-    const duration = 2000;
-    const steps = 60;
-    const increment = targetXP / steps;
-    let current = 0;
-    const timer = setInterval(() => {
-      current += increment;
-      if (current >= targetXP) {
-        setXp(targetXP);
-        clearInterval(timer);
-      } else {
-        setXp(Math.floor(current));
-      }
-    }, duration / steps);
-    return () => clearInterval(timer);
-  }, []);
-
-  return (
-    <div className="text-4xl font-bold text-yellow-400 tabular-nums">
-      {xp.toLocaleString()} <span className="text-xl">XP</span>
+    <div className="border-b border-[#2d2d44] last:border-b-0">
+      <button
+        onClick={onClick}
+        className="w-full py-4 px-2 flex items-center justify-between text-left hover:bg-white/5 transition-colors"
+      >
+        <span className="text-white font-medium pr-4">{question}</span>
+        <ChevronDown
+          className={`w-5 h-5 text-purple-400 flex-shrink-0 transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`}
+        />
+      </button>
+      <div
+        className={`overflow-hidden transition-all duration-300 ${isOpen ? "max-h-96 pb-4" : "max-h-0"}`}
+      >
+        <p className="px-2 text-gray-400 leading-relaxed">{answer}</p>
+      </div>
     </div>
   );
 }
 
 export default function HowToPlayPage() {
-  const [activeHearts, setActiveHearts] = useState(5);
-  const [currentStreak, setCurrentStreak] = useState(0);
+  const [openFAQ, setOpenFAQ] = useState<number | null>(null);
 
-  // Animate hearts
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setActiveHearts((prev) => (prev > 0 ? prev - 1 : 5));
-    }, 2000);
-    return () => clearInterval(interval);
-  }, []);
+  const faqs = [
+    {
+      question: "How do hearts work?",
+      answer:
+        "You have 10 hearts globally across all quizzes. Every wrong answer or timeout costs 1 heart. If you run out of hearts, you can't take quizzes until they regenerate. Hearts regenerate 1 every 2 minutes.",
+    },
+    {
+      question: "What happens if I run out of time?",
+      answer:
+        "Each question has a 30-second timer. If time runs out, you lose 1 heart and stay on the same question. The timer resets so you can try again.",
+    },
+    {
+      question: "How is XP calculated?",
+      answer:
+        "You earn 10 XP for each correct answer. Complete a quiz with all correct answers (perfect score) and earn a 50 XP bonus! Your total XP determines your level.",
+    },
+    {
+      question: "What are streaks?",
+      answer:
+        "Complete at least one quiz every day to build your streak. Miss a day and it resets to zero. Longer streaks show your dedication and consistency!",
+    },
+    {
+      question: "How do I unlock higher levels?",
+      answer:
+        "Each topic has multiple levels (1-15). Complete a level to unlock the next one. Start with basics and work your way up to advanced challenges.",
+    },
+    {
+      question: "What types of questions are there?",
+      answer:
+        "We have 3 question types: Multiple Choice (pick the right answer), Find the Error (spot the bug in code), and What's the Output (predict what code will print).",
+    },
+    {
+      question: "Can I redo a quiz I already completed?",
+      answer:
+        "Yes! You can replay any level for practice. However, your previous score and status for that level will remain unchanged - retaking won't update your record.",
+    },
+    {
+      question: "How do I get on the leaderboard?",
+      answer:
+        "The leaderboard ranks players by total XP. Keep answering questions correctly and completing quizzes to climb the ranks!",
+    },
+  ];
 
-  // Animate streak
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (currentStreak < 30) {
-        setCurrentStreak((prev) => prev + 1);
-      }
-    }, 100);
-    return () => clearTimeout(timer);
-  }, [currentStreak]);
+  const questionTypes = [
+    {
+      type: "Multiple Choice",
+      icon: CheckCircle2,
+      description: "Pick the correct answer from 4 options",
+      color: "#22c55e",
+    },
+    {
+      type: "Find the Error",
+      icon: XCircle,
+      description: "Spot the bug or mistake in the code",
+      color: "#ef4444",
+    },
+    {
+      type: "What's the Output",
+      icon: FileQuestion,
+      description: "Predict what the code will print",
+      color: "#f59e0b",
+    },
+  ];
 
   return (
     <Navbar>
-      <div className="min-h-screen pb-8">
+      <ScrollProgressBar />
+      <ScrollToTop />
+      <div className="min-h-screen pb-16">
         {/* Hero Section */}
-        <div className="relative overflow-hidden bg-gradient-to-br from-purple-900/50 via-[#1a1a2e] to-[#0f0f1a] border-b border-[#2d2d44]">
-          <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
-          <div className="absolute top-0 left-1/4 w-64 h-64 bg-purple-500/20 rounded-full blur-3xl" />
-          <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-pink-500/20 rounded-full blur-3xl" />
+        <section className="relative overflow-hidden border-b border-[#2d2d44]">
+          <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-5" />
+          <div
+            className="absolute top-20 left-1/4 w-48 h-48 rounded-full blur-3xl"
+            style={{ background: "rgba(124, 58, 237, 0.15)" }}
+          />
 
-          <div className="relative max-w-4xl mx-auto px-4 py-12 md:py-16 text-center">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-purple-500/20 border border-purple-500/30 rounded-full text-purple-400 text-sm mb-6">
-              <Gamepad2 className="w-4 h-4" />
-              <span>Game Guide</span>
-            </div>
-
-            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
-              How to <span className="text-purple-400">Play</span>
-            </h1>
-            <p className="text-lg md:text-xl text-gray-300 max-w-2xl mx-auto">
-              Master programming through our gamified learning experience. Earn
-              XP, maintain streaks, and become a coding champion!
-            </p>
-
-            {/* Animated Stats Preview */}
-            <div className="flex flex-wrap justify-center gap-4 md:gap-6 mt-8">
-              <div className="pixel-box px-4 md:px-6 py-4 bg-[#1a1a2e]/80">
-                <div className="flex gap-1 mb-2">
-                  {[0, 1, 2, 3, 4].map((i) => (
-                    <PixelHeart
-                      key={i}
-                      filled={i < activeHearts}
-                      delay={i * 100}
-                    />
-                  ))}
+          <div className="relative max-w-4xl mx-auto px-4 py-16 md:py-20">
+            <ScrollReveal animation="fade-up">
+              <div className="text-center">
+                <div
+                  className="inline-flex items-center gap-2 px-4 py-2 border rounded-full mb-6"
+                  style={{
+                    background: "rgba(124, 58, 237, 0.15)",
+                    borderColor: "rgba(124, 58, 237, 0.3)",
+                    color: "var(--primary-light)",
+                  }}
+                >
+                  <Gamepad2 className="w-4 h-4" />
+                  <span className="font-medium text-sm">Game Guide</span>
                 </div>
-                <p className="text-gray-400 text-sm">Lives System</p>
+
+                <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
+                  How to{" "}
+                  <span style={{ color: "var(--primary-light)" }}>Play</span>
+                </h1>
+                <p className="text-lg text-gray-400 max-w-xl mx-auto">
+                  Everything you need to know about quizzes, scoring, and
+                  becoming a coding champion
+                </p>
               </div>
-              <div className="pixel-box px-4 md:px-6 py-4 bg-[#1a1a2e]/80">
-                <div className="flex items-center gap-2 mb-2">
-                  <Flame className="w-8 h-8 text-orange-500" />
-                  <span className="text-3xl font-bold text-orange-400">
-                    {currentStreak}
-                  </span>
-                </div>
-                <p className="text-gray-400 text-sm">Day Streak</p>
-              </div>
-              <div className="pixel-box px-4 md:px-6 py-4 bg-[#1a1a2e]/80">
-                <XPCounter />
-                <p className="text-gray-400 text-sm">Experience Points</p>
-              </div>
-            </div>
+            </ScrollReveal>
           </div>
-        </div>
+        </section>
 
-        <div className="max-w-4xl mx-auto px-4 py-8">
-          {/* Game Mechanics Grid */}
-          <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
-            <Sparkles className="w-6 h-6 text-purple-400" />
-            Core Game Mechanics
-          </h2>
+        <div className="max-w-4xl mx-auto px-4 py-12">
+          {/* Step by Step - Visual Flow */}
+          <ScrollReveal animation="fade-up">
+            <h2 className="text-2xl font-bold text-white mb-8 flex items-center gap-3">
+              <Play
+                className="w-6 h-6"
+                style={{ color: "var(--primary-light)" }}
+              />
+              Getting Started
+            </h2>
+          </ScrollReveal>
 
-          <div className="grid md:grid-cols-2 gap-4 mb-12">
-            {/* Hearts Card */}
-            <div className="pixel-box p-6 bg-gradient-to-br from-red-500/10 to-transparent border-red-500/20 hover:border-red-500/40 transition-colors group">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-14 h-14 bg-red-500/20 flex items-center justify-center rounded-lg group-hover:scale-110 transition-transform">
-                  <Heart className="w-8 h-8 text-red-500 fill-red-500" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-white">Hearts</h3>
-                  <p className="text-red-400 text-sm">Your Lives</p>
-                </div>
-              </div>
-              <ul className="space-y-2 text-gray-300 text-sm">
-                <li className="flex items-center gap-2">
-                  <Shield className="w-4 h-4 text-red-400" />
-                  Start with <strong className="text-white">5 hearts</strong>
-                </li>
-                <li className="flex items-center gap-2">
-                  <ChevronRight className="w-4 h-4 text-red-400" />
-                  Wrong answer = -1 heart
-                </li>
-                <li className="flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-red-400" />
-                  Regenerate 1 heart every 2 min
-                </li>
-              </ul>
-            </div>
+          <div className="relative mb-16">
+            {/* Connection line */}
+            <div
+              className="hidden md:block absolute left-8 top-16 bottom-16 w-0.5"
+              style={{ background: "rgba(124, 58, 237, 0.3)" }}
+            />
 
-            {/* Streaks Card */}
-            <div className="pixel-box p-6 bg-gradient-to-br from-orange-500/10 to-transparent border-orange-500/20 hover:border-orange-500/40 transition-colors group">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-14 h-14 bg-orange-500/20 flex items-center justify-center rounded-lg group-hover:scale-110 transition-transform">
-                  <Flame className="w-8 h-8 text-orange-500" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-white">Streaks</h3>
-                  <p className="text-orange-400 text-sm">Daily Consistency</p>
-                </div>
-              </div>
-              <ul className="space-y-2 text-gray-300 text-sm">
-                <li className="flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-orange-400" />
-                  Complete 1 quiz daily
-                </li>
-                <li className="flex items-center gap-2">
-                  <ChevronRight className="w-4 h-4 text-orange-400" />
-                  Miss a day = streak resets
-                </li>
-                <li className="flex items-center gap-2">
-                  <Gift className="w-4 h-4 text-orange-400" />
-                  Longer streaks = bonus rewards
-                </li>
-              </ul>
-            </div>
-
-            {/* XP Card */}
-            <div className="pixel-box p-6 bg-gradient-to-br from-yellow-500/10 to-transparent border-yellow-500/20 hover:border-yellow-500/40 transition-colors group">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-14 h-14 bg-yellow-500/20 flex items-center justify-center rounded-lg group-hover:scale-110 transition-transform">
-                  <Star className="w-8 h-8 text-yellow-500" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-white">XP & Levels</h3>
-                  <p className="text-yellow-400 text-sm">Your Progress</p>
-                </div>
-              </div>
-              <ul className="space-y-2 text-gray-300 text-sm">
-                <li className="flex items-center gap-2">
-                  <Zap className="w-4 h-4 text-yellow-400" />
-                  Correct answer ={" "}
-                  <strong className="text-white">+10 XP</strong>
-                </li>
-                <li className="flex items-center gap-2">
-                  <Award className="w-4 h-4 text-yellow-400" />
-                  Perfect quiz ={" "}
-                  <strong className="text-white">+50 bonus XP</strong>
-                </li>
-                <li className="flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-yellow-400" />
-                  Level up every <strong className="text-white">1000 XP</strong>
-                </li>
-              </ul>
-            </div>
-
-            {/* Quizzes Card */}
-            <div className="pixel-box p-6 bg-gradient-to-br from-purple-500/10 to-transparent border-purple-500/20 hover:border-purple-500/40 transition-colors group">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-14 h-14 bg-purple-500/20 flex items-center justify-center rounded-lg group-hover:scale-110 transition-transform">
-                  <Target className="w-8 h-8 text-purple-500" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-white">Quizzes</h3>
-                  <p className="text-purple-400 text-sm">Test Your Skills</p>
-                </div>
-              </div>
-              <ul className="space-y-2 text-gray-300 text-sm">
-                <li className="flex items-center gap-2">
-                  <ChevronRight className="w-4 h-4 text-purple-400" />
-                  Multiple choice questions
-                </li>
-                <li className="flex items-center gap-2">
-                  <ChevronRight className="w-4 h-4 text-purple-400" />
-                  Code completion challenges
-                </li>
-                <li className="flex items-center gap-2">
-                  <ChevronRight className="w-4 h-4 text-purple-400" />
-                  True/False questions
-                </li>
-              </ul>
+            <div className="space-y-6">
+              {[
+                {
+                  step: "1",
+                  title: "Choose a Topic",
+                  desc: "Pick from HTML, CSS, JavaScript, Python, React, or SQL",
+                  icon: Target,
+                },
+                {
+                  step: "2",
+                  title: "Select Your Level",
+                  desc: "Start at Level 1 and unlock higher levels as you progress",
+                  icon: TrendingUp,
+                },
+                {
+                  step: "3",
+                  title: "Answer Questions",
+                  desc: "5-10 questions per quiz, 30 seconds each. Think fast!",
+                  icon: HelpCircle,
+                },
+                {
+                  step: "4",
+                  title: "Earn XP & Climb",
+                  desc: "Correct answers earn XP. Top the leaderboard!",
+                  icon: Trophy,
+                },
+              ].map((item, index) => (
+                <ScrollReveal
+                  key={item.step}
+                  animation="fade-right"
+                  delay={index * 100}
+                >
+                  <div className="flex items-start gap-4 md:gap-6">
+                    <div
+                      className="w-16 h-16 flex-shrink-0 pixel-box flex items-center justify-center relative z-10"
+                      style={{ background: "var(--card-bg)" }}
+                    >
+                      <span
+                        className="text-2xl font-bold"
+                        style={{ color: "var(--primary-light)" }}
+                      >
+                        {item.step}
+                      </span>
+                    </div>
+                    <div className="flex-1 pt-2">
+                      <div className="flex items-center gap-2 mb-1">
+                        <item.icon className="w-5 h-5 text-purple-400" />
+                        <h3 className="text-lg font-bold text-white">
+                          {item.title}
+                        </h3>
+                      </div>
+                      <p className="text-gray-400">{item.desc}</p>
+                    </div>
+                  </div>
+                </ScrollReveal>
+              ))}
             </div>
           </div>
 
-          {/* Rewards Section */}
-          <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
-            <Trophy className="w-6 h-6 text-yellow-400" />
-            Rewards & Achievements
-          </h2>
+          {/* Core Mechanics - Horizontal Layout */}
+          <ScrollReveal animation="fade-up">
+            <h2 className="text-2xl font-bold text-white mb-8 flex items-center gap-3">
+              <Zap
+                className="w-6 h-6"
+                style={{ color: "var(--primary-light)" }}
+              />
+              Game Mechanics
+            </h2>
+          </ScrollReveal>
 
-          <div className="pixel-box p-6 mb-12 overflow-hidden relative">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-500/10 rounded-full blur-3xl" />
-            <div className="grid md:grid-cols-3 gap-6 relative">
-              <div className="text-center">
-                <div className="w-16 h-16 mx-auto mb-3 bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center pixel-box">
-                  <Trophy className="w-8 h-8 text-white" />
+          <ScrollReveal animation="fade-up" delay={100}>
+            <div className="pixel-box p-6 md:p-8 mb-16">
+              <div className="grid md:grid-cols-3 gap-8 md:gap-6">
+                {/* Hearts */}
+                <div className="text-center">
+                  <div
+                    className="w-16 h-16 mx-auto mb-4 rounded-xl flex items-center justify-center"
+                    style={{ background: "rgba(239, 68, 68, 0.15)" }}
+                  >
+                    <Heart className="w-8 h-8 text-red-500 fill-red-500" />
+                  </div>
+                  <h3 className="text-lg font-bold text-white mb-2">
+                    10 Hearts
+                  </h3>
+                  <p className="text-gray-400 text-sm">
+                    Global across all quizzes. Regenerate 1 every 2 minutes.
+                  </p>
                 </div>
-                <h4 className="text-white font-bold mb-1">Badges</h4>
-                <p className="text-gray-400 text-sm">
-                  Unlock unique badges for achievements
-                </p>
-              </div>
-              <div className="text-center">
-                <div className="w-16 h-16 mx-auto mb-3 bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center pixel-box">
-                  <Award className="w-8 h-8 text-white" />
-                </div>
-                <h4 className="text-white font-bold mb-1">Titles</h4>
-                <p className="text-gray-400 text-sm">
-                  Earn special titles as you level up
-                </p>
-              </div>
-              <div className="text-center">
-                <div className="w-16 h-16 mx-auto mb-3 bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center pixel-box">
-                  <Star className="w-8 h-8 text-white" />
-                </div>
-                <h4 className="text-white font-bold mb-1">Leaderboard</h4>
-                <p className="text-gray-400 text-sm">
-                  Compete for top spots globally
-                </p>
-              </div>
-            </div>
-          </div>
 
-          {/* Pro Tips */}
-          <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
-            <Zap className="w-6 h-6 text-cyan-400" />
-            Pro Tips
-          </h2>
+                {/* Timer */}
+                <div className="text-center">
+                  <div
+                    className="w-16 h-16 mx-auto mb-4 rounded-xl flex items-center justify-center"
+                    style={{ background: "rgba(59, 130, 246, 0.15)" }}
+                  >
+                    <Clock className="w-8 h-8 text-blue-500" />
+                  </div>
+                  <h3 className="text-lg font-bold text-white mb-2">
+                    30 Seconds
+                  </h3>
+                  <p className="text-gray-400 text-sm">
+                    Per question. Time out = lose a heart and retry.
+                  </p>
+                </div>
 
-          <div className="grid md:grid-cols-2 gap-4 mb-8">
-            {[
-              {
-                tip: "Practice daily to maintain your streak",
-                icon: "🔥",
-              },
-              {
-                tip: "Read learning materials before quizzes",
-                icon: "📚",
-              },
-              {
-                tip: "Wait for hearts to regenerate",
-                icon: "⏰",
-              },
-              {
-                tip: "Start with basics, then advance",
-                icon: "📈",
-              },
-              {
-                tip: "Compete on leaderboards for motivation",
-                icon: "🏆",
-              },
-              {
-                tip: "Review wrong answers to learn",
-                icon: "🎯",
-              },
-            ].map((item, index) => (
+                {/* XP */}
+                <div className="text-center">
+                  <div
+                    className="w-16 h-16 mx-auto mb-4 rounded-xl flex items-center justify-center"
+                    style={{ background: "rgba(234, 179, 8, 0.15)" }}
+                  >
+                    <Star className="w-8 h-8 text-yellow-500" />
+                  </div>
+                  <h3 className="text-lg font-bold text-white mb-2">+10 XP</h3>
+                  <p className="text-gray-400 text-sm">
+                    Per correct answer. Perfect quiz = +50 bonus XP.
+                  </p>
+                </div>
+              </div>
+
+              {/* Streak Banner */}
               <div
-                key={index}
-                className="pixel-box p-4 flex items-center gap-4 hover:border-purple-500/40 transition-colors"
+                className="mt-8 pt-6 border-t flex items-center justify-center gap-4"
+                style={{ borderColor: "rgba(255, 255, 255, 0.1)" }}
               >
-                <span className="text-3xl">{item.icon}</span>
-                <p className="text-gray-300">{item.tip}</p>
+                <Flame className="w-6 h-6 text-orange-500" />
+                <p className="text-gray-300">
+                  <span className="text-orange-400 font-bold">
+                    Daily Streaks:
+                  </span>{" "}
+                  Complete a quiz every day to build your streak
+                </p>
               </div>
+            </div>
+          </ScrollReveal>
+
+          {/* Question Types */}
+          <ScrollReveal animation="fade-up">
+            <h2 className="text-2xl font-bold text-white mb-8 flex items-center gap-3">
+              <Lightbulb
+                className="w-6 h-6"
+                style={{ color: "var(--primary-light)" }}
+              />
+              Question Types
+            </h2>
+          </ScrollReveal>
+
+          <div className="grid sm:grid-cols-3 gap-4 mb-16">
+            {questionTypes.map((qt, index) => (
+              <ScrollReveal
+                key={qt.type}
+                animation="fade-up"
+                delay={index * 50}
+              >
+                <div className="pixel-box p-5 h-full flex flex-col items-center text-center hover:border-purple-500/40 transition-colors">
+                  <div
+                    className="w-14 h-14 rounded-lg flex items-center justify-center mb-3"
+                    style={{ background: `${qt.color}20` }}
+                  >
+                    <qt.icon className="w-7 h-7" style={{ color: qt.color }} />
+                  </div>
+                  <h3 className="font-bold text-white mb-1">{qt.type}</h3>
+                  <p className="text-gray-400 text-sm flex-1">
+                    {qt.description}
+                  </p>
+                </div>
+              </ScrollReveal>
             ))}
           </div>
 
-          {/* Learning Resources CTA */}
-          <div className="pixel-box p-6 bg-gradient-to-r from-green-500/10 to-cyan-500/10 border-green-500/30">
-            <div className="flex flex-col md:flex-row items-center gap-6">
-              <div className="w-16 h-16 bg-green-500/20 flex items-center justify-center rounded-lg flex-shrink-0">
-                <BookOpen className="w-8 h-8 text-green-400" />
-              </div>
-              <div className="flex-1 text-center md:text-left">
-                <h3 className="text-xl font-bold text-white mb-2">
-                  Ready to Start Learning?
-                </h3>
-                <p className="text-gray-400">
-                  Check out our comprehensive learning library with guides for
-                  all programming languages!
+          {/* Rewards */}
+          <ScrollReveal animation="fade-up">
+            <h2 className="text-2xl font-bold text-white mb-8 flex items-center gap-3">
+              <Award
+                className="w-6 h-6"
+                style={{ color: "var(--primary-light)" }}
+              />
+              Rewards
+            </h2>
+          </ScrollReveal>
+
+          <ScrollReveal animation="fade-up" delay={100}>
+            <div className="flex flex-wrap justify-center gap-12 mb-16">
+              <div className="text-center">
+                <div
+                  className="w-16 h-16 mx-auto mb-3 pixel-box flex items-center justify-center"
+                  style={{
+                    background: "linear-gradient(135deg, #f59e0b, #d97706)",
+                  }}
+                >
+                  <Trophy className="w-8 h-8 text-white" />
+                </div>
+                <p className="text-white font-medium">Badges</p>
+                <p className="text-gray-400 text-sm mt-1">
+                  Unlock achievements
                 </p>
               </div>
-              <a
-                href="/learn"
-                className="btn-primary inline-flex items-center gap-2 whitespace-nowrap"
-              >
-                Browse Library
-                <ChevronRight className="w-5 h-5" />
-              </a>
+              <div className="text-center">
+                <div
+                  className="w-16 h-16 mx-auto mb-3 pixel-box flex items-center justify-center"
+                  style={{
+                    background: "linear-gradient(135deg, #06b6d4, #0891b2)",
+                  }}
+                >
+                  <TrendingUp className="w-8 h-8 text-white" />
+                </div>
+                <p className="text-white font-medium">Leaderboard</p>
+                <p className="text-gray-400 text-sm mt-1">Compete globally</p>
+              </div>
             </div>
-          </div>
+          </ScrollReveal>
+
+          {/* FAQ Section */}
+          <ScrollReveal animation="fade-up">
+            <h2 className="text-2xl font-bold text-white mb-8 flex items-center gap-3">
+              <HelpCircle
+                className="w-6 h-6"
+                style={{ color: "var(--primary-light)" }}
+              />
+              Frequently Asked Questions
+            </h2>
+          </ScrollReveal>
+
+          <ScrollReveal animation="fade-up" delay={100}>
+            <div className="pixel-box p-4 md:p-6 mb-16">
+              {faqs.map((faq, index) => (
+                <FAQItem
+                  key={index}
+                  question={faq.question}
+                  answer={faq.answer}
+                  isOpen={openFAQ === index}
+                  onClick={() => setOpenFAQ(openFAQ === index ? null : index)}
+                />
+              ))}
+            </div>
+          </ScrollReveal>
+
+          {/* CTA */}
+          <ScrollReveal animation="fade-up">
+            <div className="pixel-box p-6 md:p-8 text-center">
+              <BookOpen
+                className="w-12 h-12 mx-auto mb-4"
+                style={{ color: "var(--primary-light)" }}
+              />
+              <h3 className="text-xl font-bold text-white mb-2">
+                Ready to Start?
+              </h3>
+              <p className="text-gray-400 mb-6 max-w-md mx-auto">
+                Jump into a quiz or brush up on concepts in our learning library
+              </p>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                <Link
+                  href="/play"
+                  className="inline-flex items-center gap-2 px-6 py-3 text-white font-bold rounded-xl transition-all hover:scale-105"
+                  style={{
+                    background: "var(--gradient-purple)",
+                    boxShadow: "0 4px 20px rgba(124, 58, 237, 0.3)",
+                  }}
+                >
+                  <Gamepad2 className="w-5 h-5" />
+                  Start Playing
+                  <ChevronRight className="w-5 h-5" />
+                </Link>
+                <Link
+                  href="/learn"
+                  className="inline-flex items-center gap-2 px-6 py-3 text-gray-300 font-medium rounded-xl border border-[#2d2d44] hover:border-purple-500/50 hover:text-white transition-all"
+                >
+                  <BookOpen className="w-5 h-5" />
+                  Browse Learning
+                </Link>
+              </div>
+            </div>
+          </ScrollReveal>
         </div>
       </div>
     </Navbar>
