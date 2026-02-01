@@ -98,9 +98,9 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # Internationalization
 LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'UTC'
-USE_I18N = True
+TIME_ZONE = 'Asia/Manila'
 USE_TZ = True
+USE_I18N = True
 
 # Static files
 STATIC_URL = 'static/'

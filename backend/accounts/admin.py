@@ -1,6 +1,6 @@
 """
 Enhanced Admin Configuration for CodeLogic Accounts.
-Manage users, tokens, and gamification settings.
+Manage users and gamification settings.
 """
 
 from django.contrib import admin
@@ -9,7 +9,7 @@ from django.utils.html import format_html
 from django.utils import timezone
 from django.contrib import messages
 from django.db.models import Sum
-from .models import User, EmailVerificationToken, PasswordResetToken
+from .models import User
 
 
 # ============================================================
@@ -122,39 +122,3 @@ class UserAdmin(BaseUserAdmin):
     def deactivate_users(self, request, queryset):
         count = queryset.update(is_active=False)
         self.message_user(request, f'{count} users deactivated.', messages.WARNING)
-
-
-# ============================================================
-# TOKEN ADMIN - Manage verification tokens
-# ============================================================
-
-@admin.register(EmailVerificationToken)
-class EmailVerificationTokenAdmin(admin.ModelAdmin):
-    list_display = ['user', 'created_at', 'expires_at', 'is_used', 'is_expired_badge']
-    list_filter = ['is_used', 'created_at']
-    search_fields = ['user__email', 'user__username']
-    readonly_fields = ['token', 'created_at']
-    ordering = ['-created_at']
-    
-    def is_expired_badge(self, obj):
-        from django.utils.safestring import mark_safe
-        if obj.expires_at < timezone.now():
-            return mark_safe('<span style="color: #ef4444;">Expired</span>')
-        return mark_safe('<span style="color: #22c55e;">Valid</span>')
-    is_expired_badge.short_description = 'Status'
-
-
-@admin.register(PasswordResetToken)
-class PasswordResetTokenAdmin(admin.ModelAdmin):
-    list_display = ['user', 'created_at', 'expires_at', 'is_used', 'is_expired_badge']
-    list_filter = ['is_used', 'created_at']
-    search_fields = ['user__email', 'user__username']
-    readonly_fields = ['token', 'created_at']
-    ordering = ['-created_at']
-    
-    def is_expired_badge(self, obj):
-        from django.utils.safestring import mark_safe
-        if obj.expires_at < timezone.now():
-            return mark_safe('<span style="color: #ef4444;">Expired</span>')
-        return mark_safe('<span style="color: #22c55e;">Valid</span>')
-    is_expired_badge.short_description = 'Status'

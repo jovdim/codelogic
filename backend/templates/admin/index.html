@@ -1,0 +1,18 @@
+{% extends "admin/index.html" %} {% load i18n %} {% block content %}
+<div
+  style="
+    background: #f0f7ff;
+    padding: 15px 20px;
+    margin-bottom: 20px;
+    border-radius: 6px;
+    border-left: 4px solid #2563eb;
+  "
+>
+  <a
+    href="{% url 'admin-dashboard' %}"
+    style="color: #2563eb; font-weight: 500; text-decoration: none"
+  >
+    View Dashboard &rarr;
+  </a>
+</div>
+{{ block.super }} {% endblock %}

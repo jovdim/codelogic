@@ -10,8 +10,8 @@ from django.db.models import Count, Avg
 from django.contrib import messages
 from django import forms
 
-from .models import Category, Topic, Question, UserProgress, QuizAttempt, LearningResource
-from .models_settings import SiteSettings, Announcement
+from .models import Category, Topic, Question, LearningResource
+from .models_settings import SiteSettings
 
 
 # ============================================================
@@ -55,10 +55,6 @@ class SiteSettingsAdmin(admin.ModelAdmin):
             ),
             'description': 'Enable/disable major features'
         }),
-        ('Announcement Banner', {
-            'fields': ('announcement_enabled', 'announcement_type', 'announcement_text'),
-            'description': 'Show a banner message to all users'
-        }),
     )
     
     def has_add_permission(self, request):
@@ -67,24 +63,6 @@ class SiteSettingsAdmin(admin.ModelAdmin):
     
     def has_delete_permission(self, request, obj=None):
         return False
-
-
-@admin.register(Announcement)
-class AnnouncementAdmin(admin.ModelAdmin):
-    list_display = ['title', 'announcement_type', 'is_active', 'is_pinned', 'created_at', 'expires_at']
-    list_filter = ['announcement_type', 'is_active', 'is_pinned']
-    search_fields = ['title', 'content']
-    list_editable = ['is_active', 'is_pinned']
-    ordering = ['-is_pinned', '-created_at']
-    
-    fieldsets = (
-        ('Content', {
-            'fields': ('title', 'content', 'announcement_type')
-        }),
-        ('Status', {
-            'fields': ('is_active', 'is_pinned', 'expires_at')
-        }),
-    )
 
 
 # ============================================================
@@ -296,58 +274,8 @@ class QuestionAdmin(admin.ModelAdmin):
 
 
 # ============================================================
-# USER PROGRESS ADMIN
+# LEARNING RESOURCE ADMIN
 # ============================================================
-
-@admin.register(UserProgress)
-class UserProgressAdmin(admin.ModelAdmin):
-    list_display = ['user', 'topic', 'current_level', 'highest_level_completed', 'total_xp_earned', 'accuracy', 'last_played']
-    list_filter = ['topic', 'topic__category']
-    search_fields = ['user__username', 'user__email']
-    readonly_fields = ['total_questions_answered', 'correct_answers', 'last_played']
-    ordering = ['-last_played']
-    
-    def accuracy(self, obj):
-        if obj.total_questions_answered > 0:
-            acc = (obj.correct_answers / obj.total_questions_answered) * 100
-            color = '#22c55e' if acc >= 70 else '#f59e0b' if acc >= 50 else '#ef4444'
-            return format_html('<span style="color: {};">{:.1f}%</span>', color, acc)
-        return '-'
-    accuracy.short_description = 'Accuracy'
-
-
-# ============================================================
-# QUIZ ATTEMPT ADMIN
-# ============================================================
-
-@admin.register(QuizAttempt)
-class QuizAttemptAdmin(admin.ModelAdmin):
-    list_display = ['user', 'topic', 'level', 'score_display', 'xp_earned', 'hearts_lost', 'passed_badge', 'completed_at']
-    list_filter = ['topic', 'passed', 'completed']
-    search_fields = ['user__username', 'user__email']
-    readonly_fields = ['user', 'topic', 'level', 'score', 'total_questions', 'xp_earned', 'hearts_lost', 'completed', 'passed', 'started_at', 'completed_at']
-    ordering = ['-started_at']
-    date_hierarchy = 'started_at'
-    
-    def score_display(self, obj):
-        if obj.total_questions > 0:
-            percentage = (obj.score / obj.total_questions) * 100
-            return format_html('{}/{} ({:.0f}%)', obj.score, obj.total_questions, percentage)
-        return f'{obj.score}/{obj.total_questions}'
-    score_display.short_description = 'Score'
-    
-    def passed_badge(self, obj):
-        from django.utils.safestring import mark_safe
-        if obj.passed:
-            return mark_safe('<span style="color: #22c55e;">✓ Passed</span>')
-        elif obj.completed:
-            return mark_safe('<span style="color: #ef4444;">✗ Failed</span>')
-        return mark_safe('<span style="color: #f59e0b;">⏳ In Progress</span>')
-    passed_badge.short_description = 'Status'
-    
-    def has_add_permission(self, request):
-        return False  # Attempts should only be created through gameplay
-
 
 @admin.register(LearningResource)
 class LearningResourceAdmin(admin.ModelAdmin):

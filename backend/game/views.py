@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-from django.db.models import F, Q
+from django.db.models import F, Q, Count, Sum
 import random
 
 from .models import Category, Topic, Question, QuizAttempt, UserProgress, LearningResource
@@ -25,6 +25,45 @@ HEART_REGEN_MINUTES = 2
 XP_PER_CORRECT = 10
 XP_BONUS_PERFECT = 50
 XP_BONUS_NO_HEARTS_LOST = 25
+
+
+class CategoryListView(APIView):
+    """Get all active categories with their topics."""
+    permission_classes = [AllowAny]
+    
+    def get(self, request):
+        categories = Category.objects.filter(is_active=True).prefetch_related(
+            'topics'
+        ).annotate(
+            topic_count=Count('topics', filter=Q(topics__is_active=True)),
+            total_questions=Count('topics__questions', filter=Q(topics__questions__is_active=True))
+        ).order_by('order', 'name')
+        
+        result = []
+        for cat in categories:
+            topics = cat.topics.filter(is_active=True).order_by('order', 'name')
+            topic_names = [t.name for t in topics]
+            
+            # Calculate total XP for category (sum of all questions XP)
+            total_xp = Question.objects.filter(
+                topic__category=cat, 
+                is_active=True
+            ).aggregate(total=Sum('xp_reward'))['total'] or 0
+            
+            result.append({
+                'id': str(cat.id),
+                'slug': cat.slug,
+                'name': cat.name,
+                'description': cat.description,
+                'icon': cat.icon,
+                'color': cat.color,
+                'topics': topic_names,
+                'topicCount': cat.topic_count,
+                'totalQuestions': cat.total_questions,
+                'totalXP': total_xp,
+            })
+        
+        return Response(result)
 
 
 class TopicDetailView(APIView):
@@ -220,7 +259,12 @@ class LeaderboardView(APIView):
     
     def get(self, request):
         limit = int(request.query_params.get('limit', 100))
-        users = User.objects.filter(is_active=True).order_by('-xp', '-current_streak')[:limit]
+        # Exclude staff and superusers from leaderboard
+        users = User.objects.filter(
+            is_active=True,
+            is_staff=False,
+            is_superuser=False
+        ).order_by('-xp', '-current_streak')[:limit]
         
         leaderboard = []
         for rank, user in enumerate(users, 1):
@@ -372,15 +416,19 @@ class UserDailyStatsView(APIView):
     
     def _get_topic_icon(self, topic_name):
         icons = {
-            'JavaScript': '⚡',
-            'Python': '🐍',
-            'HTML': '🌐',
-            'CSS': '🎨',
-            'React': '⚛️',
-            'TypeScript': '📘',
-            'Node.js': '🟢',
+            'JavaScript': 'javascript',
+            'Python': 'python',
+            'HTML': 'html',
+            'CSS': 'css',
+            'React': 'react',
+            'TypeScript': 'typescript',
+            'Node.js': 'nodejs',
+            'Java': 'java',
+            'C++': 'cpp',
+            'SQL': 'sql',
+            'Bash': 'bash',
         }
-        return icons.get(topic_name, '📚')
+        return icons.get(topic_name, 'code')
 
 
 class UserCertificatesView(APIView):
@@ -456,15 +504,19 @@ class UserCertificatesView(APIView):
     
     def _get_topic_icon(self, topic_name):
         icons = {
-            'JavaScript': '⚡',
-            'Python': '🐍',
-            'HTML': '🌐',
-            'CSS': '🎨',
-            'React': '⚛️',
-            'TypeScript': '📘',
-            'Node.js': '🟢',
+            'JavaScript': 'javascript',
+            'Python': 'python',
+            'HTML': 'html',
+            'CSS': 'css',
+            'React': 'react',
+            'TypeScript': 'typescript',
+            'Node.js': 'nodejs',
+            'Java': 'java',
+            'C++': 'cpp',
+            'SQL': 'sql',
+            'Bash': 'bash',
         }
-        return icons.get(topic_name, '📚')
+        return icons.get(topic_name, 'code')
     
     def _get_topic_color(self, topic_name):
         colors = {
@@ -475,6 +527,10 @@ class UserCertificatesView(APIView):
             'React': '#06b6d4',
             'TypeScript': '#3178c6',
             'Node.js': '#68a063',
+            'Java': '#e76f00',
+            'C++': '#00599C',
+            'SQL': '#336791',
+            'Bash': '#4EAA25',
         }
         return colors.get(topic_name, '#a855f7')
 
