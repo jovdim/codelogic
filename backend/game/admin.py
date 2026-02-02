@@ -117,16 +117,24 @@ class QuestionInline(admin.TabularInline):
     model = Question
     extra = 0
     fields = ['level', 'question_type', 'question_text', 'xp_reward', 'is_active']
-    show_change_link = True
+    show_change_link = True  # This adds a link to open the full question edit page
     ordering = ['level', 'order']
+    readonly_fields = []
+    max_num = 0  # Don't allow adding from inline - use the button instead
+    can_delete = False
+    
+    verbose_name_plural = "Existing Questions (view only - use button below to add new)"
     
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('topic')
+    
+    def has_add_permission(self, request, obj=None):
+        return False  # Disable inline add
 
 
 @admin.register(Topic)
 class TopicAdmin(admin.ModelAdmin):
-    list_display = ['name', 'category', 'slug', 'question_count', 'levels_with_questions', 'total_levels', 'is_active']
+    list_display = ['name', 'category', 'slug', 'icon', 'question_count', 'levels_with_questions', 'total_levels', 'is_active']
     list_filter = ['category', 'is_active']
     prepopulated_fields = {'slug': ('name',)}
     list_editable = ['is_active']
@@ -137,6 +145,10 @@ class TopicAdmin(admin.ModelAdmin):
     fieldsets = (
         ('Basic Info', {
             'fields': ('name', 'slug', 'category', 'description')
+        }),
+        ('Display', {
+            'fields': ('icon',),
+            'description': 'Icon key for React Icons (e.g., react, python, javascript, typescript, html, css, java, cpp, nodejs, flutter, swift, kotlin, sql, bash, docker, aws). Leave blank to auto-detect from topic name.'
         }),
         ('Settings', {
             'fields': ('total_levels', 'order'),
@@ -159,6 +171,12 @@ class TopicAdmin(admin.ModelAdmin):
         levels = obj.questions.values('level').distinct().count()
         return format_html('{} / {}', levels, obj.total_levels)
     levels_with_questions.short_description = 'Levels Used'
+    
+    def change_view(self, request, object_id, form_url='', extra_context=None):
+        extra_context = extra_context or {}
+        extra_context['show_add_question_button'] = True
+        extra_context['topic_id'] = object_id
+        return super().change_view(request, object_id, form_url, extra_context=extra_context)
 
 
 # ============================================================
@@ -214,6 +232,24 @@ class QuestionAdmin(admin.ModelAdmin):
             'fields': ('xp_reward', 'order', 'is_active')
         }),
     )
+    
+    def get_changeform_initial_data(self, request):
+        """Pre-fill topic when coming from topic page."""
+        initial = super().get_changeform_initial_data(request)
+        topic_id = request.GET.get('topic')
+        if topic_id:
+            initial['topic'] = topic_id
+        return initial
+    
+    def response_add(self, request, obj, post_url_continue=None):
+        """After adding, redirect back to topic if came from there."""
+        if '_addanother' not in request.POST and '_continue' not in request.POST:
+            topic_id = request.GET.get('topic')
+            if topic_id:
+                from django.urls import reverse
+                from django.http import HttpResponseRedirect
+                return HttpResponseRedirect(reverse('admin:game_topic_change', args=[topic_id]))
+        return super().response_add(request, obj, post_url_continue)
     
     def short_question(self, obj):
         text = obj.question_text[:60] + '...' if len(obj.question_text) > 60 else obj.question_text

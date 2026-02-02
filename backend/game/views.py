@@ -66,6 +66,58 @@ class CategoryListView(APIView):
         return Response(result)
 
 
+class CategoryDetailView(APIView):
+    """Get single category with full topic details."""
+    permission_classes = [AllowAny]
+    
+    def get(self, request, category_slug):
+        try:
+            category = Category.objects.get(slug=category_slug, is_active=True)
+        except Category.DoesNotExist:
+            return Response({'error': 'Category not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        topics = category.topics.filter(is_active=True).annotate(
+            question_count=Count('questions', filter=Q(questions__is_active=True))
+        ).order_by('order', 'name')
+        
+        # Calculate total XP
+        total_xp = Question.objects.filter(
+            topic__category=category,
+            is_active=True
+        ).aggregate(total=Sum('xp_reward'))['total'] or 0
+        
+        topics_data = []
+        for topic in topics:
+            topic_xp = topic.questions.filter(is_active=True).aggregate(
+                total=Sum('xp_reward')
+            )['total'] or 0
+            
+            # Use topic icon or fall back to slug/name
+            topic_icon = topic.icon if topic.icon else topic.slug
+            
+            topics_data.append({
+                'id': str(topic.id),
+                'slug': topic.slug,
+                'name': topic.name,
+                'description': topic.description,
+                'icon': topic_icon,
+                'totalLevels': topic.total_levels,
+                'xpReward': topic_xp,
+                'questionCount': topic.question_count,
+            })
+        
+        return Response({
+            'id': str(category.id),
+            'slug': category.slug,
+            'name': category.name,
+            'description': category.description,
+            'icon': category.icon,
+            'color': category.color,
+            'topics': topics_data,
+            'totalXP': total_xp,
+        })
+
+
 class TopicDetailView(APIView):
     """Get topic details with user progress."""
     permission_classes = [AllowAny]

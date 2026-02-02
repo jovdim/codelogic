@@ -1,5 +1,46 @@
 {% extends "admin/base_site.html" %} {% load i18n %} {% block content %}
-<h1>Dashboard</h1>
+<style>
+  .pixel-box {
+    background: #1a1a2e;
+    border: 2px solid #2d2d44;
+    box-shadow:
+      4px 4px 0 0 rgba(124, 58, 237, 0.3),
+      -1px -1px 0 0 rgba(255, 255, 255, 0.1) inset;
+  }
+  .pixel-box:hover {
+    border-color: #3d3d5c;
+  }
+  .stat-number {
+    font-size: 28px;
+    font-weight: bold;
+    color: #a78bfa;
+  }
+  .stat-label {
+    color: #9ca3af;
+    margin-top: 5px;
+    font-size: 14px;
+  }
+  .table-header {
+    background: #0f0f1a;
+    color: #a1a1b5;
+    font-weight: 500;
+  }
+  .table-row {
+    border-bottom: 1px solid #2d2d44;
+  }
+  .table-cell {
+    padding: 12px;
+    color: #e2e2f0;
+  }
+  .section-title {
+    color: #e2e2f0;
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 15px;
+  }
+</style>
+
+<h1 style="color: #e2e2f0; margin-bottom: 24px">Dashboard</h1>
 
 <div
   style="
@@ -9,127 +50,54 @@
     margin-bottom: 30px;
   "
 >
-  <div
-    style="
-      background: #f8f9fa;
-      padding: 20px;
-      border-radius: 8px;
-      text-align: center;
-    "
-  >
-    <div style="font-size: 28px; font-weight: bold; color: #2563eb">
-      {{ total_users }}
-    </div>
-    <div style="color: #666; margin-top: 5px">Users</div>
+  <div class="pixel-box" style="padding: 20px; text-align: center">
+    <div class="stat-number">{{ total_users }}</div>
+    <div class="stat-label">Users</div>
   </div>
-  <div
-    style="
-      background: #f8f9fa;
-      padding: 20px;
-      border-radius: 8px;
-      text-align: center;
-    "
-  >
-    <div style="font-size: 28px; font-weight: bold; color: #2563eb">
-      {{ total_categories }}
-    </div>
-    <div style="color: #666; margin-top: 5px">Categories</div>
+  <div class="pixel-box" style="padding: 20px; text-align: center">
+    <div class="stat-number">{{ total_categories }}</div>
+    <div class="stat-label">Categories</div>
   </div>
-  <div
-    style="
-      background: #f8f9fa;
-      padding: 20px;
-      border-radius: 8px;
-      text-align: center;
-    "
-  >
-    <div style="font-size: 28px; font-weight: bold; color: #2563eb">
-      {{ total_topics }}
-    </div>
-    <div style="color: #666; margin-top: 5px">Topics</div>
+  <div class="pixel-box" style="padding: 20px; text-align: center">
+    <div class="stat-number">{{ total_topics }}</div>
+    <div class="stat-label">Topics</div>
   </div>
-  <div
-    style="
-      background: #f8f9fa;
-      padding: 20px;
-      border-radius: 8px;
-      text-align: center;
-    "
-  >
-    <div style="font-size: 28px; font-weight: bold; color: #2563eb">
-      {{ total_questions }}
-    </div>
-    <div style="color: #666; margin-top: 5px">Questions</div>
+  <div class="pixel-box" style="padding: 20px; text-align: center">
+    <div class="stat-number">{{ total_questions }}</div>
+    <div class="stat-label">Questions</div>
   </div>
-  <div
-    style="
-      background: #f8f9fa;
-      padding: 20px;
-      border-radius: 8px;
-      text-align: center;
-    "
-  >
-    <div style="font-size: 28px; font-weight: bold; color: #2563eb">
-      {{ total_resources }}
-    </div>
-    <div style="color: #666; margin-top: 5px">Resources</div>
+  <div class="pixel-box" style="padding: 20px; text-align: center">
+    <div class="stat-number">{{ total_resources }}</div>
+    <div class="stat-label">Resources</div>
   </div>
 </div>
 
 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px">
   <!-- Recent Users -->
-  <div>
-    <h2 style="color: #2563eb; font-size: 18px; margin-bottom: 10px">
-      Recent Users
-    </h2>
+  <div class="pixel-box" style="padding: 20px">
+    <h2 class="section-title">Recent Users</h2>
     <table style="width: 100%; border-collapse: collapse">
       <thead>
-        <tr style="background: #f1f5f9">
-          <th
-            style="
-              padding: 10px;
-              text-align: left;
-              border-bottom: 1px solid #ddd;
-            "
-          >
-            Username
-          </th>
-          <th
-            style="
-              padding: 10px;
-              text-align: left;
-              border-bottom: 1px solid #ddd;
-            "
-          >
-            Email
-          </th>
-          <th
-            style="
-              padding: 10px;
-              text-align: left;
-              border-bottom: 1px solid #ddd;
-            "
-          >
-            Joined
-          </th>
+        <tr class="table-header">
+          <th style="padding: 12px; text-align: left">Username</th>
+          <th style="padding: 12px; text-align: left">Email</th>
+          <th style="padding: 12px; text-align: left">Joined</th>
         </tr>
       </thead>
       <tbody>
         {% for user in recent_users %}
-        <tr>
-          <td style="padding: 10px; border-bottom: 1px solid #eee">
-            {{ user.username }}
-          </td>
-          <td style="padding: 10px; border-bottom: 1px solid #eee">
-            {{ user.email }}
-          </td>
-          <td style="padding: 10px; border-bottom: 1px solid #eee">
+        <tr class="table-row">
+          <td class="table-cell">{{ user.username }}</td>
+          <td class="table-cell" style="color: #a1a1b5">{{ user.email }}</td>
+          <td class="table-cell" style="color: #a1a1b5">
             {{ user.date_joined|date:"M d, Y" }}
           </td>
         </tr>
         {% empty %}
         <tr>
-          <td colspan="3" style="padding: 10px; color: #999">No users yet</td>
+          <td colspan="3" class="table-cell" style="color: #6b7280">
+            No users yet
+          </td>
         </tr>
         {% endfor %}
       </tbody>
@@ -137,46 +105,26 @@
   </div>
 
   <!-- Categories -->
-  <div>
-    <h2 style="color: #2563eb; font-size: 18px; margin-bottom: 10px">
-      Categories
-    </h2>
+  <div class="pixel-box" style="padding: 20px">
+    <h2 class="section-title">Categories</h2>
     <table style="width: 100%; border-collapse: collapse">
       <thead>
-        <tr style="background: #f1f5f9">
-          <th
-            style="
-              padding: 10px;
-              text-align: left;
-              border-bottom: 1px solid #ddd;
-            "
-          >
-            Name
-          </th>
-          <th
-            style="
-              padding: 10px;
-              text-align: left;
-              border-bottom: 1px solid #ddd;
-            "
-          >
-            Topics
-          </th>
+        <tr class="table-header">
+          <th style="padding: 12px; text-align: left">Name</th>
+          <th style="padding: 12px; text-align: left">Topics</th>
         </tr>
       </thead>
       <tbody>
         {% for cat in categories %}
-        <tr>
-          <td style="padding: 10px; border-bottom: 1px solid #eee">
-            {{ cat.name }}
-          </td>
-          <td style="padding: 10px; border-bottom: 1px solid #eee">
+        <tr class="table-row">
+          <td class="table-cell">{{ cat.name }}</td>
+          <td class="table-cell" style="color: #a1a1b5">
             {{ cat.topics_count }}
           </td>
         </tr>
         {% empty %}
         <tr>
-          <td colspan="2" style="padding: 10px; color: #999">
+          <td colspan="2" class="table-cell" style="color: #6b7280">
             No categories yet
           </td>
         </tr>
@@ -186,8 +134,10 @@
   </div>
 </div>
 
-<div style="margin-top: 30px">
-  <a href="{% url 'admin:index' %}" style="color: #2563eb"
+<div style="margin-top: 20px">
+  <a
+    href="{% url 'admin:index' %}"
+    style="color: #a78bfa; text-decoration: none"
     >&larr; Back to Admin</a
   >
 </div>

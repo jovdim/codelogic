@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/auth/RouteGuards";
@@ -14,61 +15,109 @@ import {
   Sparkles,
   Target,
   Flame,
+  Loader2,
 } from "lucide-react";
-import { FaReact, FaServer, FaCloud } from "react-icons/fa";
-import { IconType } from "react-icons";
+import api from "@/lib/api";
+import { getIcon, getIconColor } from "@/lib/iconMap";
 
-// Category data
-const categories = [
-  {
-    id: "frontend",
-    name: "Frontend",
-    bgColor: "bg-violet-600",
-    borderColor: "border-violet-500/30",
+// Category type
+interface Category {
+  id: string;
+  slug: string;
+  name: string;
+  description: string;
+  icon: string;
+  color: string;
+  topics: string[];
+  topicCount: number;
+  totalQuestions: number;
+  totalXP: number;
+}
+
+// Color mapping for categories
+const colorMap: Record<
+  string,
+  { bg: string; border: string; hoverBorder: string; progress: string }
+> = {
+  "#8b5cf6": {
+    bg: "bg-violet-600",
+    border: "border-violet-500/30",
     hoverBorder: "hover:border-violet-500",
-    progressColor: "bg-violet-500",
-    description: "Build beautiful user interfaces",
-    longDescription:
-      "Master the art of creating stunning web interfaces with HTML, CSS, JavaScript, and more.",
-    topics: ["HTML", "JavaScript"],
-    totalXP: 300,
-    progress: 0,
-    Icon: FaReact,
+    progress: "bg-violet-500",
   },
-  {
-    id: "backend",
-    name: "Backend",
-    bgColor: "bg-emerald-600",
-    borderColor: "border-emerald-500/30",
+  "#10b981": {
+    bg: "bg-emerald-600",
+    border: "border-emerald-500/30",
     hoverBorder: "hover:border-emerald-500",
-    progressColor: "bg-emerald-500",
-    description: "Power the server side",
-    longDescription:
-      "Learn to build robust server applications with Python, Node.js, databases, and APIs.",
-    topics: ["Python"],
-    totalXP: 150,
-    progress: 0,
-    Icon: FaServer,
+    progress: "bg-emerald-500",
   },
-  {
-    id: "devops",
-    name: "DevOps",
-    bgColor: "bg-amber-600",
-    borderColor: "border-amber-500/30",
+  "#f59e0b": {
+    bg: "bg-amber-600",
+    border: "border-amber-500/30",
     hoverBorder: "hover:border-amber-500",
-    progressColor: "bg-amber-500",
-    description: "Deploy & scale applications",
-    longDescription:
-      "Master deployment, CI/CD, containers, databases, and cloud infrastructure.",
-    topics: ["SQL"],
-    totalXP: 150,
-    progress: 0,
-    Icon: FaCloud,
+    progress: "bg-amber-500",
   },
-];
+  "#3b82f6": {
+    bg: "bg-blue-600",
+    border: "border-blue-500/30",
+    hoverBorder: "hover:border-blue-500",
+    progress: "bg-blue-500",
+  },
+  "#ef4444": {
+    bg: "bg-red-600",
+    border: "border-red-500/30",
+    hoverBorder: "hover:border-red-500",
+    progress: "bg-red-500",
+  },
+  "#ec4899": {
+    bg: "bg-pink-600",
+    border: "border-pink-500/30",
+    hoverBorder: "hover:border-pink-500",
+    progress: "bg-pink-500",
+  },
+  "#06b6d4": {
+    bg: "bg-cyan-600",
+    border: "border-cyan-500/30",
+    hoverBorder: "hover:border-cyan-500",
+    progress: "bg-cyan-500",
+  },
+  "#84cc16": {
+    bg: "bg-lime-600",
+    border: "border-lime-500/30",
+    hoverBorder: "hover:border-lime-500",
+    progress: "bg-lime-500",
+  },
+};
+
+// Default colors if not in map
+const defaultColors = {
+  bg: "bg-slate-600",
+  border: "border-slate-500/30",
+  hoverBorder: "hover:border-slate-500",
+  progress: "bg-slate-500",
+};
 
 export default function PlayPage() {
   const { user } = useAuth();
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await api.get("/game/categories/");
+        setCategories(response.data);
+      } catch (error) {
+        console.error("Failed to fetch categories:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchCategories();
+  }, []);
+
+  const getColors = (color: string) =>
+    colorMap[color.toLowerCase()] || defaultColors;
 
   return (
     <ProtectedRoute>
@@ -149,88 +198,82 @@ export default function PlayPage() {
             )}
 
             {/* Categories Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {categories.map((category, index) => {
-                const IconComponent = category.Icon;
+            {loading ? (
+              <div className="flex items-center justify-center py-20">
+                <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {categories.map((category, index) => {
+                  const colors = getColors(category.color);
+                  const CategoryIcon = getIcon(category.icon);
+                  const iconColor = getIconColor(category.icon);
 
-                return (
-                  <ScrollReveal key={category.id} delay={0.1 + index * 0.05}>
-                    <Link
-                      href={`/play/${category.id}`}
-                      className={`block pixel-box p-6 ${category.borderColor} ${category.hoverBorder} transition-all duration-200 hover:scale-[1.02]`}
-                    >
-                      {/* Icon & XP Badge */}
-                      <div className="flex items-start justify-between mb-4">
-                        <div
-                          className={`w-14 h-14 ${category.bgColor} flex items-center justify-center rounded-xl`}
-                        >
-                          <IconComponent className="w-7 h-7 text-white" />
-                        </div>
-                        <div className="flex items-center gap-1 px-3 py-1 bg-yellow-500/20 rounded-full">
-                          <Zap className="w-4 h-4 text-yellow-400" />
-                          <span className="text-yellow-400 text-sm font-bold">
-                            {category.totalXP} XP
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Title & Description */}
-                      <h3 className="text-xl font-bold text-white mb-2">
-                        {category.name}
-                      </h3>
-                      <p className="text-gray-400 text-sm mb-4 line-clamp-2">
-                        {category.longDescription}
-                      </p>
-
-                      {/* Topics Preview */}
-                      <div className="flex flex-wrap gap-2 mb-4">
-                        {category.topics.slice(0, 3).map((topic) => (
-                          <span
-                            key={topic}
-                            className="px-2 py-1 bg-[#0a0a12] text-gray-400 text-xs rounded-lg"
-                          >
-                            {topic}
-                          </span>
-                        ))}
-                        {category.topics.length > 3 && (
-                          <span className="px-2 py-1 bg-[#0a0a12] text-purple-400 text-xs rounded-lg">
-                            +{category.topics.length - 3} more
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Progress Bar */}
-                      <div className="mb-4">
-                        <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
-                          <span>Progress</span>
-                          <span>{category.progress}%</span>
-                        </div>
-                        <div className="h-2 bg-[#0a0a12] rounded-full overflow-hidden">
+                  return (
+                    <ScrollReveal key={category.id} delay={0.1 + index * 0.05}>
+                      <Link
+                        href={`/play/${category.slug}`}
+                        className={`flex flex-col h-full pixel-box p-6 ${colors.border} ${colors.hoverBorder} transition-all duration-200 hover:scale-[1.02]`}
+                      >
+                        {/* Icon & XP Badge */}
+                        <div className="flex items-start justify-between mb-4">
                           <div
-                            className={`h-full ${category.progressColor}`}
-                            style={{ width: `${category.progress}%` }}
-                          />
+                            className={`w-14 h-14 ${colors.bg} flex items-center justify-center rounded-xl`}
+                          >
+                            <CategoryIcon className="w-7 h-7" style={{ color: iconColor }} />
+                          </div>
+                          <div className="flex items-center gap-1 px-3 py-1 bg-yellow-500/20 rounded-full">
+                            <Zap className="w-4 h-4 text-yellow-400" />
+                            <span className="text-yellow-400 text-sm font-bold">
+                              {category.totalXP} XP
+                            </span>
+                          </div>
                         </div>
-                      </div>
 
-                      {/* Footer */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Target className="w-4 h-4 text-gray-500" />
-                          <span className="text-gray-500 text-sm">
-                            {category.topics.length} Topics
-                          </span>
+                        {/* Title & Description */}
+                        <h3 className="text-xl font-bold text-white mb-2">
+                          {category.name}
+                        </h3>
+                        <p className="text-gray-400 text-sm mb-4 line-clamp-2 min-h-[40px]">
+                          {category.description}
+                        </p>
+
+                        {/* Topics Preview */}
+                        <div className="flex flex-wrap gap-2 mb-4 min-h-[32px]">
+                          {category.topics.slice(0, 3).map((topic) => (
+                            <span
+                              key={topic}
+                              className="px-2 py-1 bg-[#0a0a12] text-gray-400 text-xs rounded-lg"
+                            >
+                              {topic}
+                            </span>
+                          ))}
+                          {category.topics.length > 3 && (
+                            <span className="px-2 py-1 bg-[#0a0a12] text-purple-400 text-xs rounded-lg">
+                              +{category.topics.length - 3} more
+                            </span>
+                          )}
                         </div>
-                        <div className="flex items-center gap-1 text-sm font-medium text-cyan-400">
-                          Start
-                          <ChevronRight className="w-4 h-4" />
+
+                        {/* Footer - pushed to bottom */}
+                        <div className="flex items-center justify-between mt-auto pt-2">
+                          <div className="flex items-center gap-2">
+                            <Target className="w-4 h-4 text-gray-500" />
+                            <span className="text-gray-500 text-sm">
+                              {category.topicCount} Topics
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1 text-sm font-medium text-cyan-400">
+                            Start
+                            <ChevronRight className="w-4 h-4" />
+                          </div>
                         </div>
-                      </div>
-                    </Link>
-                  </ScrollReveal>
-                );
-              })}
-            </div>
+                      </Link>
+                    </ScrollReveal>
+                  );
+                })}
+              </div>
+            )}
 
             {/* Info Section */}
             <ScrollReveal delay={0.3}>

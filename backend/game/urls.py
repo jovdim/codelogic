@@ -8,6 +8,7 @@ from . import views
 urlpatterns = [
     # Categories and Topics
     path('categories/', views.CategoryListView.as_view(), name='category-list'),
+    path('categories/<slug:category_slug>/', views.CategoryDetailView.as_view(), name='category-detail'),
     path('topics/<slug:category_slug>/<slug:topic_slug>/', views.TopicDetailView.as_view(), name='topic-detail'),
     
     # Quiz

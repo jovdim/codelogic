@@ -38,6 +38,7 @@ class Topic(models.Model):
     name = models.CharField(max_length=100)
     slug = models.SlugField(max_length=100)
     description = models.TextField(blank=True)
+    icon = models.CharField(max_length=50, blank=True, help_text='Icon key (e.g., react, python, javascript)')
     order = models.PositiveIntegerField(default=0)
     total_levels = models.PositiveIntegerField(default=15)
     is_active = models.BooleanField(default=True)

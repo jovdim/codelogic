@@ -6,7 +6,7 @@ import { useParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/auth/RouteGuards";
 import Sidebar from "@/components/layout/Sidebar";
-import { gameAPI } from "@/lib/api";
+import api from "@/lib/api";
 import {
   Zap,
   ChevronRight,
@@ -16,244 +16,156 @@ import {
   Target,
   Sparkles,
   ArrowLeft,
-  Award,
   CheckCircle,
+  Loader2,
 } from "lucide-react";
-import {
-  FaReact,
-  FaServer,
-  FaCloud,
-  FaHtml5,
-  FaPython,
-  FaJs,
-  FaDatabase,
-  FaTerminal,
-  FaCss3Alt,
-  FaJava,
-} from "react-icons/fa";
-import { SiCplusplus } from "react-icons/si";
-import { IconType } from "react-icons";
+import { getIcon, getIconColor } from "@/lib/iconMap";
 
-// Category data with topics
-const categoryData: {
-  [key: string]: {
-    name: string;
-    Icon: IconType;
-    color: string;
-    description: string;
-    topics: {
-      id: string;
-      name: string;
-      Icon: IconType;
-      iconColor: string;
-      color: string;
-      borderColor: string;
-      hoverBorder: string;
-      level: number;
-      totalLevels: number;
-      xpReward: number;
-      description: string;
-      unlocked: boolean;
-      requiredLevel?: number;
-    }[];
-  };
-} = {
-  frontend: {
-    name: "Frontend",
-    Icon: FaReact,
-    color: "from-purple-500 to-pink-500",
-    description: "Master the art of creating stunning web interfaces",
-    topics: [
-      {
-        id: "html",
-        name: "HTML",
-        Icon: FaHtml5,
-        iconColor: "#e34f26",
-        color: "from-orange-400 to-orange-500",
-        borderColor: "border-orange-500/30",
-        hoverBorder: "hover:border-orange-500",
-        level: 1,
-        totalLevels: 15,
-        xpReward: 150,
-        description: "Web structure & markup",
-        unlocked: true,
-      },
-      {
-        id: "css",
-        name: "CSS",
-        Icon: FaCss3Alt,
-        iconColor: "#264de4",
-        color: "from-blue-400 to-blue-500",
-        borderColor: "border-blue-500/30",
-        hoverBorder: "hover:border-blue-500",
-        level: 1,
-        totalLevels: 15,
-        xpReward: 150,
-        description: "Styling & visual design",
-        unlocked: true,
-      },
-      {
-        id: "javascript",
-        name: "JavaScript",
-        Icon: FaJs,
-        iconColor: "#f7df1e",
-        color: "from-yellow-400 to-yellow-500",
-        borderColor: "border-yellow-500/30",
-        hoverBorder: "hover:border-yellow-500",
-        level: 1,
-        totalLevels: 15,
-        xpReward: 150,
-        description: "Interactive web magic",
-        unlocked: true,
-      },
-      {
-        id: "react",
-        name: "React",
-        Icon: FaReact,
-        iconColor: "#61dafb",
-        color: "from-cyan-400 to-cyan-500",
-        borderColor: "border-cyan-500/30",
-        hoverBorder: "hover:border-cyan-500",
-        level: 1,
-        totalLevels: 15,
-        xpReward: 150,
-        description: "Component-based UI library",
-        unlocked: true,
-      },
-    ],
+// Category type from API
+interface Topic {
+  id: string;
+  slug: string;
+  name: string;
+  description: string;
+  icon: string;
+  totalLevels: number;
+  xpReward: number;
+  questionCount: number;
+}
+
+interface Category {
+  id: string;
+  slug: string;
+  name: string;
+  description: string;
+  icon: string;
+  color: string;
+  topics: Topic[];
+  totalXP: number;
+}
+
+// Color mapping
+const colorMap: Record<
+  string,
+  { gradient: string; border: string; hoverBorder: string }
+> = {
+  "#8b5cf6": {
+    gradient: "from-violet-500 to-purple-500",
+    border: "border-violet-500/30",
+    hoverBorder: "hover:border-violet-500",
   },
-  backend: {
-    name: "Backend",
-    Icon: FaServer,
-    color: "from-green-500 to-teal-500",
-    description: "Build robust server-side applications",
-    topics: [
-      {
-        id: "python",
-        name: "Python",
-        Icon: FaPython,
-        iconColor: "#3776ab",
-        color: "from-blue-400 to-blue-500",
-        borderColor: "border-blue-500/30",
-        hoverBorder: "hover:border-blue-500",
-        level: 1,
-        totalLevels: 15,
-        xpReward: 150,
-        description: "Versatile programming",
-        unlocked: true,
-      },
-      {
-        id: "java",
-        name: "Java",
-        Icon: FaJava,
-        iconColor: "#f89820",
-        color: "from-orange-400 to-red-500",
-        borderColor: "border-orange-500/30",
-        hoverBorder: "hover:border-orange-500",
-        level: 1,
-        totalLevels: 15,
-        xpReward: 150,
-        description: "Enterprise programming",
-        unlocked: true,
-      },
-      {
-        id: "cpp",
-        name: "C++",
-        Icon: SiCplusplus,
-        iconColor: "#00599C",
-        color: "from-blue-500 to-indigo-600",
-        borderColor: "border-indigo-500/30",
-        hoverBorder: "hover:border-indigo-500",
-        level: 1,
-        totalLevels: 15,
-        xpReward: 150,
-        description: "Systems programming",
-        unlocked: true,
-      },
-    ],
+  "#10b981": {
+    gradient: "from-emerald-500 to-teal-500",
+    border: "border-emerald-500/30",
+    hoverBorder: "hover:border-emerald-500",
   },
-  devops: {
-    name: "DevOps",
-    Icon: FaCloud,
-    color: "from-orange-500 to-yellow-500",
-    description: "Deploy and scale applications",
-    topics: [
-      {
-        id: "sql",
-        name: "SQL",
-        Icon: FaDatabase,
-        iconColor: "#00758f",
-        color: "from-cyan-400 to-cyan-500",
-        borderColor: "border-cyan-500/30",
-        hoverBorder: "hover:border-cyan-500",
-        level: 1,
-        totalLevels: 15,
-        xpReward: 150,
-        description: "Database queries",
-        unlocked: true,
-      },
-      {
-        id: "bash",
-        name: "Bash",
-        Icon: FaTerminal,
-        iconColor: "#4eaa25",
-        color: "from-green-400 to-green-500",
-        borderColor: "border-green-500/30",
-        hoverBorder: "hover:border-green-500",
-        level: 1,
-        totalLevels: 15,
-        xpReward: 150,
-        description: "Shell scripting",
-        unlocked: true,
-      },
-    ],
+  "#f59e0b": {
+    gradient: "from-amber-500 to-orange-500",
+    border: "border-amber-500/30",
+    hoverBorder: "hover:border-amber-500",
   },
+  "#3b82f6": {
+    gradient: "from-blue-500 to-indigo-500",
+    border: "border-blue-500/30",
+    hoverBorder: "hover:border-blue-500",
+  },
+  "#ef4444": {
+    gradient: "from-red-500 to-rose-500",
+    border: "border-red-500/30",
+    hoverBorder: "hover:border-red-500",
+  },
+  "#ec4899": {
+    gradient: "from-pink-500 to-rose-500",
+    border: "border-pink-500/30",
+    hoverBorder: "hover:border-pink-500",
+  },
+  "#06b6d4": {
+    gradient: "from-cyan-500 to-teal-500",
+    border: "border-cyan-500/30",
+    hoverBorder: "hover:border-cyan-500",
+  },
+  "#84cc16": {
+    gradient: "from-lime-500 to-green-500",
+    border: "border-lime-500/30",
+    hoverBorder: "hover:border-lime-500",
+  },
+};
+
+const defaultColors = {
+  gradient: "from-slate-500 to-gray-500",
+  border: "border-slate-500/30",
+  hoverBorder: "hover:border-slate-500",
 };
 
 export default function CategoryPage() {
   const params = useParams();
   const { user } = useAuth();
+  const [category, setCategory] = useState<Category | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [topicProgress, setTopicProgress] = useState<{ [key: string]: number }>(
     {},
   );
 
-  const categoryId = params.category as string;
-  const category = categoryData[categoryId];
+  const categorySlug = params.category as string;
 
-  // Fetch user progress for all topics in this category
+  // Fetch category with topics from API
+  useEffect(() => {
+    const fetchCategory = async () => {
+      try {
+        const response = await api.get(`/game/categories/${categorySlug}/`);
+        setCategory(response.data);
+        setError(false);
+      } catch (err) {
+        console.error("Failed to fetch category:", err);
+        setError(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchCategory();
+  }, [categorySlug]);
+
+  // Fetch user progress for topics
   useEffect(() => {
     const fetchProgress = async () => {
       if (!category || !user) return;
 
       const progressMap: { [key: string]: number } = {};
-
       for (const topic of category.topics) {
         try {
-          const response = await gameAPI.getTopic(categoryId, topic.id);
+          const response = await api.get(
+            `/game/topics/${categorySlug}/${topic.slug}/`,
+          );
           const progress = response.data.user_progress;
-          if (progress) {
-            progressMap[topic.id] = progress.current_level || 1;
-          } else {
-            progressMap[topic.id] = 1;
-          }
-        } catch (err) {
-          progressMap[topic.id] = 1;
+          progressMap[topic.slug] = progress?.current_level || 1;
+        } catch {
+          progressMap[topic.slug] = 1;
         }
       }
-
       setTopicProgress(progressMap);
     };
-
     fetchProgress();
-  }, [categoryId, category, user]);
+  }, [category, user, categorySlug]);
 
-  // Helper to get current level for a topic
-  const getTopicLevel = (topicId: string) => {
-    return topicProgress[topicId] || 1;
-  };
+  const getColors = (color: string) =>
+    colorMap[color?.toLowerCase()] || defaultColors;
 
-  // If category doesn't exist, show error
-  if (!category) {
+  // Loading state
+  if (loading) {
+    return (
+      <ProtectedRoute>
+        <Sidebar>
+          <div className="min-h-screen flex items-center justify-center">
+            <Loader2 className="w-8 h-8 text-purple-400 animate-spin" />
+          </div>
+        </Sidebar>
+      </ProtectedRoute>
+    );
+  }
+
+  // Error state
+  if (error || !category) {
     return (
       <ProtectedRoute>
         <Sidebar>
@@ -272,16 +184,8 @@ export default function CategoryPage() {
     );
   }
 
-  const isTopicUnlocked = (topic: (typeof category.topics)[0]) => {
-    if (topic.unlocked) return true;
-    if (!user) return false;
-    return user.level >= (topic.requiredLevel || 0);
-  };
-
-  const totalXP = category.topics.reduce((sum, t) => sum + t.xpReward, 0);
-  const unlockedCount = category.topics.filter((t) =>
-    isTopicUnlocked(t),
-  ).length;
+  const colors = getColors(category.color);
+  const totalXP = category.totalXP || 0;
 
   return (
     <ProtectedRoute>
@@ -299,11 +203,16 @@ export default function CategoryPage() {
               </Link>
 
               <div className="flex items-center gap-4">
-                <div
-                  className={`w-16 h-16 bg-gradient-to-br ${category.color} rounded-xl flex items-center justify-center shadow-lg`}
-                >
-                  <category.Icon className="w-8 h-8 text-white" />
-                </div>
+                {(() => {
+                  const CategoryIcon = getIcon(category.icon);
+                  return (
+                    <div
+                      className={`w-16 h-16 bg-gradient-to-br ${colors.gradient} rounded-xl flex items-center justify-center shadow-lg`}
+                    >
+                      <CategoryIcon className="w-8 h-8 text-white" />
+                    </div>
+                  );
+                })()}
                 <div>
                   <h1 className="text-2xl md:text-3xl font-bold text-white">
                     {category.name}
@@ -314,7 +223,9 @@ export default function CategoryPage() {
             </div>
 
             {/* Category Stats */}
-            <div className="pixel-box p-5 mb-8 bg-gradient-to-r from-purple-600/10 to-pink-600/10">
+            <div
+              className={`pixel-box p-5 mb-8 bg-gradient-to-r ${colors.gradient.replace("from-", "from-").replace("to-", "to-")}/10`}
+            >
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="flex items-center gap-6">
                   <div className="text-center">
@@ -333,15 +244,6 @@ export default function CategoryPage() {
                     </div>
                     <p className="text-gray-500 text-xs">Topics</p>
                   </div>
-                  <div className="text-center">
-                    <div className="flex items-center gap-1 text-green-400">
-                      <Trophy className="w-5 h-5" />
-                      <span className="font-bold text-xl">
-                        {unlockedCount}/{category.topics.length}
-                      </span>
-                    </div>
-                    <p className="text-gray-500 text-xs">Unlocked</p>
-                  </div>
                 </div>
 
                 {user && (
@@ -353,7 +255,7 @@ export default function CategoryPage() {
                       </p>
                     </div>
                     <div
-                      className={`w-12 h-12 bg-gradient-to-br ${category.color} rounded-xl flex items-center justify-center text-lg`}
+                      className={`w-12 h-12 bg-gradient-to-br ${colors.gradient} rounded-xl flex items-center justify-center`}
                     >
                       <Star className="w-6 h-6 text-white" />
                     </div>
@@ -368,160 +270,109 @@ export default function CategoryPage() {
               Choose a Topic
             </h2>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {category.topics.map((topic) => {
-                const unlocked = isTopicUnlocked(topic);
-                const rawLevel = getTopicLevel(topic.id);
-                const isCompleted = rawLevel > topic.totalLevels;
-                const currentLevel = isCompleted ? topic.totalLevels : rawLevel;
-                const completedLevels = isCompleted
-                  ? topic.totalLevels
-                  : Math.max(0, rawLevel - 1);
-                const TopicIcon = topic.Icon;
+            {category.topics.length === 0 ? (
+              <div className="pixel-box p-8 text-center">
+                <p className="text-gray-400">
+                  No topics available yet. Check back soon!
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {category.topics.map((topic) => {
+                  const currentLevel = topicProgress[topic.slug] || 1;
+                  const isCompleted = currentLevel > topic.totalLevels;
+                  const displayLevel = isCompleted
+                    ? topic.totalLevels
+                    : currentLevel;
+                  const completedLevels = isCompleted
+                    ? topic.totalLevels
+                    : Math.max(0, currentLevel - 1);
 
-                return (
-                  <div key={topic.id}>
-                    {unlocked ? (
-                      <Link
-                        href={`/play/${categoryId}/${topic.id}`}
-                        className={`block pixel-box p-5 ${topic.borderColor} ${topic.hoverBorder} transition-all duration-200 hover:scale-[1.02]`}
-                      >
-                        {/* Icon and Level/Completion */}
-                        <div className="flex items-start justify-between mb-3">
-                          <div
-                            className={`w-14 h-14 bg-gradient-to-br ${topic.color} flex items-center justify-center rounded-lg`}
-                          >
-                            <TopicIcon
-                              className="w-8 h-8"
-                              style={{ color: topic.iconColor }}
-                            />
-                          </div>
-
-                          {isCompleted ? (
-                            <div className="flex items-center gap-2 px-3 py-1.5 bg-green-500/20 border border-green-500/30 rounded-lg">
-                              <CheckCircle className="w-4 h-4 text-green-400" />
-                              <span className="text-green-400 text-sm font-medium">
-                                Complete
-                              </span>
-                            </div>
-                          ) : (
-                            <div className="text-right">
-                              <div className="text-xs text-gray-500 uppercase tracking-wide">
-                                Level
-                              </div>
-                              <div className="text-xl font-bold text-white">
-                                {currentLevel}
-                                <span className="text-sm text-gray-500 font-normal">
-                                  /{topic.totalLevels}
-                                </span>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Title and Description */}
-                        <h3 className="text-lg font-bold text-white mb-1">
-                          {topic.name}
-                        </h3>
-                        <p className="text-xs text-gray-400 mb-3">
-                          {topic.description}
-                        </p>
-
-                        {/* Progress Bar */}
-                        <div className="mb-3">
-                          <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
-                            <span>Progress</span>
-                            <span>
-                              {completedLevels}/{topic.totalLevels}
-                            </span>
-                          </div>
-                          <div className="h-1.5 bg-[#0a0a12] rounded-full overflow-hidden">
+                  return (
+                    <Link
+                      key={topic.id}
+                      href={`/play/${categorySlug}/${topic.slug}`}
+                      className={`block pixel-box p-5 h-full ${colors.border} ${colors.hoverBorder} transition-all duration-200 hover:scale-[1.02]`}
+                    >
+                      {/* Icon and Level */}
+                      <div className="flex items-start justify-between mb-3">
+                        {(() => {
+                          const TopicIcon = getIcon(topic.icon);
+                          return (
                             <div
-                              className={`h-full ${isCompleted ? "bg-green-500" : `bg-gradient-to-r ${topic.color}`}`}
-                              style={{
-                                width: `${(completedLevels / topic.totalLevels) * 100}%`,
-                              }}
-                            />
-                          </div>
-                        </div>
-
-                        {/* XP Reward and Play Button */}
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-1 text-yellow-400 text-sm">
-                            <Zap className="w-4 h-4" />
-                            <span className="font-medium">
-                              +{topic.xpReward} XP
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-1 text-sm font-medium text-purple-400">
-                            {isCompleted ? "Review" : "Play"}
-                            <ChevronRight className="w-4 h-4" />
-                          </div>
-                        </div>
-                      </Link>
-                    ) : (
-                      <div
-                        className={`relative overflow-hidden pixel-box p-5 border-gray-600/30 opacity-60`}
-                      >
-                        {/* Locked Overlay */}
-                        <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px] flex items-center justify-center z-20">
-                          <div className="text-center">
-                            <div className="w-12 h-12 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-2">
-                              <Lock className="w-6 h-6 text-gray-500" />
-                            </div>
-                            {topic.requiredLevel === 999 ? (
-                              <>
-                                <p className="text-gray-400 text-sm font-medium">
-                                  Coming Soon
-                                </p>
-                                <p className="text-gray-500 text-xs">
-                                  Questions being added
-                                </p>
-                              </>
-                            ) : (
-                              <>
-                                <p className="text-gray-400 text-sm font-medium">
-                                  Reach Level {topic.requiredLevel}
-                                </p>
-                                <p className="text-gray-500 text-xs">
-                                  to unlock this topic
-                                </p>
-                              </>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Content (dimmed) */}
-                        <div className="relative z-10">
-                          <div className="flex items-start justify-between mb-3">
-                            <div
-                              className={`w-14 h-14 bg-gradient-to-br ${topic.color} flex items-center justify-center rounded-lg grayscale`}
+                              className={`w-14 h-14 bg-gradient-to-br ${colors.gradient} flex items-center justify-center rounded-lg`}
                             >
                               <TopicIcon className="w-8 h-8 text-white" />
                             </div>
-                            <div className="text-right">
-                              <div className="text-xs text-gray-500 uppercase tracking-wide">
-                                Level
-                              </div>
-                              <div className="text-xl font-bold text-gray-500">
-                                ?
-                              </div>
+                          );
+                        })()}
+
+                        {isCompleted ? (
+                          <div className="flex items-center gap-2 px-3 py-1.5 bg-green-500/20 border border-green-500/30 rounded-lg">
+                            <CheckCircle className="w-4 h-4 text-green-400" />
+                            <span className="text-green-400 text-sm font-medium">
+                              Complete
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="text-right">
+                            <div className="text-xs text-gray-500 uppercase tracking-wide">
+                              Level
+                            </div>
+                            <div className="text-xl font-bold text-white">
+                              {displayLevel}
+                              <span className="text-sm text-gray-500 font-normal">
+                                /{topic.totalLevels}
+                              </span>
                             </div>
                           </div>
-                          <h3 className="text-lg font-bold text-gray-500 mb-1">
-                            {topic.name}
-                          </h3>
-                          <p className="text-xs text-gray-600 mb-3">
-                            {topic.description}
-                          </p>
-                          <div className="h-1.5 bg-[#0a0a12] rounded-full" />
+                        )}
+                      </div>
+
+                      {/* Title and Description */}
+                      <h3 className="text-lg font-bold text-white mb-1">
+                        {topic.name}
+                      </h3>
+                      <p className="text-xs text-gray-400 mb-3 line-clamp-2">
+                        {topic.description}
+                      </p>
+
+                      {/* Progress Bar */}
+                      <div className="mb-3">
+                        <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+                          <span>Progress</span>
+                          <span>
+                            {completedLevels}/{topic.totalLevels}
+                          </span>
+                        </div>
+                        <div className="h-1.5 bg-[#0a0a12] rounded-full overflow-hidden">
+                          <div
+                            className={`h-full ${isCompleted ? "bg-green-500" : `bg-gradient-to-r ${colors.gradient}`}`}
+                            style={{
+                              width: `${(completedLevels / topic.totalLevels) * 100}%`,
+                            }}
+                          />
                         </div>
                       </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+
+                      {/* XP and Play Button */}
+                      <div className="flex items-center justify-between mt-auto">
+                        <div className="flex items-center gap-1 text-yellow-400 text-sm">
+                          <Zap className="w-4 h-4" />
+                          <span className="font-medium">
+                            +{topic.xpReward} XP
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 text-sm font-medium text-purple-400">
+                          {isCompleted ? "Review" : "Play"}
+                          <ChevronRight className="w-4 h-4" />
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
 
             {/* Tips Section */}
             <div className="mt-8 pixel-box p-5 bg-[#0a0a12]">

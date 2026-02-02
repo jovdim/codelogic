@@ -18,93 +18,7 @@ import {
   Award,
   Download,
 } from "lucide-react";
-import {
-  FaHtml5,
-  FaPython,
-  FaJs,
-  FaDatabase,
-  FaTerminal,
-  FaCss3Alt,
-  FaReact,
-  FaJava,
-} from "react-icons/fa";
-import { SiCplusplus } from "react-icons/si";
-import { IconType } from "react-icons";
-
-// Topic data
-const topicData: {
-  [key: string]: {
-    name: string;
-    Icon: IconType;
-    iconColor: string;
-    accentColor: string;
-    totalLevels: number;
-  };
-} = {
-  javascript: {
-    name: "JavaScript",
-    Icon: FaJs,
-    iconColor: "#f7df1e",
-    accentColor: "#eab308",
-    totalLevels: 15,
-  },
-  html: {
-    name: "HTML",
-    Icon: FaHtml5,
-    iconColor: "#e34f26",
-    accentColor: "#f97316",
-    totalLevels: 15,
-  },
-  css: {
-    name: "CSS",
-    Icon: FaCss3Alt,
-    iconColor: "#264de4",
-    accentColor: "#3b82f6",
-    totalLevels: 15,
-  },
-  react: {
-    name: "React",
-    Icon: FaReact,
-    iconColor: "#61dafb",
-    accentColor: "#06b6d4",
-    totalLevels: 15,
-  },
-  python: {
-    name: "Python",
-    Icon: FaPython,
-    iconColor: "#3776ab",
-    accentColor: "#3b82f6",
-    totalLevels: 15,
-  },
-  sql: {
-    name: "SQL",
-    Icon: FaDatabase,
-    iconColor: "#00758f",
-    accentColor: "#06b6d4",
-    totalLevels: 15,
-  },
-  bash: {
-    name: "Bash",
-    Icon: FaTerminal,
-    iconColor: "#4eaa25",
-    accentColor: "#22c55e",
-    totalLevels: 15,
-  },
-  java: {
-    name: "Java",
-    Icon: FaJava,
-    iconColor: "#f89820",
-    accentColor: "#f97316",
-    totalLevels: 15,
-  },
-  cpp: {
-    name: "C++",
-    Icon: SiCplusplus,
-    iconColor: "#00599C",
-    accentColor: "#6366f1",
-    totalLevels: 15,
-  },
-};
+import { getIcon, getIconColor, getAccentColor } from "@/lib/iconMap";
 
 // Level titles for each topic
 const topicLevelTitles: { [key: string]: string[] } = {
@@ -309,12 +223,18 @@ export default function TopicLevelPage() {
   const topicId = params.topic as string;
   const currentLevelRef = useRef<HTMLDivElement>(null);
 
-  const topic = topicData[topicId] || {
-    name: "Topic",
-    icon: "📚",
-    accentColor: "#a855f7",
-    totalLevels: 15,
-  };
+  // Topic data from API
+  const [topicInfo, setTopicInfo] = useState<{
+    name: string;
+    icon: string;
+    totalLevels: number;
+  } | null>(null);
+  
+  // Get icon and colors from iconMap using topicId as fallback
+  const iconKey = topicInfo?.icon || topicId;
+  const TopicIcon = getIcon(iconKey);
+  const iconColor = getIconColor(iconKey);
+  const accentColor = getAccentColor(iconKey);
 
   const [userProgress, setUserProgress] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -335,7 +255,16 @@ export default function TopicLevelPage() {
     const fetchProgress = async () => {
       try {
         const response = await gameAPI.getTopic(categoryId, topicId);
-        const progress = response.data.user_progress;
+        const data = response.data;
+        
+        // Set topic info from API
+        setTopicInfo({
+          name: data.name,
+          icon: data.icon || topicId,
+          totalLevels: data.total_levels || 15,
+        });
+        
+        const progress = data.user_progress;
         if (progress) {
           setUserProgress(progress.current_level || 1);
           setCertificateData({
@@ -349,6 +278,12 @@ export default function TopicLevelPage() {
         console.error("Failed to fetch progress:", err);
         // Default to level 1 for new users
         setUserProgress(1);
+        // Set fallback topic info
+        setTopicInfo({
+          name: topicId.charAt(0).toUpperCase() + topicId.slice(1).replace(/-/g, ' '),
+          icon: topicId,
+          totalLevels: 15,
+        });
       } finally {
         setLoading(false);
       }
@@ -357,11 +292,15 @@ export default function TopicLevelPage() {
     fetchProgress();
   }, [categoryId, topicId]);
 
-  const levels = generateLevels(topicId, topic.totalLevels, userProgress);
+  // Use topicInfo for totalLevels (with fallback)
+  const totalLevels = topicInfo?.totalLevels || 15;
+  const topicName = topicInfo?.name || topicId;
+  
+  const levels = generateLevels(topicId, totalLevels, userProgress);
   const completedLevels = levels.filter((l) => l.isCompleted).length;
   const totalStars =
     certificateData.totalStars || levels.reduce((acc, l) => acc + l.stars, 0);
-  const isAllCompleted = completedLevels === topic.totalLevels;
+  const isAllCompleted = completedLevels === totalLevels;
 
   const [selectedLevel, setSelectedLevel] = useState<number | null>(null);
   const [showCertificate, setShowCertificate] = useState(false);
@@ -402,7 +341,7 @@ export default function TopicLevelPage() {
                   top: `${(i * 23) % 100}%`,
                   width: `${4 + (i % 3) * 2}px`,
                   height: `${4 + (i % 3) * 2}px`,
-                  backgroundColor: i % 2 === 0 ? topic.accentColor : "#a855f7",
+                  backgroundColor: i % 2 === 0 ? accentColor : "#a855f7",
                   opacity: 0.15 + (i % 5) * 0.05,
                   animationDelay: `${i * 0.5}s`,
                   animationDuration: `${8 + (i % 5) * 2}s`,
@@ -437,22 +376,22 @@ export default function TopicLevelPage() {
                   <div
                     className="w-10 h-10 rounded-lg flex items-center justify-center"
                     style={{
-                      backgroundColor: `${topic.accentColor}20`,
+                      backgroundColor: `${accentColor}20`,
                     }}
                   >
-                    <topic.Icon
+                    <TopicIcon
                       className="w-6 h-6"
-                      style={{ color: topic.iconColor }}
+                      style={{ color: iconColor }}
                     />
                   </div>
                   <div>
                     <h1 className="text-lg font-bold text-white">
-                      {topic.name}
+                      {topicName}
                     </h1>
                     <p className="text-xs text-green-500">
                       {isAllCompleted
                         ? "All levels completed!"
-                        : `Level ${userProgress} of ${topic.totalLevels}`}
+                        : `Level ${userProgress} of ${totalLevels}`}
                     </p>
                   </div>
                 </div>
@@ -461,11 +400,11 @@ export default function TopicLevelPage() {
                   <div className="flex items-center gap-1 px-2 py-1 bg-[#1a1a2e] rounded-lg">
                     <Star
                       className="w-4 h-4"
-                      style={{ color: topic.accentColor }}
+                      style={{ color: accentColor }}
                     />
                     <span
                       className="text-sm font-bold"
-                      style={{ color: topic.accentColor }}
+                      style={{ color: accentColor }}
                     >
                       {totalStars}
                     </span>
@@ -479,13 +418,13 @@ export default function TopicLevelPage() {
                   <div
                     className="h-full rounded-full transition-all duration-500"
                     style={{
-                      width: `${(completedLevels / topic.totalLevels) * 100}%`,
-                      backgroundColor: topic.accentColor,
+                      width: `${(completedLevels / totalLevels) * 100}%`,
+                      backgroundColor: accentColor,
                     }}
                   />
                 </div>
                 <p className="text-xs text-gray-500 mt-1 text-right">
-                  {completedLevels}/{topic.totalLevels} completed
+                  {completedLevels}/{totalLevels} completed
                 </p>
               </div>
             </div>
@@ -504,9 +443,9 @@ export default function TopicLevelPage() {
               <div
                 className="absolute left-1/2 top-0 w-1 -translate-x-1/2 transition-all duration-500 rounded-full"
                 style={{
-                  height: `${((userProgress - 0.5) / (topic.totalLevels + 1)) * 100}%`,
-                  backgroundColor: topic.accentColor,
-                  boxShadow: `0 0 10px ${topic.accentColor}40`,
+                  height: `${((userProgress - 0.5) / (totalLevels + 1)) * 100}%`,
+                  backgroundColor: accentColor,
+                  boxShadow: `0 0 10px ${accentColor}40`,
                 }}
               />
 
@@ -528,11 +467,11 @@ export default function TopicLevelPage() {
                         right: isLeft ? "50%" : "0",
                         backgroundColor:
                           level.isCompleted || level.isCurrent
-                            ? topic.accentColor
+                            ? accentColor
                             : "#2d2d44",
                         boxShadow:
                           level.isCompleted || level.isCurrent
-                            ? `0 0 8px ${topic.accentColor}40`
+                            ? `0 0 8px ${accentColor}40`
                             : "none",
                       }}
                     />
@@ -546,10 +485,10 @@ export default function TopicLevelPage() {
                         style={{
                           backgroundColor:
                             level.isCompleted || level.isCurrent
-                              ? topic.accentColor
+                              ? accentColor
                               : "#2d2d44",
                           boxShadow: level.isCurrent
-                            ? `0 0 12px ${topic.accentColor}`
+                            ? `0 0 12px ${accentColor}`
                             : "none",
                           transform: "rotate(45deg)",
                         }}
@@ -582,7 +521,7 @@ export default function TopicLevelPage() {
                           }`}
                           style={{
                             borderColor: level.isCompleted
-                              ? topic.accentColor
+                              ? accentColor
                               : undefined,
                           }}
                         >
@@ -593,7 +532,7 @@ export default function TopicLevelPage() {
                               style={{
                                 backgroundColor: level.isLocked
                                   ? "#2d2d44"
-                                  : topic.accentColor,
+                                  : accentColor,
                                 color: level.isLocked ? "#6b7280" : "#0f0f1a",
                               }}
                             >
@@ -605,10 +544,10 @@ export default function TopicLevelPage() {
                           <div
                             className="w-9 h-9 mx-auto mb-1 rounded-lg flex items-center justify-center text-sm font-bold"
                             style={{
-                              backgroundColor: `${topic.accentColor}20`,
+                              backgroundColor: `${accentColor}20`,
                               color: level.isLocked
                                 ? "#4b5563"
-                                : topic.accentColor,
+                                : accentColor,
                             }}
                           >
                             {level.isLocked ? (
@@ -664,11 +603,11 @@ export default function TopicLevelPage() {
                             <div className="flex items-center justify-center gap-0.5 mt-0.5">
                               <Zap
                                 className="w-2.5 h-2.5"
-                                style={{ color: topic.accentColor }}
+                                style={{ color: accentColor }}
                               />
                               <span
                                 className="text-[9px] font-medium"
-                                style={{ color: topic.accentColor }}
+                                style={{ color: accentColor }}
                               >
                                 +{level.xpReward}
                               </span>
@@ -690,10 +629,10 @@ export default function TopicLevelPage() {
                     left: "50%",
                     right: "0",
                     backgroundColor: isAllCompleted
-                      ? topic.accentColor
+                      ? accentColor
                       : "#2d2d44",
                     boxShadow: isAllCompleted
-                      ? `0 0 8px ${topic.accentColor}40`
+                      ? `0 0 8px ${accentColor}40`
                       : "none",
                   }}
                 />
@@ -704,7 +643,7 @@ export default function TopicLevelPage() {
                     className="w-4 h-4 rounded-sm"
                     style={{
                       backgroundColor: isAllCompleted
-                        ? topic.accentColor
+                        ? accentColor
                         : "#2d2d44",
                       transform: "rotate(45deg)",
                     }}
@@ -725,14 +664,14 @@ export default function TopicLevelPage() {
                       className="p-3 rounded-xl border-2 bg-[#1a1a2e] flex flex-col items-center justify-center gap-1"
                       style={{
                         borderColor: isAllCompleted
-                          ? topic.accentColor
+                          ? accentColor
                           : "#2d2d44",
                       }}
                     >
                       {isAllCompleted ? (
                         <Award
                           className="w-8 h-8"
-                          style={{ color: topic.accentColor }}
+                          style={{ color: accentColor }}
                         />
                       ) : (
                         <Lock className="w-6 h-6 text-gray-500" />
@@ -740,7 +679,7 @@ export default function TopicLevelPage() {
                       <p
                         className="text-xs font-bold"
                         style={{
-                          color: isAllCompleted ? topic.accentColor : "#6b7280",
+                          color: isAllCompleted ? accentColor : "#6b7280",
                         }}
                       >
                         Certificate
@@ -777,11 +716,11 @@ export default function TopicLevelPage() {
                       <div className="text-center mb-4">
                         <div
                           className="w-16 h-16 mx-auto mb-3 rounded-xl flex items-center justify-center"
-                          style={{ backgroundColor: `${topic.accentColor}20` }}
+                          style={{ backgroundColor: `${accentColor}20` }}
                         >
-                          <topic.Icon
+                          <TopicIcon
                             className="w-8 h-8"
-                            style={{ color: topic.iconColor }}
+                            style={{ color: iconColor }}
                           />
                         </div>
                         <h2 className="text-xl font-bold text-white">
@@ -819,7 +758,7 @@ export default function TopicLevelPage() {
                         </div>
                         <div className="flex justify-between text-sm px-3 py-2 bg-[#0f0f1a] rounded-lg">
                           <span className="text-gray-400">XP Reward</span>
-                          <span style={{ color: topic.accentColor }}>
+                          <span style={{ color: accentColor }}>
                             +{level.xpReward}
                           </span>
                         </div>
@@ -835,7 +774,7 @@ export default function TopicLevelPage() {
                         <button
                           onClick={startLevel}
                           className="flex-1 py-2.5 text-white rounded-lg font-medium flex items-center justify-center gap-2"
-                          style={{ backgroundColor: topic.accentColor }}
+                          style={{ backgroundColor: accentColor }}
                         >
                           <Play className="w-4 h-4" />
                           {level.isCompleted ? "Replay" : "Start"}
@@ -882,19 +821,19 @@ export default function TopicLevelPage() {
                   <div
                     className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-3"
                     style={{
-                      backgroundColor: `${topic.accentColor}15`,
-                      border: `2px solid ${topic.accentColor}40`,
+                      backgroundColor: `${accentColor}15`,
+                      border: `2px solid ${accentColor}40`,
                     }}
                   >
-                    <topic.Icon
+                    <TopicIcon
                       className="w-6 h-6"
-                      style={{ color: topic.iconColor }}
+                      style={{ color: iconColor }}
                     />
                     <span
                       className="font-semibold text-[#2d2418]"
                       style={{ fontFamily: "Georgia, serif" }}
                     >
-                      {topic.name}
+                      {topicName}
                     </span>
                   </div>
 
@@ -909,15 +848,15 @@ export default function TopicLevelPage() {
                   </p>
 
                   <p className="text-[10px] text-[#5c5040] mt-2 mb-3 leading-relaxed max-w-xs mx-auto">
-                    For successfully completing all {topic.totalLevels} levels
-                    of the {topic.name} course, demonstrating exceptional
+                    For successfully completing all {totalLevels} levels
+                    of the {topicName} course, demonstrating exceptional
                     proficiency.
                   </p>
 
                   {/* Stars */}
                   <div className="flex justify-center gap-1 mb-1">
                     {[1, 2, 3].map((star) => {
-                      const avgStars = totalStars / topic.totalLevels;
+                      const avgStars = totalStars / totalLevels;
                       const filled = star <= Math.round(avgStars);
                       return (
                         <Star
@@ -938,7 +877,7 @@ export default function TopicLevelPage() {
                         className="text-base font-semibold text-[#2d2418]"
                         style={{ fontFamily: "Georgia, serif" }}
                       >
-                        {topic.totalLevels}
+                        {totalLevels}
                       </p>
                       <p className="text-[8px] text-[#8b7355] uppercase tracking-wider">
                         Levels
@@ -949,7 +888,7 @@ export default function TopicLevelPage() {
                         className="text-base font-semibold text-[#2d2418]"
                         style={{ fontFamily: "Georgia, serif" }}
                       >
-                        {totalStars}/{topic.totalLevels * 3}
+                        {totalStars}/{totalLevels * 3}
                       </p>
                       <p className="text-[8px] text-[#8b7355] uppercase tracking-wider">
                         Stars
@@ -1003,7 +942,7 @@ export default function TopicLevelPage() {
                   </button>
                   <button
                     onClick={() => {
-                      const avgStars = totalStars / topic.totalLevels;
+                      const avgStars = totalStars / totalLevels;
                       const filledStars = Math.round(avgStars);
                       const completionDateStr = certificateData.completionDate
                         ? new Date(
@@ -1054,7 +993,7 @@ export default function TopicLevelPage() {
                         };
                         return (
                           svgMap[topicId] ||
-                          `<svg viewBox="0 0 48 48" width="48" height="48"><path fill="${topic.accentColor}" d="M14 16l-8 8 8 8 2.8-2.8L11.6 24l5.2-5.2L14 16zm20 0l8 8-8 8-2.8-2.8 5.2-5.2-5.2-5.2L34 16z"/></svg>`
+                          `<svg viewBox="0 0 48 48" width="48" height="48"><path fill="${accentColor}" d="M14 16l-8 8 8 8 2.8-2.8L11.6 24l5.2-5.2L14 16zm20 0l8 8-8 8-2.8-2.8 5.2-5.2-5.2-5.2L34 16z"/></svg>`
                         );
                       };
 
@@ -1071,7 +1010,7 @@ export default function TopicLevelPage() {
                         <!DOCTYPE html>
                         <html>
                           <head>
-                            <title>Certificate - ${topic.name} | CodeLogic Academy</title>
+                            <title>Certificate - ${topicName} | CodeLogic Academy</title>
                             <style>
                               @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Montserrat:wght@400;500;600&display=swap');
                               
@@ -1192,8 +1131,8 @@ export default function TopicLevelPage() {
                                 justify-content: center;
                                 gap: 16px;
                                 padding: 14px 36px;
-                                background: linear-gradient(135deg, ${topic.accentColor}08, ${topic.accentColor}15);
-                                border: 2px solid ${topic.accentColor}30;
+                                background: linear-gradient(135deg, ${accentColor}08, ${accentColor}15);
+                                border: 2px solid ${accentColor}30;
                                 border-radius: 60px;
                                 margin-bottom: 20px;
                               }
@@ -1427,14 +1366,14 @@ export default function TopicLevelPage() {
                                   
                                   <div class="topic-section">
                                     ${getTopicSVG()}
-                                    <span class="topic-name">${topic.name}</span>
+                                    <span class="topic-name">${topicName}</span>
                                   </div>
                                   
                                   <div class="awarded-text">This certificate is proudly presented to</div>
                                   <div class="recipient-name">${userName}</div>
                                   
                                   <div class="description">
-                                    For successfully completing all ${topic.totalLevels} levels of the ${topic.name} course,
+                                    For successfully completing all ${totalLevels} levels of the ${topicName} course,
                                     demonstrating exceptional proficiency and dedication in mastering the fundamentals
                                     and advanced concepts of ${categoryId} development.
                                   </div>
@@ -1446,11 +1385,11 @@ export default function TopicLevelPage() {
                                   
                                   <div class="stats-row">
                                     <div class="stat-item">
-                                      <div class="stat-value">${topic.totalLevels}</div>
+                                      <div class="stat-value">${totalLevels}</div>
                                       <div class="stat-label">Levels Completed</div>
                                     </div>
                                     <div class="stat-item">
-                                      <div class="stat-value">${totalStars}/${topic.totalLevels * 3}</div>
+                                      <div class="stat-value">${totalStars}/${totalLevels * 3}</div>
                                       <div class="stat-label">Stars Earned</div>
                                     </div>
                                     <div class="stat-item">
@@ -1494,7 +1433,7 @@ export default function TopicLevelPage() {
                       }
                     }}
                     className="flex-1 py-2 text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2"
-                    style={{ backgroundColor: topic.accentColor }}
+                    style={{ backgroundColor: accentColor }}
                   >
                     <Download className="w-4 h-4" />
                     Download PDF
