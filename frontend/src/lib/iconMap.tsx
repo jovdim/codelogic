@@ -335,6 +335,11 @@ export const iconMap: Record<string, IconType> = {
   "security": FaLock,
   "cube": FaCube,
   "default": FaCode,
+  
+  // Category icons
+  "frontend": FaCode,
+  "backend": FaServer,
+  "devops": FaCloud,
 };
 
 // Color mapping for icons
@@ -443,6 +448,12 @@ export const iconColors: Record<string, string> = {
   "server": "#10b981",
   "cloud": "#f59e0b",
   "default": "#7c3aed",
+  
+  // Category icons
+  "frontend": "#8b5cf6",
+  "backend": "#10b981",
+  "devops": "#f59e0b",
+  "mobile": "#7c3aed",
 };
 
 // Accent colors for UI elements (borders, progress bars, etc.)
@@ -468,6 +479,12 @@ export const accentColors: Record<string, string> = {
   "flutter": "#3b82f6",
   "docker": "#3b82f6",
   "default": "#8b5cf6",
+  
+  // Category accent colors
+  "frontend": "#8b5cf6",
+  "backend": "#22c55e",
+  "devops": "#f59e0b",
+  "mobile": "#8b5cf6",
 };
 
 /**
