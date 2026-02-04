@@ -1,0 +1,21 @@
+# Django and Core
+Django>=4.2,<5.0
+djangorestframework>=3.14.0
+djangorestframework-simplejwt>=5.3.0
+
+# Database
+psycopg2-binary>=2.9.9
+dj-database-url>=2.1.0
+
+# CORS
+django-cors-headers>=4.3.0
+
+# Static files & Production
+whitenoise>=6.6.0
+gunicorn>=21.2.0
+
+# Environment
+python-dotenv>=1.0.0
+
+# Pillow for image handling (if needed)
+Pillow>=10.0.0

@@ -67,14 +67,15 @@ export default function LoginPage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
             <div className="bg-red-500/10 border border-red-500/50 text-red-400 px-4 py-3 flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+              <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
               <div className="flex-1">
                 <p>{error}</p>
                 {showResendVerification && (
                   <button
                     type="button"
                     onClick={handleResendVerification}
-                    className="text-purple-400 hover:text-purple-300 underline mt-1 text-sm"
+                    className="underline mt-1 text-sm hover:opacity-80"
+                    style={{ color: "var(--primary-light)" }}
                   >
                     Resend verification email
                   </button>
@@ -145,7 +146,8 @@ export default function LoginPage() {
           <div className="flex justify-end">
             <Link
               href="/forgot-password"
-              className="text-sm text-purple-400 hover:text-purple-300"
+              className="text-sm hover:opacity-80"
+              style={{ color: "var(--primary-light)" }}
             >
               Forgot password?
             </Link>
@@ -170,7 +172,8 @@ export default function LoginPage() {
             Don&apos;t have an account?{" "}
             <Link
               href="/register"
-              className="text-purple-400 hover:text-purple-300"
+              className="hover:opacity-80"
+              style={{ color: "var(--primary-light)" }}
             >
               Sign up
             </Link>

@@ -28,6 +28,7 @@ import {
   HelpCircle,
   FileQuestion,
   Lightbulb,
+  Code,
 } from "lucide-react";
 
 // FAQ Item Component
@@ -50,7 +51,7 @@ function FAQItem({
       >
         <span className="text-white font-medium pr-4">{question}</span>
         <ChevronDown
-          className={`w-5 h-5 text-purple-400 flex-shrink-0 transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`}
+          className={`w-5 h-5 text-purple-400 shrink-0 transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`}
         />
       </button>
       <div
@@ -94,7 +95,7 @@ export default function HowToPlayPage() {
     {
       question: "What types of questions are there?",
       answer:
-        "We have 3 question types: Multiple Choice (pick the right answer), Find the Error (spot the bug in code), and What's the Output (predict what code will print).",
+        "We have 4 question types: Multiple Choice (pick the right answer), Find the Error (spot the bug in code), What's the Output (predict what code will print), and Fill in the Blank (complete the missing code).",
     },
     {
       question: "Can I redo a quiz I already completed?",
@@ -126,6 +127,12 @@ export default function HowToPlayPage() {
       icon: FileQuestion,
       description: "Predict what the code will print",
       color: "#f59e0b",
+    },
+    {
+      type: "Fill in the Blank",
+      icon: Code,
+      description: "Complete the missing code snippet",
+      color: "#3b82f6",
     },
   ];
 
@@ -223,7 +230,7 @@ export default function HowToPlayPage() {
                 >
                   <div className="flex items-start gap-4 md:gap-6">
                     <div
-                      className="w-16 h-16 flex-shrink-0 pixel-box flex items-center justify-center relative z-10"
+                      className="w-16 h-16 shrink-0 pixel-box flex items-center justify-center relative z-10"
                       style={{ background: "var(--card-bg)" }}
                     >
                       <span
@@ -336,14 +343,14 @@ export default function HowToPlayPage() {
             </h2>
           </ScrollReveal>
 
-          <div className="grid sm:grid-cols-3 gap-4 mb-16">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-16">
             {questionTypes.map((qt, index) => (
               <ScrollReveal
                 key={qt.type}
                 animation="fade-up"
                 delay={index * 50}
               >
-                <div className="pixel-box p-5 h-full flex flex-col items-center text-center hover:border-purple-500/40 transition-colors">
+                <div className="pixel-box p-5 h-full flex flex-col items-center text-center hover:border-(--primary)/40 transition-colors">
                   <div
                     className="w-14 h-14 rounded-lg flex items-center justify-center mb-3"
                     style={{ background: `${qt.color}20` }}

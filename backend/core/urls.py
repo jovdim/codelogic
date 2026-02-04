@@ -11,7 +11,20 @@ from django.db.models import Count
 # Simple admin dashboard view
 def admin_dashboard(request):
     from accounts.models import User
-    from game.models import Category, Topic, Question, LearningResource
+    from game.models import Category, Topic, Question, LearningResource, Certificate, UserCertificate
+    
+    # Get categories with topics
+    categories_with_topics = []
+    for cat in Category.objects.prefetch_related('topics').order_by('order', 'name'):
+        topics = cat.topics.filter(is_active=True).order_by('order', 'name')
+        categories_with_topics.append({
+            'category': cat,
+            'topics': topics,
+            'topics_count': topics.count(),
+        })
+    
+    # Get all certificates (one per topic)
+    certificates = Certificate.objects.select_related('topic', 'topic__category').order_by('topic__category__order', 'topic__order')
     
     context = {
         'title': 'Dashboard',
@@ -20,8 +33,12 @@ def admin_dashboard(request):
         'total_topics': Topic.objects.count(),
         'total_questions': Question.objects.count(),
         'total_resources': LearningResource.objects.count(),
+        'total_certificates': Certificate.objects.count(),
+        'total_awarded': UserCertificate.objects.count(),
         'recent_users': User.objects.order_by('-date_joined')[:5],
-        'categories': Category.objects.annotate(topics_count=Count('topics')),
+        'categories_with_topics': categories_with_topics,
+        'certificates': certificates,
+        'recent_certificates': UserCertificate.objects.select_related('user', 'certificate__topic').order_by('-completion_date')[:5],
     }
     return render(request, 'admin/dashboard.html', context)
 

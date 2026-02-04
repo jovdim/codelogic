@@ -198,7 +198,7 @@ export default function LearnPage() {
                     <select
                       value={selectedCategory}
                       onChange={(e) => setSelectedCategory(e.target.value)}
-                      className="flex-1 md:flex-none bg-[#0f0f1a] border border-[#2d2d44] rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-purple-500 transition-colors cursor-pointer appearance-none min-w-[160px]"
+                      className="flex-1 md:flex-none bg-[#0f0f1a] border border-[#2d2d44] rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-(--primary) transition-colors cursor-pointer appearance-none min-w-40"
                       style={{
                         backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
                         backgroundRepeat: "no-repeat",
@@ -219,7 +219,7 @@ export default function LearnPage() {
                   <select
                     value={selectedLanguage}
                     onChange={(e) => setSelectedLanguage(e.target.value)}
-                    className="bg-[#0f0f1a] border border-[#2d2d44] rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-purple-500 transition-colors cursor-pointer appearance-none min-w-[160px]"
+                    className="bg-[#0f0f1a] border border-[#2d2d44] rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-(--primary) transition-colors cursor-pointer appearance-none min-w-40"
                     style={{
                       backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
                       backgroundRepeat: "no-repeat",
@@ -252,7 +252,10 @@ export default function LearnPage() {
 
           {isLoading ? (
             <div className="flex items-center justify-center py-20">
-              <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />
+              <Loader2
+                className="w-8 h-8 animate-spin"
+                style={{ color: "var(--primary)" }}
+              />
             </div>
           ) : resources.length > 0 ? (
             /* Resource Grid */
@@ -267,15 +270,18 @@ export default function LearnPage() {
                   key={resource.id}
                   href={`/learn/${resource.slug}`}
                   onClick={(e) => handleResourceClick(resource.slug, e)}
-                  className="pixel-box overflow-hidden hover:border-purple-500/50 transition-colors group relative"
+                  className="pixel-box overflow-hidden hover:border-(--primary)/50 transition-colors group relative"
                 >
                   {/* Lock overlay for non-authenticated users */}
                   {!isAuthenticated && (
                     <div className="absolute inset-0 bg-black/40 z-10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                       <div className="bg-[#1a1a2e] px-4 py-2 rounded-lg flex items-center gap-2">
-                        <Lock className="w-4 h-4 text-purple-400" />
+                        <Lock
+                          className="w-4 h-4"
+                          style={{ color: "var(--primary-light)" }}
+                        />
                         <span className="text-white text-sm font-medium">
-                          Login to Read
+                          View
                         </span>
                       </div>
                     </div>
@@ -283,13 +289,22 @@ export default function LearnPage() {
 
                   {/* Featured Badge */}
                   {resource.is_featured && (
-                    <div className="absolute top-2 left-2 z-20 px-2 py-1 bg-purple-500 text-white text-xs font-medium rounded">
+                    <div
+                      className="absolute top-2 left-2 z-20 px-2 py-1 text-white text-xs font-medium rounded"
+                      style={{ background: "var(--primary)" }}
+                    >
                       Featured
                     </div>
                   )}
 
                   {/* Thumbnail */}
-                  <div className="h-32 bg-gradient-to-br from-purple-600 to-purple-900 flex items-center justify-center relative overflow-hidden">
+                  <div
+                    className="h-32 flex items-center justify-center relative overflow-hidden"
+                    style={{
+                      background:
+                        "linear-gradient(to bottom right, var(--primary), var(--primary-dark))",
+                    }}
+                  >
                     {resource.thumbnail_url ? (
                       <img
                         src={resource.thumbnail_url}
@@ -305,7 +320,7 @@ export default function LearnPage() {
                   {/* Content */}
                   <div className="p-4">
                     <div className="flex items-start justify-between gap-2 mb-2">
-                      <h3 className="text-white font-bold group-hover:text-purple-400 transition-colors line-clamp-1">
+                      <h3 className="text-white font-bold transition-colors line-clamp-1 group-hover:text-(--primary-light)">
                         {resource.title}
                       </h3>
                     </div>
@@ -334,7 +349,13 @@ export default function LearnPage() {
 
                     {/* Language Tag */}
                     <div className="mt-3 pt-3 border-t border-[#2d2d44]">
-                      <span className="inline-block px-2 py-1 bg-purple-500/20 text-purple-400 text-xs font-medium rounded">
+                      <span
+                        className="inline-block px-2 py-1 text-xs font-medium rounded"
+                        style={{
+                          background: "rgba(var(--primary-rgb), 0.2)",
+                          color: "var(--primary-light)",
+                        }}
+                      >
                         {resource.language}
                       </span>
                     </div>
@@ -356,7 +377,11 @@ export default function LearnPage() {
                 {hasActiveFilters && (
                   <button
                     onClick={clearFilters}
-                    className="px-4 py-2 bg-purple-500/20 text-purple-400 rounded-lg hover:bg-purple-500/30 transition-colors"
+                    className="px-4 py-2 rounded-lg transition-colors"
+                    style={{
+                      background: "rgba(var(--primary-rgb), 0.2)",
+                      color: "var(--primary-light)",
+                    }}
                   >
                     Clear Filters
                   </button>
@@ -367,7 +392,13 @@ export default function LearnPage() {
 
           {/* Coming Soon Banner */}
           <ScrollReveal animation="fade-up" delay={300}>
-            <div className="pixel-box p-6 mt-8 border-purple-500/30 bg-purple-500/5 text-center">
+            <div
+              className="pixel-box p-6 mt-8 text-center"
+              style={{
+                borderColor: "rgba(var(--primary-rgb), 0.3)",
+                background: "rgba(var(--primary-rgb), 0.05)",
+              }}
+            >
               <h3 className="text-lg font-bold text-white mb-2">
                 More Resources Coming Soon!
               </h3>

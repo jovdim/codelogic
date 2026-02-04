@@ -191,7 +191,7 @@ export default function Sidebar({ children }: SidebarProps) {
         >
           <Link href="/" className="flex items-center gap-3">
             <div
-              className="w-10 h-10 flex items-center justify-center pixel-box flex-shrink-0"
+              className="w-10 h-10 flex items-center justify-center pixel-box shrink-0"
               style={{ background: "var(--primary)" }}
             >
               <Code2 className="w-6 h-6 text-white" />
@@ -269,7 +269,7 @@ export default function Sidebar({ children }: SidebarProps) {
                 {/* Avatar + Username - Expanded */}
                 <div className="flex items-center gap-3 mb-3">
                   <div
-                    className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0"
+                    className="w-12 h-12 rounded-lg overflow-hidden shrink-0"
                     style={{
                       border: "2px solid rgba(var(--primary-rgb), 0.5)",
                     }}
@@ -478,7 +478,7 @@ export default function Sidebar({ children }: SidebarProps) {
                 }}
                 title={isCollapsed ? "Logout" : undefined}
               >
-                <LogOut className="w-5 h-5 flex-shrink-0" />
+                <LogOut className="w-5 h-5 shrink-0" />
                 {!isCollapsed && <span className="font-medium">Logout</span>}
               </button>
             </>
@@ -492,7 +492,7 @@ export default function Sidebar({ children }: SidebarProps) {
                 style={{ color: "var(--muted)" }}
                 title={isCollapsed ? "Login" : undefined}
               >
-                <Gamepad2 className="w-5 h-5 flex-shrink-0" />
+                <Gamepad2 className="w-5 h-5 shrink-0" />
                 {!isCollapsed && <span className="font-medium">Login</span>}
               </Link>
             </>

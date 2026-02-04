@@ -19,16 +19,15 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     }
   }, [isLoading, isAuthenticated, router]);
 
-  if (isLoading) {
+  if (isLoading || !isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
+        <Loader2
+          className="w-8 h-8 animate-spin"
+          style={{ color: "var(--primary)" }}
+        />
       </div>
     );
-  }
-
-  if (!isAuthenticated) {
-    return null;
   }
 
   return <>{children}</>;
@@ -48,16 +47,15 @@ export function PublicRoute({ children }: PublicRouteProps) {
     }
   }, [isLoading, isAuthenticated, router]);
 
-  if (isLoading) {
+  if (isLoading || isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
+        <Loader2
+          className="w-8 h-8 animate-spin"
+          style={{ color: "var(--primary)" }}
+        />
       </div>
     );
-  }
-
-  if (isAuthenticated) {
-    return null;
   }
 
   return <>{children}</>;

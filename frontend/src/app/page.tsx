@@ -14,10 +14,15 @@ import {
 } from "react-icons/di";
 import {
   ScrollReveal,
-  AnimatedCounter,
   ScrollProgressBar,
   ScrollToTop,
 } from "@/components/ui/ScrollAnimations";
+import {
+  NAV_ITEMS,
+  PLATFORM_STATS,
+  TYPEWRITER_WORDS,
+  FOOTER_LINKS,
+} from "@/lib/constants";
 import {
   Code2,
   Zap,
@@ -49,7 +54,6 @@ import {
   Lightbulb,
 } from "lucide-react";
 
-// Demo quiz questions for hero section
 const demoQuestions = [
   {
     id: 1,
@@ -79,25 +83,6 @@ const demoQuestions = [
   },
 ];
 
-// Stats data
-const platformStats = [
-  { label: "Active Learners", value: 10000, suffix: "+" },
-  { label: "Quiz Questions", value: 500, suffix: "+" },
-  { label: "Languages", value: 12, suffix: "" },
-  { label: "Avg. Rating", value: 4.9, suffix: "/5" },
-];
-
-// Words to cycle through in the typewriter effect
-const typewriterWords = [
-  "Coding Skills",
-  "Python Skills",
-  "SQL Skills",
-  "React Skills",
-  "CSS Mastery",
-  "HTML Skills",
-];
-
-// Typewriter effect component
 function TypewriterText({ words }: { words: string[] }) {
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [currentText, setCurrentText] = useState("");
@@ -137,7 +122,6 @@ function TypewriterText({ words }: { words: string[] }) {
   );
 }
 
-// Animated counter component
 function AnimatedNumber({
   value,
   duration = 1000,
@@ -186,7 +170,6 @@ function AnimatedNumber({
   );
 }
 
-// Programming Languages available to learn
 const availableLanguages = [
   {
     icon: DiHtml5,
@@ -250,7 +233,6 @@ const availableLanguages = [
   },
 ];
 
-// Floating pixel particles
 function FloatingPixels() {
   const [particles, setParticles] = useState<
     { id: number; left: number; top: number; delay: number; duration: number }[]
@@ -285,7 +267,6 @@ function FloatingPixels() {
   );
 }
 
-// Interactive Hero Quiz Component
 function HeroQuiz({
   onComplete,
   onGameOver,
@@ -581,19 +562,14 @@ export default function Home() {
                 className="text-[10px] -mt-1"
                 style={{ color: "var(--primary-light)" }}
               >
-                Level Up Your Code
+                Test your coding skills
               </span>
             </div>
           </Link>
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-1">
-            {[
-              { href: "/learn", label: "Learn", icon: BookOpen },
-              { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
-              { href: "/how-to-play", label: "How to Play", icon: HelpCircle },
-              { href: "/about", label: "About", icon: Users },
-            ].map((item) => (
+            {NAV_ITEMS.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
@@ -716,12 +692,7 @@ export default function Home() {
               background: "var(--background)",
             }}
           >
-            {[
-              { href: "/learn", label: "Learn", icon: BookOpen },
-              { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
-              { href: "/how-to-play", label: "How to Play", icon: HelpCircle },
-              { href: "/about", label: "About", icon: Users },
-            ].map((item) => (
+            {NAV_ITEMS.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
@@ -826,7 +797,7 @@ export default function Home() {
                         backgroundSize: "200% 200%",
                       }}
                     >
-                      <TypewriterText words={typewriterWords} />
+                      <TypewriterText words={TYPEWRITER_WORDS} />
                     </span>
                   </h1>
                 </ScrollReveal>
@@ -876,7 +847,7 @@ export default function Home() {
                     className="flex items-center justify-center lg:justify-start gap-10 pt-8 mt-4 border-t"
                     style={{ borderColor: "rgba(255,255,255,0.1)" }}
                   >
-                    {platformStats.map((stat, index) => (
+                    {PLATFORM_STATS.map((stat, index) => (
                       <div key={index} className="text-center">
                         <div className="text-2xl md:text-3xl font-bold text-white">
                           <AnimatedNumber
@@ -1651,16 +1622,10 @@ export default function Home() {
                 </p>
               </div>
 
-              {/* Quick Links */}
               <div>
                 <h4 className="text-white font-medium mb-4">Quick Links</h4>
                 <ul className="space-y-2">
-                  {[
-                    { href: "/how-to-play", label: "How to Play" },
-                    { href: "/learn", label: "Learn" },
-                    { href: "/leaderboard", label: "Leaderboard" },
-                    { href: "/about", label: "About Us" },
-                  ].map((link) => (
+                  {FOOTER_LINKS.quickLinks.map((link) => (
                     <li key={link.href}>
                       <Link
                         href={link.href}
@@ -1674,15 +1639,10 @@ export default function Home() {
                 </ul>
               </div>
 
-              {/* Support */}
               <div>
                 <h4 className="text-white font-medium mb-4">Account</h4>
                 <ul className="space-y-2">
-                  {[
-                    { href: "/login", label: "Login" },
-                    { href: "/register", label: "Register" },
-                    { href: "/forgot-password", label: "Reset Password" },
-                  ].map((link) => (
+                  {FOOTER_LINKS.account.map((link) => (
                     <li key={link.href}>
                       <Link
                         href={link.href}

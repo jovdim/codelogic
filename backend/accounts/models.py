@@ -24,6 +24,15 @@ class UserManager(BaseUserManager):
         # Assign random avatar (1-5) if not specified
         if 'avatar' not in extra_fields:
             extra_fields['avatar'] = random.randint(1, 5)
+        
+        # Set initial streak to 1 and last_activity_date to today
+        if 'current_streak' not in extra_fields:
+            extra_fields['current_streak'] = 1
+        if 'longest_streak' not in extra_fields:
+            extra_fields['longest_streak'] = 1
+        if 'last_activity_date' not in extra_fields:
+            extra_fields['last_activity_date'] = timezone.now().date()
+        
         user = self.model(email=email, username=username, **extra_fields)
         user.set_password(password)
         user.save(using=self._db)

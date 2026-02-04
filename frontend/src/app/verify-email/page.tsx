@@ -62,7 +62,10 @@ function VerifyEmailContent() {
     return (
       <AuthLayout title="Verifying Email">
         <div className="text-center space-y-4">
-          <Loader2 className="w-12 h-12 animate-spin text-purple-500 mx-auto" />
+          <Loader2
+            className="w-12 h-12 animate-spin mx-auto"
+            style={{ color: "var(--primary)" }}
+          />
           <p className="text-gray-300">Verifying your email address...</p>
         </div>
       </AuthLayout>
@@ -103,7 +106,8 @@ function VerifyEmailContent() {
             Need a new verification link?{" "}
             <Link
               href="/register"
-              className="text-purple-400 hover:text-purple-300"
+              className="hover:opacity-80"
+              style={{ color: "var(--primary-light)" }}
             >
               Register again
             </Link>
@@ -119,7 +123,10 @@ export default function VerifyEmailPage() {
     <Suspense
       fallback={
         <div className="min-h-screen flex items-center justify-center">
-          <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
+          <Loader2
+            className="w-8 h-8 animate-spin"
+            style={{ color: "var(--primary)" }}
+          />
         </div>
       }
     >

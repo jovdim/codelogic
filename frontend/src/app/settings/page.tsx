@@ -41,7 +41,7 @@ export default function SettingsPage() {
             <h1 className="text-2xl font-bold text-white mb-6">Settings</h1>
             <div className="flex flex-col md:flex-row gap-6 md:gap-8">
               {/* Settings Tabs */}
-              <div className="w-full md:w-48 flex-shrink-0">
+              <div className="w-full md:w-48 shrink-0">
                 <nav className="flex md:flex-col gap-2 md:space-y-1 overflow-x-auto pb-2 md:pb-0">
                   <button
                     onClick={() => setActiveTab("profile")}

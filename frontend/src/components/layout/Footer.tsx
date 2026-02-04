@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Code2 } from "lucide-react";
+import { FOOTER_LINKS } from "@/lib/constants";
 
 export default function Footer() {
   return (
@@ -11,7 +12,6 @@ export default function Footer() {
     >
       <div className="max-w-7xl mx-auto px-4">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-          {/* Brand */}
           <div className="col-span-1 md:col-span-2">
             <Link href="/" className="flex items-center gap-2 mb-4">
               <div
@@ -28,16 +28,10 @@ export default function Footer() {
             </p>
           </div>
 
-          {/* Quick Links */}
           <div>
             <h4 className="text-white font-medium mb-4">Quick Links</h4>
             <ul className="space-y-2">
-              {[
-                { href: "/how-to-play", label: "How to Play" },
-                { href: "/learn", label: "Learn" },
-                { href: "/leaderboard", label: "Leaderboard" },
-                { href: "/about", label: "About Us" },
-              ].map((link) => (
+              {FOOTER_LINKS.quickLinks.map((link) => (
                 <li key={link.href}>
                   <Link
                     href={link.href}
@@ -51,15 +45,10 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Account */}
           <div>
             <h4 className="text-white font-medium mb-4">Account</h4>
             <ul className="space-y-2">
-              {[
-                { href: "/login", label: "Login" },
-                { href: "/register", label: "Register" },
-                { href: "/forgot-password", label: "Reset Password" },
-              ].map((link) => (
+              {FOOTER_LINKS.account.map((link) => (
                 <li key={link.href}>
                   <Link
                     href={link.href}

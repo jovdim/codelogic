@@ -6,7 +6,6 @@ Manage users and gamification settings.
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.html import format_html
-from django.utils import timezone
 from django.contrib import messages
 from django.db.models import Sum
 from .models import User
@@ -78,8 +77,8 @@ class UserAdmin(BaseUserAdmin):
     
     def streak_display(self, obj):
         if obj.current_streak > 0:
-            return f"{obj.current_streak} days"
-        return "-"
+            return f"{obj.current_streak} {'day' if obj.current_streak == 1 else 'days'}"
+        return "0 days"
     streak_display.short_description = 'Streak'
     
     @admin.action(description='Mark selected as Email Verified')

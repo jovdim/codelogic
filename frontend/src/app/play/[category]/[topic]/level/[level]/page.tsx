@@ -8,7 +8,6 @@ import { ProtectedRoute } from "@/components/auth/RouteGuards";
 import { gameAPI } from "@/lib/api";
 import {
   Heart,
-  Zap,
   X,
   Check,
   Trophy,
@@ -133,7 +132,6 @@ export default function LevelQuizPage() {
   const [hearts, setHearts] = useState(5);
   const [xpEarned, setXpEarned] = useState(0);
   const [showResult, setShowResult] = useState(false);
-  const [streak, setStreak] = useState(0);
   const [timeLeft, setTimeLeft] = useState(30);
   const [heartsLost, setHeartsLost] = useState(0);
   const [quizSubmitted, setQuizSubmitted] = useState(false);
@@ -231,7 +229,6 @@ export default function LevelQuizPage() {
       const newHearts = Math.max(0, hearts - 1);
       setHearts(newHearts);
       setHeartsLost((prev) => prev + 1);
-      setStreak(0);
 
       // Trigger heart shake animation
       setHeartShake(true);
@@ -292,11 +289,9 @@ export default function LevelQuizPage() {
       const baseXP = 10;
       setScore((prev) => prev + 1);
       setXpEarned((prev) => prev + baseXP);
-      setStreak((prev) => prev + 1);
     } else {
       setHearts((prev) => Math.max(0, prev - 1));
       setHeartsLost((prev) => prev + 1);
-      setStreak(0);
     }
 
     // Sync with backend to deduct hearts in database
@@ -362,7 +357,6 @@ export default function LevelQuizPage() {
       setScore(0);
       setXpEarned(0);
       setShowResult(false);
-      setStreak(0);
       setTimeLeft(30);
       setHeartsLost(0);
       setQuizSubmitted(false); // Allow new submission for restarted quiz
@@ -720,14 +714,6 @@ export default function LevelQuizPage() {
                   />
                   <span className="text-red-400 font-bold text-sm">
                     {hearts}/{user?.max_hearts || 10}
-                  </span>
-                </div>
-
-                {/* Streak */}
-                <div className="flex items-center gap-1 px-2 py-1 bg-orange-500/20 rounded-lg">
-                  <Zap className="w-4 h-4 text-orange-400" />
-                  <span className="text-orange-400 font-bold text-sm">
-                    {streak + 1}
                   </span>
                 </div>
 

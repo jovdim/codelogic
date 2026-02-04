@@ -37,31 +37,31 @@ export default function AboutPage() {
     {
       name: "Alex Chen",
       role: "Project Lead",
-      image: "/avatars/team-1.jpg",
+      image: "/team/team-1.jpg",
       socials: { linkedin: "#", github: "#", twitter: "#" },
     },
     {
       name: "Jordan Lee",
       role: "Backend Developer",
-      image: "/avatars/team-2.jpg",
+      image: "/team/team-2.jpg",
       socials: { linkedin: "#", github: "#" },
     },
     {
       name: "Sam Rivera",
       role: "Frontend Developer",
-      image: "/avatars/team-3.jpg",
+      image: "/team/team-3.jpg",
       socials: { linkedin: "#", github: "#", twitter: "#" },
     },
     {
       name: "Morgan Park",
       role: "UI/UX Designer",
-      image: "/avatars/team-4.jpg",
+      image: "/team/team-4.jpg",
       socials: { linkedin: "#", twitter: "#" },
     },
     {
       name: "Taylor Kim",
       role: "Content & QA",
-      image: "/avatars/team-5.jpg",
+      image: "/team/team-5.jpg",
       socials: { linkedin: "#", github: "#" },
     },
   ];
@@ -161,7 +161,7 @@ export default function AboutPage() {
             <div className="pixel-box p-6 md:p-8 mb-16">
               <div className="flex flex-col md:flex-row items-center gap-6">
                 <div
-                  className="w-20 h-20 flex-shrink-0 rounded-xl flex items-center justify-center"
+                  className="w-20 h-20 shrink-0 rounded-xl flex items-center justify-center"
                   style={{ background: "rgba(124, 58, 237, 0.15)" }}
                 >
                   <Code2
@@ -210,13 +210,13 @@ export default function AboutPage() {
                     <div className="flex flex-col items-center text-center h-full">
                       {/* Profile Image */}
                       <div className="relative mb-4">
-                        <div className="w-32 h-32 rounded-2xl overflow-hidden border-2 border-[#2d2d44] group-hover:border-purple-500/50 transition-all duration-300 bg-[#1a1a2e]">
+                        <div className="w-60 h-60 shadow-2xl  -rotate-3 overflow-hidden border-2 border-[#2d2d44] group-hover:border-purple-500/50 transition-all duration-300 bg-[#1a1a2e] rounded-lg">
                           <Image
                             src={member.image}
                             alt={member.name}
-                            width={128}
-                            height={128}
-                            className="w-full h-full object-cover"
+                            width={500}
+                            height={500}
+                            className="w-full h-full "
                             onError={(e) => {
                               const target = e.target as HTMLImageElement;
                               target.style.display = "none";
@@ -285,12 +285,12 @@ export default function AboutPage() {
                     <div className="flex flex-col items-center text-center h-full">
                       {/* Profile Image */}
                       <div className="relative mb-4">
-                        <div className="w-32 h-32 rounded-2xl overflow-hidden border-2 border-[#2d2d44] group-hover:border-purple-500/50 transition-all duration-300 bg-[#1a1a2e]">
+                        <div className="w-60 h-60 rounded-lg -rotate-3 shadow-2xl overflow-hidden border-2 border-[#2d2d44] group-hover:border-purple-500/50 transition-all duration-300 bg-[#1a1a2e]">
                           <Image
                             src={member.image}
                             alt={member.name}
-                            width={128}
-                            height={128}
+                            width={500}
+                            height={500}
                             className="w-full h-full object-cover"
                             onError={(e) => {
                               const target = e.target as HTMLImageElement;
@@ -370,7 +370,7 @@ export default function AboutPage() {
                 <div className="pixel-box p-5 h-full hover:border-purple-500/40 transition-colors">
                   <div className="flex items-start gap-4">
                     <div
-                      className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0"
+                      className="w-12 h-12 rounded-lg flex items-center justify-center  shrink-0"
                       style={{ background: `${value.color}20` }}
                     >
                       <value.icon

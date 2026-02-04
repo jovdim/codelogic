@@ -126,9 +126,14 @@ export default function LeaderboardPage() {
                       onClick={() => setTimeFilter(filter)}
                       className={`px-3 md:px-4 py-2 text-sm font-medium transition-colors ${
                         timeFilter === filter
-                          ? "bg-purple-500 text-white"
+                          ? "text-white"
                           : "bg-[#1a1a2e] text-gray-400 hover:text-white border border-[#2d2d44]"
                       }`}
+                      style={
+                        timeFilter === filter
+                          ? { background: "var(--primary)" }
+                          : undefined
+                      }
                     >
                       {filter === "all-time"
                         ? "All Time"
@@ -144,7 +149,10 @@ export default function LeaderboardPage() {
 
           {loading ? (
             <div className="flex items-center justify-center py-20">
-              <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />
+              <Loader2
+                className="w-8 h-8 animate-spin"
+                style={{ color: "var(--primary)" }}
+              />
             </div>
           ) : leaderboard.length === 0 ? (
             <ScrollReveal animation="fade-up">

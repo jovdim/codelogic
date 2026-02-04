@@ -5,12 +5,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import Footer from "./Footer";
+import { NAV_ITEMS } from "@/lib/constants";
 import {
   Code2,
-  BookOpen,
-  Trophy,
-  HelpCircle,
-  Users,
   Menu,
   X,
   ArrowRight,
@@ -23,13 +20,6 @@ import {
 interface NavbarProps {
   children: React.ReactNode;
 }
-
-const navItems = [
-  { href: "/learn", label: "Learn", icon: BookOpen },
-  { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
-  { href: "/how-to-play", label: "How to Play", icon: HelpCircle },
-  { href: "/about", label: "About", icon: Users },
-];
 
 export default function Navbar({ children }: NavbarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -61,14 +51,14 @@ export default function Navbar({ children }: NavbarProps) {
                 className="text-[10px] -mt-1"
                 style={{ color: "var(--primary-light)" }}
               >
-                Level Up Your Code
+                Test your coding skills
               </span>
             </div>
           </Link>
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-1">
-            {navItems.map((item) => {
+            {NAV_ITEMS.map((item) => {
               const isActive = pathname === item.href;
               const Icon = item.icon;
               return (
@@ -208,7 +198,7 @@ export default function Navbar({ children }: NavbarProps) {
               background: "var(--background)",
             }}
           >
-            {navItems.map((item) => {
+            {NAV_ITEMS.map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.href;
               return (

@@ -16,9 +16,9 @@ import {
   Target,
   Flame,
   Loader2,
+  Code,
 } from "lucide-react";
 import api from "@/lib/api";
-import { getIcon, getIconColor } from "@/lib/iconMap";
 
 // Category type
 interface Category {
@@ -26,7 +26,7 @@ interface Category {
   slug: string;
   name: string;
   description: string;
-  icon: string;
+  icon: string | null;
   color: string;
   topics: string[];
   topicCount: number;
@@ -206,8 +206,6 @@ export default function PlayPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {categories.map((category, index) => {
                   const colors = getColors(category.color);
-                  const CategoryIcon = getIcon(category.icon);
-                  const iconColor = getIconColor(category.icon);
 
                   return (
                     <ScrollReveal key={category.id} delay={0.1 + index * 0.05}>
@@ -217,10 +215,16 @@ export default function PlayPage() {
                       >
                         {/* Icon & XP Badge */}
                         <div className="flex items-start justify-between mb-4">
-                          <div
-                            className={`w-14 h-14 ${colors.bg} flex items-center justify-center rounded-xl`}
-                          >
-                            <CategoryIcon className="w-7 h-7" style={{ color: iconColor }} />
+                          <div className="w-14 h-14 bg-[#0f0f1a] flex items-center justify-center rounded-xl overflow-hidden border border-[#2d2d44]">
+                            {category.icon ? (
+                              <img
+                                src={category.icon}
+                                alt={category.name}
+                                className="w-8 h-8 object-contain"
+                              />
+                            ) : (
+                              <Code className="w-7 h-7 text-white" />
+                            )}
                           </div>
                           <div className="flex items-center gap-1 px-3 py-1 bg-yellow-500/20 rounded-full">
                             <Zap className="w-4 h-4 text-yellow-400" />
@@ -279,7 +283,7 @@ export default function PlayPage() {
             <ScrollReveal delay={0.3}>
               <div className="mt-8 pixel-box p-6 bg-[#0a0a12]">
                 <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-cyan-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <div className="w-12 h-12 bg-cyan-500/20 rounded-xl flex items-center justify-center shrink-0">
                     <Sparkles className="w-6 h-6 text-cyan-400" />
                   </div>
                   <div>

@@ -10,37 +10,67 @@ User = get_user_model()
 
 
 class CategorySerializer(serializers.ModelSerializer):
+    icon = serializers.SerializerMethodField()
+    
     class Meta:
         model = Category
         fields = ['id', 'name', 'slug', 'description', 'icon', 'color']
+    
+    def get_icon(self, obj):
+        if obj.icon_file:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.icon_file.url)
+            return obj.icon_file.url
+        return None
 
 
 class TopicSerializer(serializers.ModelSerializer):
     category_slug = serializers.CharField(source='category.slug', read_only=True)
+    category_color = serializers.CharField(source='category.color', read_only=True)
     icon = serializers.SerializerMethodField()
     
     class Meta:
         model = Topic
-        fields = ['id', 'name', 'slug', 'description', 'icon', 'total_levels', 'category_slug']
+        fields = ['id', 'name', 'slug', 'description', 'total_levels', 'category_slug', 'category_color', 'icon']
     
     def get_icon(self, obj):
-        # Return icon field if set, otherwise use slug as fallback
-        return obj.icon if obj.icon else obj.slug
+        request = self.context.get('request')
+        # Use topic icon, or fallback to category icon
+        if obj.icon_file:
+            if request:
+                return request.build_absolute_uri(obj.icon_file.url)
+            return obj.icon_file.url
+        elif obj.category.icon_file:
+            if request:
+                return request.build_absolute_uri(obj.category.icon_file.url)
+            return obj.category.icon_file.url
+        return None
 
 
 class TopicWithProgressSerializer(serializers.ModelSerializer):
     """Topic serializer with user progress included."""
     category_slug = serializers.CharField(source='category.slug', read_only=True)
+    category_color = serializers.CharField(source='category.color', read_only=True)
     icon = serializers.SerializerMethodField()
     user_progress = serializers.SerializerMethodField()
     
     class Meta:
         model = Topic
-        fields = ['id', 'name', 'slug', 'description', 'icon', 'total_levels', 'category_slug', 'user_progress']
+        fields = ['id', 'name', 'slug', 'description', 'total_levels', 'category_slug', 'category_color', 'icon', 'user_progress']
     
     def get_icon(self, obj):
-        # Return icon field if set, otherwise use slug as fallback
-        return obj.icon if obj.icon else obj.slug
+        request = self.context.get('request')
+        # Use topic icon, or fallback to category icon
+        if obj.icon_file:
+            if request:
+                return request.build_absolute_uri(obj.icon_file.url)
+            return obj.icon_file.url
+        elif obj.category.icon_file:
+            if request:
+                return request.build_absolute_uri(obj.category.icon_file.url)
+            return obj.category.icon_file.url
+        return None
     
     def get_user_progress(self, obj):
         request = self.context.get('request')

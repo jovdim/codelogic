@@ -50,12 +50,17 @@ class CategoryListView(APIView):
                 is_active=True
             ).aggregate(total=Sum('xp_reward'))['total'] or 0
             
+            # Build icon URL
+            icon_url = None
+            if cat.icon_file:
+                icon_url = request.build_absolute_uri(cat.icon_file.url)
+            
             result.append({
                 'id': str(cat.id),
                 'slug': cat.slug,
                 'name': cat.name,
                 'description': cat.description,
-                'icon': cat.icon,
+                'icon': icon_url,
                 'color': cat.color,
                 'topics': topic_names,
                 'topicCount': cat.topic_count,
@@ -86,21 +91,30 @@ class CategoryDetailView(APIView):
             is_active=True
         ).aggregate(total=Sum('xp_reward'))['total'] or 0
         
+        # Build category icon URL
+        category_icon_url = None
+        if category.icon_file:
+            category_icon_url = request.build_absolute_uri(category.icon_file.url)
+        
         topics_data = []
         for topic in topics:
             topic_xp = topic.questions.filter(is_active=True).aggregate(
                 total=Sum('xp_reward')
             )['total'] or 0
             
-            # Use topic icon or fall back to slug/name
-            topic_icon = topic.icon if topic.icon else topic.slug
+            # Build topic icon URL (fallback to category icon)
+            topic_icon_url = None
+            if topic.icon_file:
+                topic_icon_url = request.build_absolute_uri(topic.icon_file.url)
+            elif category.icon_file:
+                topic_icon_url = category_icon_url
             
             topics_data.append({
                 'id': str(topic.id),
                 'slug': topic.slug,
                 'name': topic.name,
                 'description': topic.description,
-                'icon': topic_icon,
+                'icon': topic_icon_url,
                 'totalLevels': topic.total_levels,
                 'xpReward': topic_xp,
                 'questionCount': topic.question_count,
@@ -111,7 +125,7 @@ class CategoryDetailView(APIView):
             'slug': category.slug,
             'name': category.name,
             'description': category.description,
-            'icon': category.icon,
+            'icon': category_icon_url,
             'color': category.color,
             'topics': topics_data,
             'totalXP': total_xp,
@@ -271,6 +285,28 @@ class CompleteQuizView(APIView):
         if hearts_lost == 0 and score > 0:
             xp_earned += XP_BONUS_NO_HEARTS_LOST  # +25 for no hearts lost
         
+        # Update streak (by calendar day at midnight)
+        today = timezone.now().date()
+        from datetime import timedelta
+        yesterday = today - timedelta(days=1)
+        
+        if user.last_activity_date is None:
+            # First activity ever (shouldn't happen, but handle it)
+            user.current_streak = 1
+            user.longest_streak = max(user.longest_streak, 1)
+        elif user.last_activity_date == today:
+            # Already played today, no streak change
+            pass
+        elif user.last_activity_date == yesterday:
+            # Played yesterday, increment streak
+            user.current_streak += 1
+            user.longest_streak = max(user.longest_streak, user.current_streak)
+        else:
+            # Missed a day or more, reset streak to 1
+            user.current_streak = 1
+        
+        user.last_activity_date = today
+        
         # Update user XP (hearts already deducted during quiz via SubmitAnswerView)
         user.xp += xp_earned
         user.save()
@@ -302,6 +338,7 @@ class CompleteQuizView(APIView):
             'xp_earned': xp_earned,
             'new_level': progress.current_level,
             'total_xp': user.xp,
+            'current_streak': user.current_streak,
         })
 
 
@@ -531,11 +568,18 @@ class UserCertificatesView(APIView):
                 
                 total_stars = sum(level_stars.values())
                 
+                # Get icon URL with fallback chain: topic → category
+                icon_url = None
+                if topic.icon_file:
+                    icon_url = request.build_absolute_uri(topic.icon_file.url)
+                elif topic.category.icon_file:
+                    icon_url = request.build_absolute_uri(topic.category.icon_file.url)
+                
                 completed_topics.append({
                     'id': str(topic.id),
                     'topicId': topic.slug,
                     'topicName': topic.name,
-                    'topicIcon': self._get_topic_icon(topic.name),
+                    'topicIcon': icon_url,  # Now returns actual URL or None
                     'category': topic.category.name,
                     'categorySlug': topic.category.slug,
                     'completedAt': completion_date,
@@ -543,7 +587,7 @@ class UserCertificatesView(APIView):
                     'maxStars': topic.total_levels * 3,
                     'totalLevels': topic.total_levels,
                     'totalXpEarned': progress.total_xp_earned,
-                    'accentColor': self._get_topic_color(topic.name),
+                    'accentColor': topic.category.color,  # Use category color
                 })
         
         # Sort by completion date (most recent first)
@@ -553,38 +597,6 @@ class UserCertificatesView(APIView):
             'certificates': completed_topics,
             'total': len(completed_topics),
         })
-    
-    def _get_topic_icon(self, topic_name):
-        icons = {
-            'JavaScript': 'javascript',
-            'Python': 'python',
-            'HTML': 'html',
-            'CSS': 'css',
-            'React': 'react',
-            'TypeScript': 'typescript',
-            'Node.js': 'nodejs',
-            'Java': 'java',
-            'C++': 'cpp',
-            'SQL': 'sql',
-            'Bash': 'bash',
-        }
-        return icons.get(topic_name, 'code')
-    
-    def _get_topic_color(self, topic_name):
-        colors = {
-            'JavaScript': '#eab308',
-            'Python': '#22c55e',
-            'HTML': '#f97316',
-            'CSS': '#3b82f6',
-            'React': '#06b6d4',
-            'TypeScript': '#3178c6',
-            'Node.js': '#68a063',
-            'Java': '#e76f00',
-            'C++': '#00599C',
-            'SQL': '#336791',
-            'Bash': '#4EAA25',
-        }
-        return colors.get(topic_name, '#a855f7')
 
 
 class LearningResourceListView(APIView):

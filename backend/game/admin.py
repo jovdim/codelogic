@@ -10,7 +10,7 @@ from django.db.models import Count, Avg
 from django.contrib import messages
 from django import forms
 
-from .models import Category, Topic, Question, LearningResource
+from .models import Category, Topic, Question, LearningResource, Certificate, UserCertificate
 from .models_settings import SiteSettings
 
 
@@ -71,7 +71,7 @@ class SiteSettingsAdmin(admin.ModelAdmin):
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
-    list_display = ['name', 'slug', 'topic_count', 'question_count', 'color_preview', 'order', 'is_active']
+    list_display = ['name', 'slug', 'icon_preview', 'topic_count', 'question_count', 'color_preview', 'order', 'is_active']
     list_filter = ['is_active']
     prepopulated_fields = {'slug': ('name',)}
     list_editable = ['order', 'is_active']
@@ -83,13 +83,19 @@ class CategoryAdmin(admin.ModelAdmin):
             'fields': ('name', 'slug', 'description')
         }),
         ('Display', {
-            'fields': ('icon', 'color', 'order'),
-            'description': 'Icon class, color (hex), and display order'
+            'fields': ('icon_file', 'color', 'order'),
+            'description': 'Upload icon (SVG, PNG, etc.), set color (hex), and display order'
         }),
         ('Status', {
             'fields': ('is_active',)
         }),
     )
+    
+    def icon_preview(self, obj):
+        if obj.icon_file:
+            return format_html('<img src="{}" width="24" height="24" style="object-fit: contain;" />', obj.icon_file.url)
+        return "-"
+    icon_preview.short_description = 'Icon'
     
     def topic_count(self, obj):
         count = obj.topics.count()
@@ -134,7 +140,7 @@ class QuestionInline(admin.TabularInline):
 
 @admin.register(Topic)
 class TopicAdmin(admin.ModelAdmin):
-    list_display = ['name', 'category', 'slug', 'icon', 'question_count', 'levels_with_questions', 'total_levels', 'is_active']
+    list_display = ['name', 'category', 'slug', 'icon_preview', 'question_count', 'levels_with_questions', 'total_levels', 'is_active']
     list_filter = ['category', 'is_active']
     prepopulated_fields = {'slug': ('name',)}
     list_editable = ['is_active']
@@ -147,8 +153,8 @@ class TopicAdmin(admin.ModelAdmin):
             'fields': ('name', 'slug', 'category', 'description')
         }),
         ('Display', {
-            'fields': ('icon',),
-            'description': 'Icon key for React Icons (e.g., react, python, javascript, typescript, html, css, java, cpp, nodejs, flutter, swift, kotlin, sql, bash, docker, aws). Leave blank to auto-detect from topic name.'
+            'fields': ('icon_file',),
+            'description': 'Upload icon (SVG, PNG, etc.) - if not set, uses category icon'
         }),
         ('Settings', {
             'fields': ('total_levels', 'order'),
@@ -158,6 +164,14 @@ class TopicAdmin(admin.ModelAdmin):
             'fields': ('is_active',)
         }),
     )
+    
+    def icon_preview(self, obj):
+        if obj.icon_file:
+            return format_html('<img src="{}" width="24" height="24" style="object-fit: contain;" />', obj.icon_file.url)
+        elif obj.category.icon_file:
+            return format_html('<img src="{}" width="24" height="24" style="object-fit: contain; opacity: 0.5;" title="Using category icon" />', obj.category.icon_file.url)
+        return "-"
+    icon_preview.short_description = 'Icon'
     
     def question_count(self, obj):
         count = obj.questions.count()
@@ -356,3 +370,82 @@ class LearningResourceAdmin(admin.ModelAdmin):
             return format_html('<img src="{}" width="200" style="border-radius: 8px;" />', obj.thumbnail.url)
         return "No thumbnail uploaded"
     thumbnail_preview_large.short_description = 'Thumbnail Preview'
+
+
+# ============================================================
+# CERTIFICATE ADMIN
+# ============================================================
+
+@admin.register(Certificate)
+class CertificateAdmin(admin.ModelAdmin):
+    list_display = ['topic', 'category_name', 'icon_preview', 'title_display', 'awarded_count', 'created_at']
+    list_filter = ['topic__category']
+    search_fields = ['topic__name', 'title', 'description']
+    ordering = ['topic__category__order', 'topic__order']
+    readonly_fields = ['created_at', 'updated_at', 'icon_preview_large']
+    
+    fieldsets = (
+        ('Topic', {
+            'fields': ('topic',),
+            'description': 'Certificate is automatically created for each topic'
+        }),
+        ('Customization', {
+            'fields': ('title', 'description'),
+            'description': 'Optional: customize certificate text (defaults to topic name)'
+        }),
+        ('Icon', {
+            'fields': ('icon_file', 'icon_preview_large'),
+            'description': 'Optional: custom icon (defaults to topic icon → category icon)'
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def category_name(self, obj):
+        return obj.topic.category.name
+    category_name.short_description = 'Category'
+    
+    def icon_preview(self, obj):
+        icon_url = obj.icon_url
+        if icon_url:
+            return format_html('<img src="{}" width="24" height="24" style="object-fit: contain;" />', icon_url)
+        return "-"
+    icon_preview.short_description = 'Icon'
+    
+    def icon_preview_large(self, obj):
+        icon_url = obj.icon_url
+        if icon_url:
+            source = "certificate" if obj.icon_file else ("topic" if obj.topic.icon_file else "category")
+            return format_html('<img src="{}" width="48" height="48" style="object-fit: contain;" /><br><small>Using {} icon</small>', icon_url, source)
+        return "No icon (will use default)"
+    icon_preview_large.short_description = 'Icon Preview'
+    
+    def title_display(self, obj):
+        return obj.get_title()
+    title_display.short_description = 'Certificate Title'
+    
+    def awarded_count(self, obj):
+        count = obj.awarded_to.count()
+        if count > 0:
+            return format_html('<span style="color: #22c55e; font-weight: bold;">{}</span>', count)
+        return count
+    awarded_count.short_description = 'Awarded'
+    
+    def has_add_permission(self, request):
+        # Certificates are auto-created with topics
+        return False
+
+
+@admin.register(UserCertificate)
+class UserCertificateAdmin(admin.ModelAdmin):
+    list_display = ['user', 'certificate_topic', 'certificate_code', 'total_stars', 'total_xp_earned', 'completion_date']
+    list_filter = ['certificate__topic__category', 'completion_date']
+    search_fields = ['user__username', 'user__email', 'certificate__topic__name', 'certificate_code']
+    ordering = ['-completion_date']
+    readonly_fields = ['certificate_code', 'completion_date']
+    
+    def certificate_topic(self, obj):
+        return obj.certificate.topic.name
+    certificate_topic.short_description = 'Topic'

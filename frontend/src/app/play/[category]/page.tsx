@@ -18,8 +18,8 @@ import {
   ArrowLeft,
   CheckCircle,
   Loader2,
+  Code,
 } from "lucide-react";
-import { getIcon, getIconColor } from "@/lib/iconMap";
 
 // Category type from API
 interface Topic {
@@ -27,7 +27,7 @@ interface Topic {
   slug: string;
   name: string;
   description: string;
-  icon: string;
+  icon: string | null;
   totalLevels: number;
   xpReward: number;
   questionCount: number;
@@ -38,7 +38,7 @@ interface Category {
   slug: string;
   name: string;
   description: string;
-  icon: string;
+  icon: string | null;
   color: string;
   topics: Topic[];
   totalXP: number;
@@ -203,16 +203,17 @@ export default function CategoryPage() {
               </Link>
 
               <div className="flex items-center gap-4">
-                {(() => {
-                  const CategoryIcon = getIcon(category.icon);
-                  return (
-                    <div
-                      className={`w-16 h-16 bg-gradient-to-br ${colors.gradient} rounded-xl flex items-center justify-center shadow-lg`}
-                    >
-                      <CategoryIcon className="w-8 h-8 text-white" />
-                    </div>
-                  );
-                })()}
+                <div className="w-16 h-16 bg-[#0f0f1a] rounded-xl flex items-center justify-center shadow-lg overflow-hidden border border-[#2d2d44]">
+                  {category.icon ? (
+                    <img
+                      src={category.icon}
+                      alt={category.name}
+                      className="w-10 h-10 object-contain"
+                    />
+                  ) : (
+                    <Code className="w-8 h-8 text-white" />
+                  )}
+                </div>
                 <div>
                   <h1 className="text-2xl md:text-3xl font-bold text-white">
                     {category.name}
@@ -296,16 +297,17 @@ export default function CategoryPage() {
                     >
                       {/* Icon and Level */}
                       <div className="flex items-start justify-between mb-3">
-                        {(() => {
-                          const TopicIcon = getIcon(topic.icon);
-                          return (
-                            <div
-                              className={`w-14 h-14 bg-gradient-to-br ${colors.gradient} flex items-center justify-center rounded-lg`}
-                            >
-                              <TopicIcon className="w-8 h-8 text-white" />
-                            </div>
-                          );
-                        })()}
+                        <div className="w-14 h-14 bg-[#0f0f1a] flex items-center justify-center rounded-lg overflow-hidden border border-[#2d2d44]">
+                          {topic.icon ? (
+                            <img
+                              src={topic.icon}
+                              alt={topic.name}
+                              className="w-9 h-9 object-contain"
+                            />
+                          ) : (
+                            <Code className="w-8 h-8 text-white" />
+                          )}
+                        </div>
 
                         {isCompleted ? (
                           <div className="flex items-center gap-2 px-3 py-1.5 bg-green-500/20 border border-green-500/30 rounded-lg">
@@ -377,7 +379,7 @@ export default function CategoryPage() {
             {/* Tips Section */}
             <div className="mt-8 pixel-box p-5 bg-[#0a0a12]">
               <div className="flex items-start gap-3">
-                <div className="w-10 h-10 bg-yellow-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                <div className="w-10 h-10 bg-yellow-500/20 rounded-lg flex items-center justify-center shrink-0">
                   <Star className="w-5 h-5 text-yellow-400" />
                 </div>
                 <div>

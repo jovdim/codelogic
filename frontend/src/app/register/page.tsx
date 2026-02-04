@@ -165,7 +165,8 @@ export default function RegisterPage() {
                     alert("Failed to resend email. Please try again.");
                   }
                 }}
-                className="text-purple-400 hover:text-purple-300 underline"
+                className="underline hover:opacity-80"
+                style={{ color: "var(--primary-light)" }}
               >
                 resend it
               </button>
@@ -188,7 +189,7 @@ export default function RegisterPage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           {errors.general && (
             <div className="bg-red-500/10 border border-red-500/50 text-red-400 px-4 py-3 flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+              <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
               <p>{errors.general[0]}</p>
             </div>
           )}
@@ -392,7 +393,8 @@ export default function RegisterPage() {
             Already have an account?{" "}
             <Link
               href="/login"
-              className="text-purple-400 hover:text-purple-300"
+              className="hover:opacity-80"
+              style={{ color: "var(--primary-light)" }}
             >
               Log in
             </Link>
