@@ -23,6 +23,9 @@ export const metadata: Metadata = {
   title: "CodeLogic - Learn Programming Through Quizzes",
   description:
     "A pixel-art gamified quiz platform for learning programming languages",
+  icons: {
+    icon: "/logo/codelogic-logo.png",
+  },
 };
 
 export default function RootLayout({

@@ -275,6 +275,11 @@ body::before {
   color: var(--muted);
 }
 
+/* form field icon issuee*/
+.input-field.pl-12 {
+  padding-left: 38px !important;
+}
+
 /* Card styles */
 .card {
   background: var(--card-bg);
