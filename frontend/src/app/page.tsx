@@ -115,11 +115,7 @@ function TypewriterText({ words }: { words: string[] }) {
     return () => clearTimeout(timeout);
   }, [currentText, isDeleting, currentWordIndex, words]);
 
-  return (
-    <span className="inline-block min-w-[280px] md:min-w-[360px]">
-      {currentText}
-    </span>
-  );
+  return <span className="inline-block">{currentText}</span>;
 }
 
 function AnimatedNumber({
@@ -525,7 +521,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen relative">
+    <div className="min-h-screen relative overflow-x-hidden">
       {/* Scroll Progress Bar */}
       <ScrollProgressBar />
 
@@ -763,30 +759,32 @@ export default function Home() {
         />
 
         {/* Hero content */}
-        <div className="relative z-10 w-full">
+        <div className="relative z-10 w-full overflow-hidden">
           <FloatingPixels />
-          <div className="max-w-7xl mx-auto px-6 py-16 md:py-24">
-            <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 items-center">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12 md:py-24">
+            <div className="grid lg:grid-cols-12 gap-8 lg:gap-16 items-center">
               {/* Left Content - Takes 7 columns */}
               <div className="lg:col-span-7 text-center lg:text-left space-y-6">
                 {/* Badge */}
                 <ScrollReveal animation="fade-down" delay={100}>
                   <div
-                    className="inline-flex items-center gap-2 px-4 py-2 border rounded-full text-sm animate-pulse"
+                    className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 border rounded-full text-xs sm:text-sm animate-pulse"
                     style={{
                       background: "rgba(34, 197, 94, 0.15)",
                       borderColor: "rgba(34, 197, 94, 0.4)",
                       color: "#4ade80",
                     }}
                   >
-                    <Sparkles className="w-4 h-4" />
-                    New: Python Challenges Available!
+                    <Sparkles className="w-3 h-3 sm:w-4 sm:h-4" />
+                    <span className="whitespace-nowrap">
+                      New: Python Challenges!
+                    </span>
                   </div>
                 </ScrollReveal>
 
                 {/* Headline */}
                 <ScrollReveal animation="fade-up" delay={200}>
-                  <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white leading-tight tracking-tight">
+                  <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-white leading-tight tracking-tight">
                     Level Up Your
                     <br />
                     <span
@@ -805,7 +803,7 @@ export default function Home() {
                 {/* Subheadline */}
                 <ScrollReveal animation="fade-up" delay={400}>
                   <p
-                    className="text-lg md:text-xl max-w-lg mx-auto lg:mx-0 leading-relaxed"
+                    className="text-base sm:text-lg md:text-xl max-w-lg mx-auto lg:mx-0 leading-relaxed"
                     style={{ color: "rgba(255,255,255,0.7)" }}
                   >
                     Master programming through epic quizzes, earn XP, unlock
@@ -816,10 +814,10 @@ export default function Home() {
 
                 {/* CTA Buttons */}
                 <ScrollReveal animation="fade-up" delay={600}>
-                  <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-2">
+                  <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 sm:gap-4 pt-2">
                     <Link
                       href={isAuthenticated ? "/dashboard" : "/register"}
-                      className="w-full sm:w-auto px-8 py-4 text-white font-bold text-lg rounded-xl transition-all flex items-center justify-center gap-3 group shadow-2xl hover:scale-105 hover:shadow-purple-500/30"
+                      className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 text-white font-bold text-base sm:text-lg rounded-xl transition-all flex items-center justify-center gap-2 sm:gap-3 group shadow-2xl hover:scale-105 hover:shadow-purple-500/30"
                       style={{
                         background: "var(--primary)",
                         boxShadow: "0 15px 50px rgba(var(--primary-rgb), 0.4)",
@@ -844,19 +842,19 @@ export default function Home() {
                 {/* Stats Row */}
                 <ScrollReveal animation="fade-up" delay={800}>
                   <div
-                    className="flex items-center justify-center lg:justify-start gap-10 pt-8 mt-4 border-t"
+                    className="flex flex-wrap items-center justify-center lg:justify-start gap-4 sm:gap-6 md:gap-10 pt-6 md:pt-8 mt-4 border-t"
                     style={{ borderColor: "rgba(255,255,255,0.1)" }}
                   >
                     {PLATFORM_STATS.map((stat, index) => (
-                      <div key={index} className="text-center">
-                        <div className="text-2xl md:text-3xl font-bold text-white">
+                      <div key={index} className="text-center min-w-[70px]">
+                        <div className="text-xl sm:text-2xl md:text-3xl font-bold text-white">
                           <AnimatedNumber
                             value={stat.value}
                             suffix={stat.suffix}
                           />
                         </div>
                         <div
-                          className="text-xs uppercase tracking-wider mt-1"
+                          className="text-[10px] sm:text-xs uppercase tracking-wider mt-1"
                           style={{ color: "rgba(255,255,255,0.5)" }}
                         >
                           {stat.label}
@@ -1296,10 +1294,14 @@ export default function Home() {
             {/* Top Row - HTML, CSS, JavaScript */}
             <div className="grid grid-cols-3 gap-4 md:gap-8 mb-16 relative z-10">
               {availableLanguages.slice(0, 3).map((lang) => (
-                <ScrollReveal key={lang.slug} animation="fade-down">
-                  <div className="flex justify-center">
+                <ScrollReveal
+                  key={lang.slug}
+                  animation="fade-down"
+                  className="h-full"
+                >
+                  <div className="flex justify-center h-full">
                     <div
-                      className={`group relative pixel-box p-4 md:p-6 flex flex-col items-center text-center transition-all duration-300 hover:-translate-y-2 ${lang.borderHover} w-full max-w-[200px]`}
+                      className={`group relative pixel-box p-4 md:p-6 flex flex-col items-center text-center transition-all duration-300 hover:-translate-y-2 ${lang.borderHover} w-full max-w-[200px] h-full`}
                     >
                       {/* Glowing dot indicator */}
                       <div
@@ -1339,10 +1341,14 @@ export default function Home() {
             {/* Bottom Row - Python, React, SQL */}
             <div className="grid grid-cols-3 gap-4 md:gap-8 relative z-10">
               {availableLanguages.slice(3, 6).map((lang) => (
-                <ScrollReveal key={lang.slug} animation="fade-up">
-                  <div className="flex justify-center">
+                <ScrollReveal
+                  key={lang.slug}
+                  animation="fade-up"
+                  className="h-full"
+                >
+                  <div className="flex justify-center h-full">
                     <div
-                      className={`group relative pixel-box p-4 md:p-6 flex flex-col items-center text-center transition-all duration-300 hover:-translate-y-2 ${lang.borderHover} w-full max-w-[200px]`}
+                      className={`group relative pixel-box p-4 md:p-6 flex flex-col items-center text-center transition-all duration-300 hover:-translate-y-2 ${lang.borderHover} w-full max-w-[200px] h-full`}
                     >
                       {/* Glowing dot indicator */}
                       <div
@@ -1501,12 +1507,12 @@ export default function Home() {
 
                 <div className="grid grid-cols-2 gap-6">
                   {[
-                    { value: "10K+", label: "Active Users", icon: Users },
+                    { value: "9", label: "Languages", icon: Code2 },
                     { value: "500+", label: "Quiz Questions", icon: Brain },
-                    { value: "98%", label: "Satisfaction", icon: Star },
+                    { value: "100%", label: "Free Forever", icon: Star },
                     {
-                      value: "50K+",
-                      label: "Quizzes Completed",
+                      value: "50+",
+                      label: "Quiz Topics",
                       icon: TrendingUp,
                     },
                   ].map((stat, index) => (

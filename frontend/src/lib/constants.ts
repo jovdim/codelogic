@@ -29,10 +29,10 @@ export const FOOTER_LINKS = {
 };
 
 export const PLATFORM_STATS = [
-  { label: "Active Learners", value: 10000, suffix: "+" },
+  { label: "Quiz Topics", value: 50, suffix: "+" },
   { label: "Quiz Questions", value: 500, suffix: "+" },
-  { label: "Languages", value: 12, suffix: "" },
-  { label: "Avg. Rating", value: 4.9, suffix: "/5" },
+  { label: "Languages", value: 9, suffix: "" },
+  { label: "Free Forever", value: 100, suffix: "%" },
 ];
 
 export const TYPEWRITER_WORDS = [
