@@ -784,7 +784,7 @@ export default function Home() {
 
                 {/* Headline */}
                 <ScrollReveal animation="fade-up" delay={200}>
-                  <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-white leading-tight tracking-tight">
+                  <h1 className="text-5xl md:text-6xl  xl:text-7xl font-bold text-white leading-tight tracking-tight">
                     Level Up Your
                     <br />
                     <span
