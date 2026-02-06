@@ -1,33 +1,14 @@
-{% extends "admin/change_form.html" %} {% load i18n %} {% block
-after_related_objects %} {{ block.super }} {% if show_add_question_button and
-original %}
-<div
-  style="
-    margin: 20px 0;
-    padding: 20px;
-    background: #1a1a2e;
-    border: 2px solid #2d2d44;
-    box-shadow: 4px 4px 0 0 rgba(124, 58, 237, 0.3);
-  "
->
+{% extends "admin/change_form.html" %}
+
+{% block after_related_objects %}
+{{ block.super }}
+{% if show_add_question_button and original %}
+<div style="margin: 20px 0; padding: 20px; background: #1a1a2e; border: 2px solid #2d2d44; box-shadow: 4px 4px 0 0 rgba(124, 58, 237, 0.3);">
   <h3 style="margin: 0 0 10px 0; color: #e2e2f0">Add New Question</h3>
-  <p style="color: #9ca3af; margin-bottom: 15px">
-    To add a question with full options (answers, code, explanation), use the
-    button below:
-  </p>
-  <a
-    href="{% url 'admin:game_question_add' %}?topic={{ original.pk }}"
-    style="
-      display: inline-block;
-      background: #7c3aed;
-      color: white;
-      padding: 10px 20px;
-      text-decoration: none;
-      font-weight: 600;
-      box-shadow: 0 4px 0 0 #5b21b6;
-    "
-  >
+  <p style="color: #9ca3af; margin-bottom: 15px">To add a question with full options (answers, code, explanation), use the button below:</p>
+  <a href="{% url 'admin:game_question_add' %}?topic={{ original.pk }}" style="display: inline-block; background: #7c3aed; color: white; padding: 10px 20px; text-decoration: none; font-weight: 600; box-shadow: 0 4px 0 0 #5b21b6;">
     + Add Question for "{{ original.name }}"
   </a>
 </div>
-{% endif %} {% endblock %}
+{% endif %}
+{% endblock %}
