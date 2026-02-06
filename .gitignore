@@ -17,7 +17,7 @@ build/
 *.log
 local_settings.py
 db.sqlite3
-media/
+# media/  # Temporarily allow media for small number of images
 
 # Node.js
 node_modules/

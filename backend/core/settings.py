@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
+    'storages',
     # Local apps
     'accounts',
     'game',
@@ -120,6 +121,22 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 # Media files (uploaded files)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+# Cloud Storage for Media Files (Digital Ocean Spaces)
+USE_SPACES = os.getenv('USE_SPACES', 'False') == 'True'
+if USE_SPACES:
+    AWS_ACCESS_KEY_ID = os.getenv('DO_SPACES_ACCESS_KEY')
+    AWS_SECRET_ACCESS_KEY = os.getenv('DO_SPACES_SECRET_KEY')
+    AWS_STORAGE_BUCKET_NAME = os.getenv('DO_SPACES_BUCKET_NAME')
+    AWS_S3_REGION_NAME = os.getenv('DO_SPACES_REGION', 'nyc3')
+    AWS_S3_ENDPOINT_URL = f'https://{AWS_S3_REGION_NAME}.digitaloceanspaces.com'
+    AWS_S3_OBJECT_PARAMETERS = {
+        'CacheControl': 'max-age=86400',
+    }
+    AWS_DEFAULT_ACL = 'public-read'
+    AWS_LOCATION = 'media'
+    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+    MEDIA_URL = f'{AWS_S3_ENDPOINT_URL}/{AWS_STORAGE_BUCKET_NAME}/{AWS_LOCATION}/'
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
