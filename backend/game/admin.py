@@ -378,7 +378,7 @@ class LearningResourceAdmin(admin.ModelAdmin):
 
 @admin.register(Certificate)
 class CertificateAdmin(admin.ModelAdmin):
-    list_display = ['topic', 'category_name', 'icon_preview', 'title_display', 'awarded_count', 'created_at']
+    list_display = ['topic', 'category_name', 'icon_preview', 'title_display', 'created_at']
     list_filter = ['topic__category']
     search_fields = ['topic__name', 'title', 'description']
     ordering = ['topic__category__order', 'topic__order']
@@ -426,26 +426,8 @@ class CertificateAdmin(admin.ModelAdmin):
         return obj.get_title()
     title_display.short_description = 'Certificate Title'
     
-    def awarded_count(self, obj):
-        count = obj.awarded_to.count()
-        if count > 0:
-            return format_html('<span style="color: #22c55e; font-weight: bold;">{}</span>', count)
-        return count
-    awarded_count.short_description = 'Awarded'
-    
     def has_add_permission(self, request):
         # Certificates are auto-created with topics
         return False
 
 
-@admin.register(UserCertificate)
-class UserCertificateAdmin(admin.ModelAdmin):
-    list_display = ['user', 'certificate_topic', 'certificate_code', 'total_stars', 'total_xp_earned', 'completion_date']
-    list_filter = ['certificate__topic__category', 'completion_date']
-    search_fields = ['user__username', 'user__email', 'certificate__topic__name', 'certificate_code']
-    ordering = ['-completion_date']
-    readonly_fields = ['certificate_code', 'completion_date']
-    
-    def certificate_topic(self, obj):
-        return obj.certificate.topic.name
-    certificate_topic.short_description = 'Topic'

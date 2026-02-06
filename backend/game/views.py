@@ -34,15 +34,19 @@ class CategoryListView(APIView):
     def get(self, request):
         categories = Category.objects.filter(is_active=True).prefetch_related(
             'topics'
-        ).annotate(
-            topic_count=Count('topics', filter=Q(topics__is_active=True)),
-            total_questions=Count('topics__questions', filter=Q(topics__questions__is_active=True))
         ).order_by('order', 'name')
         
         result = []
         for cat in categories:
             topics = cat.topics.filter(is_active=True).order_by('order', 'name')
             topic_names = [t.name for t in topics]
+            topic_count = topics.count()
+            
+            # Calculate total questions
+            total_questions = Question.objects.filter(
+                topic__category=cat, 
+                is_active=True
+            ).count()
             
             # Calculate total XP for category (sum of all questions XP)
             total_xp = Question.objects.filter(
@@ -63,8 +67,8 @@ class CategoryListView(APIView):
                 'icon': icon_url,
                 'color': cat.color,
                 'topics': topic_names,
-                'topicCount': cat.topic_count,
-                'totalQuestions': cat.total_questions,
+                'topicCount': topic_count,
+                'totalQuestions': total_questions,
                 'totalXP': total_xp,
             })
         
@@ -530,10 +534,12 @@ class UserCertificatesView(APIView):
         # Get all topics where user has completed all levels
         completed_topics = []
         
-        user_progress_list = UserProgress.objects.filter(user=user).select_related('topic', 'topic__category')
+        user_progress_list = UserProgress.objects.filter(user=user).select_related('topic', 'topic__category', 'topic__certificate')
         
         for progress in user_progress_list:
             topic = progress.topic
+            certificate = topic.certificate  # Get the certificate for this topic
+            
             # Check if all levels are completed
             if progress.highest_level_completed >= topic.total_levels:
                 # Get completion date (when final level was first passed)
@@ -568,12 +574,18 @@ class UserCertificatesView(APIView):
                 
                 total_stars = sum(level_stars.values())
                 
-                # Get icon URL with fallback chain: topic → category
+                # Get icon URL with fallback chain: certificate → topic → category
                 icon_url = None
-                if topic.icon_file:
+                if certificate.icon_file:
+                    icon_url = request.build_absolute_uri(certificate.icon_file.url)
+                elif topic.icon_file:
                     icon_url = request.build_absolute_uri(topic.icon_file.url)
                 elif topic.category.icon_file:
                     icon_url = request.build_absolute_uri(topic.category.icon_file.url)
+                
+                # Get certificate title and description
+                cert_title = certificate.get_title()
+                cert_description = certificate.description or f"For successfully completing the {topic.name} course at CodeLogic Academy"
                 
                 completed_topics.append({
                     'id': str(topic.id),
@@ -588,6 +600,8 @@ class UserCertificatesView(APIView):
                     'totalLevels': topic.total_levels,
                     'totalXpEarned': progress.total_xp_earned,
                     'accentColor': topic.category.color,  # Use category color
+                    'certificateTitle': cert_title,
+                    'certificateDescription': cert_description,
                 })
         
         # Sort by completion date (most recent first)

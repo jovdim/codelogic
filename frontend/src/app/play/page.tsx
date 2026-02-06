@@ -128,7 +128,7 @@ export default function PlayPage() {
             <ScrollReveal>
               <div className="mb-8">
                 <div className="flex items-center gap-3 mb-2">
-                  <div className="w-12 h-12 bg-cyan-600 rounded-xl flex items-center justify-center shadow-lg shadow-cyan-500/20">
+                  <div className="w-12 h-12 bg-cyan-600 rounded-xl flex items-center justify-center shadow-lg ">
                     <Gamepad2 className="w-6 h-6 text-white" />
                   </div>
                   <div>

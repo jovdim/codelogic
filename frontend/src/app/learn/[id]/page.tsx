@@ -240,7 +240,7 @@ export default function LearnResourcePage() {
               <div className="pixel-box overflow-hidden">
                 {/* PDF Info Card */}
                 <div className="p-8 text-center">
-                  <div className="w-24 h-32 mx-auto mb-6 bg-gradient-to-br from-red-500 to-red-700 rounded-lg flex items-center justify-center shadow-lg shadow-red-500/20">
+                  <div className="w-24 h-32 mx-auto mb-6  bg-red-500 rounded-lg flex items-center justify-center shadow-lg ">
                     <FileText className="w-12 h-12 text-white" />
                   </div>
 

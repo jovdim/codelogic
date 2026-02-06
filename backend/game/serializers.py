@@ -54,10 +54,12 @@ class TopicWithProgressSerializer(serializers.ModelSerializer):
     category_color = serializers.CharField(source='category.color', read_only=True)
     icon = serializers.SerializerMethodField()
     user_progress = serializers.SerializerMethodField()
+    certificate_title = serializers.SerializerMethodField()
+    certificate_description = serializers.SerializerMethodField()
     
     class Meta:
         model = Topic
-        fields = ['id', 'name', 'slug', 'description', 'total_levels', 'category_slug', 'category_color', 'icon', 'user_progress']
+        fields = ['id', 'name', 'slug', 'description', 'total_levels', 'category_slug', 'category_color', 'icon', 'user_progress', 'certificate_title', 'certificate_description']
     
     def get_icon(self, obj):
         request = self.context.get('request')
@@ -132,6 +134,17 @@ class TopicWithProgressSerializer(serializers.ModelSerializer):
             'level_stars': {},
             'completion_date': None,
         }
+    
+    def get_certificate_title(self, obj):
+        """Return the certificate title for this topic."""
+        return obj.certificate.get_title()
+    
+    def get_certificate_description(self, obj):
+        """Return the certificate description for this topic."""
+        certificate = obj.certificate
+        if certificate.description:
+            return certificate.description
+        return f"For successfully completing the {obj.name} course at CodeLogic Academy"
 
 
 class QuestionSerializer(serializers.ModelSerializer):

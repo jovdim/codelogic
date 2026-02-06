@@ -143,7 +143,6 @@ export default function HowToPlayPage() {
       <div className="min-h-screen pb-16">
         {/* Hero Section */}
         <section className="relative overflow-hidden border-b border-[#2d2d44]">
-          <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-5" />
           <div
             className="absolute top-20 left-1/4 w-48 h-48 rounded-full blur-3xl"
             style={{ background: "rgba(124, 58, 237, 0.15)" }}

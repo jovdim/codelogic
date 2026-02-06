@@ -121,6 +121,9 @@ export const authAPI = {
 
 // Game API functions
 export const gameAPI = {
+  // Get all categories
+  getCategories: () => api.get("/game/categories/"),
+
   // Get topic details and user progress
   getTopic: (categorySlug: string, topicSlug: string) =>
     api.get(`/game/topics/${categorySlug}/${topicSlug}/`),

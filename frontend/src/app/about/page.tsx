@@ -35,34 +35,34 @@ import {
 export default function AboutPage() {
   const team = [
     {
-      name: "Alex Chen",
-      role: "Project Lead",
+      name: "Ayes, Kevin Jones R.",
+      role: "UX/UI Designer",
       image: "/team/team-1.jpg",
-      socials: { linkedin: "#", github: "#", twitter: "#" },
+      socials: { linkedin: "#", twitter: "#" },
     },
     {
-      name: "Jordan Lee",
-      role: "Backend Developer",
+      name: "Cantoria, Hanna Hazel",
+      role: "Documentation lead",
       image: "/team/team-2.jpg",
-      socials: { linkedin: "#", github: "#" },
+      socials: { linkedin: "#", twitter: "#" },
     },
     {
-      name: "Sam Rivera",
-      role: "Frontend Developer",
+      name: "Arceo, Geris Aisen D.",
+      role: "Quality Assurance  ",
       image: "/team/team-3.jpg",
       socials: { linkedin: "#", github: "#", twitter: "#" },
     },
     {
-      name: "Morgan Park",
-      role: "UI/UX Designer",
+      name: "Cabero, Marc Gemmerson D.",
+      role: "Full Stack Developer",
       image: "/team/team-4.jpg",
-      socials: { linkedin: "#", twitter: "#" },
+      socials: { linkedin: "#", github: "#" },
     },
     {
-      name: "Taylor Kim",
-      role: "Content & QA",
+      name: "Sierra, Ejay D.",
+      role: "Research Lead",
       image: "/team/team-5.jpg",
-      socials: { linkedin: "#", github: "#" },
+      socials: { linkedin: "#", twitter: "#" },
     },
   ];
 
@@ -119,7 +119,6 @@ export default function AboutPage() {
       <div className="min-h-screen pb-16">
         {/* Hero Section */}
         <section className="relative overflow-hidden border-b border-[#2d2d44]">
-          <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-5" />
           <div
             className="absolute top-20 right-1/4 w-48 h-48 rounded-full blur-3xl"
             style={{ background: "rgba(124, 58, 237, 0.15)" }}

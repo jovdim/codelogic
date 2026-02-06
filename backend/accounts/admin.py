@@ -57,7 +57,7 @@ class UserAdmin(BaseUserAdmin):
         }),
     )
     
-    readonly_fields = ['date_joined']
+    readonly_fields = ['date_joined', 'last_active']
     
     def level_badge(self, obj):
         colors = {

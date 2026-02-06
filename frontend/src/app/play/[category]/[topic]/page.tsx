@@ -7,6 +7,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/auth/RouteGuards";
 import { gameAPI } from "@/lib/api";
 import Sidebar from "@/components/layout/Sidebar";
+import { ScrollReveal } from "@/components/ui/ScrollAnimations";
+import { Modal, ModalButton } from "@/components/ui/Modal";
 import {
   Star,
   Lock,
@@ -17,8 +19,16 @@ import {
   Play,
   Award,
   Download,
-  Code,
+  Code2,
+  X,
+  Heart,
+  Clock,
 } from "lucide-react";
+import {
+  generateCertificateHTML,
+  CertData,
+  getTopicIconForCertificate,
+} from "@/lib/certTemplate";
 
 // Topic data structure for API response
 interface TopicData {
@@ -26,6 +36,8 @@ interface TopicData {
   icon: string | null;
   accentColor: string;
   totalLevels: number;
+  certificateTitle?: string;
+  certificateDescription?: string;
 }
 
 // Level titles for each topic
@@ -237,6 +249,8 @@ export default function TopicLevelPage() {
     icon: null,
     accentColor: "#a855f7",
     totalLevels: 15,
+    certificateTitle: undefined,
+    certificateDescription: undefined,
   });
 
   const [userProgress, setUserProgress] = useState(1);
@@ -266,6 +280,8 @@ export default function TopicLevelPage() {
           icon: data.icon || null,
           accentColor: data.category_color || "#a855f7",
           totalLevels: data.total_levels || 15,
+          certificateTitle: data.certificate_title,
+          certificateDescription: data.certificate_description,
         });
 
         // Set progress if available
@@ -299,6 +315,7 @@ export default function TopicLevelPage() {
 
   const [selectedLevel, setSelectedLevel] = useState<number | null>(null);
   const [showCertificate, setShowCertificate] = useState(false);
+  const [showOutOfHearts, setShowOutOfHearts] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -317,6 +334,11 @@ export default function TopicLevelPage() {
 
   const startLevel = () => {
     if (selectedLevel) {
+      // Check if user has hearts
+      if (!user || user.current_hearts <= 0) {
+        setShowOutOfHearts(true);
+        return;
+      }
       router.push(`/play/${categoryId}/${topicId}/level/${selectedLevel}`);
     }
   };
@@ -376,7 +398,7 @@ export default function TopicLevelPage() {
                         className="w-6 h-6 object-contain"
                       />
                     ) : (
-                      <Code
+                      <Code2
                         className="w-6 h-6"
                         style={{ color: topic.accentColor }}
                       />
@@ -452,169 +474,172 @@ export default function TopicLevelPage() {
                 const isLeft = index % 2 === 0;
 
                 return (
-                  <div
-                    key={level.level}
-                    ref={level.isCurrent ? currentLevelRef : null}
-                    className="relative h-28"
-                  >
-                    {/* Branch line - thicker and longer */}
+                  <ScrollReveal key={level.level} delay={0.1 + index * 0.05}>
                     <div
-                      className="absolute top-1/2 h-1 -translate-y-1/2 rounded-full"
-                      style={{
-                        left: isLeft ? "0" : "50%",
-                        right: isLeft ? "50%" : "0",
-                        backgroundColor:
-                          level.isCompleted || level.isCurrent
-                            ? topic.accentColor
-                            : "#2d2d44",
-                        boxShadow:
-                          level.isCompleted || level.isCurrent
-                            ? `0 0 8px ${topic.accentColor}40`
-                            : "none",
-                      }}
-                    />
-
-                    {/* Center dot - bigger */}
-                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
+                      key={level.level}
+                      ref={level.isCurrent ? currentLevelRef : null}
+                      className="relative h-28"
+                    >
+                      {/* Branch line - thicker and longer */}
                       <div
-                        className={`w-4 h-4 rounded-sm ${
-                          level.isCurrent ? "animate-pulse" : ""
-                        }`}
+                        className="absolute top-1/2 h-1 -translate-y-1/2 rounded-full"
                         style={{
+                          left: isLeft ? "0" : "50%",
+                          right: isLeft ? "50%" : "0",
                           backgroundColor:
                             level.isCompleted || level.isCurrent
                               ? topic.accentColor
                               : "#2d2d44",
-                          boxShadow: level.isCurrent
-                            ? `0 0 12px ${topic.accentColor}`
-                            : "none",
-                          transform: "rotate(45deg)",
+                          boxShadow:
+                            level.isCompleted || level.isCurrent
+                              ? `0 0 8px ${topic.accentColor}40`
+                              : "none",
                         }}
                       />
-                    </div>
 
-                    {/* Level Card */}
-                    <div
-                      className={`absolute top-1/2 -translate-y-1/2 ${
-                        isLeft ? "left-0" : "right-0"
-                      }`}
-                      style={{ width: "calc(50% - 20px)" }}
-                    >
-                      <button
-                        onClick={() => handleLevelClick(level)}
-                        disabled={level.isLocked}
-                        className={`relative w-full transition-all duration-200 ${
-                          level.isLocked
-                            ? "cursor-not-allowed"
-                            : "hover:scale-[1.02] cursor-pointer"
-                        }`}
-                      >
+                      {/* Center dot - bigger */}
+                      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
                         <div
-                          className={`p-2.5 rounded-xl border-2 bg-[#1a1a2e] ${
-                            level.isCurrent
-                              ? "border-purple-500"
-                              : level.isCompleted
-                                ? ""
-                                : "border-[#2d2d44]"
+                          className={`w-4 h-4 rounded-sm ${
+                            level.isCurrent ? "animate-pulse" : ""
                           }`}
                           style={{
-                            borderColor: level.isCompleted
-                              ? topic.accentColor
-                              : undefined,
+                            backgroundColor:
+                              level.isCompleted || level.isCurrent
+                                ? topic.accentColor
+                                : "#2d2d44",
+                            boxShadow: level.isCurrent
+                              ? `0 0 12px ${topic.accentColor}`
+                              : "none",
+                            transform: "rotate(45deg)",
                           }}
-                        >
-                          {/* Boss badge */}
-                          {level.type === "boss" && (
-                            <div
-                              className="absolute -top-2 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded text-[8px] font-bold uppercase"
-                              style={{
-                                backgroundColor: level.isLocked
-                                  ? "#2d2d44"
-                                  : topic.accentColor,
-                                color: level.isLocked ? "#6b7280" : "#0f0f1a",
-                              }}
-                            >
-                              Final
-                            </div>
-                          )}
+                        />
+                      </div>
 
-                          {/* Level icon/number */}
+                      {/* Level Card */}
+                      <div
+                        className={`absolute top-1/2 -translate-y-1/2 ${
+                          isLeft ? "left-0" : "right-0"
+                        }`}
+                        style={{ width: "calc(50% - 20px)" }}
+                      >
+                        <button
+                          onClick={() => handleLevelClick(level)}
+                          disabled={level.isLocked}
+                          className={`relative w-full transition-all duration-200 ${
+                            level.isLocked
+                              ? "cursor-not-allowed"
+                              : "hover:scale-[1.02] cursor-pointer"
+                          }`}
+                        >
                           <div
-                            className="w-9 h-9 mx-auto mb-1 rounded-lg flex items-center justify-center text-sm font-bold"
+                            className={`p-2.5 border-2 bg-[#1a1a2e] ${
+                              level.isCurrent
+                                ? "border-purple-500"
+                                : level.isCompleted
+                                  ? ""
+                                  : "border-[#2d2d44]"
+                            }`}
                             style={{
-                              backgroundColor: `${topic.accentColor}20`,
-                              color: level.isLocked
-                                ? "#4b5563"
-                                : topic.accentColor,
+                              borderColor: level.isCompleted
+                                ? topic.accentColor
+                                : undefined,
                             }}
                           >
-                            {level.isLocked ? (
-                              <Lock className="w-4 h-4" />
-                            ) : level.isCompleted ? (
-                              <CheckCircle2 className="w-5 h-5" />
-                            ) : (
-                              level.level
+                            {/* Boss badge */}
+                            {level.type === "boss" && (
+                              <div
+                                className="absolute -top-2 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded text-[8px] font-bold uppercase"
+                                style={{
+                                  backgroundColor: level.isLocked
+                                    ? "#2d2d44"
+                                    : topic.accentColor,
+                                  color: level.isLocked ? "#6b7280" : "#0f0f1a",
+                                }}
+                              >
+                                Final
+                              </div>
+                            )}
+
+                            {/* Level icon/number */}
+                            <div
+                              className="w-8 h-8 mx-auto mb-1 rounded border flex items-center justify-center text-sm font-bold"
+                              style={{
+                                backgroundColor: `${topic.accentColor}20`,
+                                borderColor: topic.accentColor,
+                                color: level.isLocked
+                                  ? "#4b5563"
+                                  : topic.accentColor,
+                              }}
+                            >
+                              {level.isLocked ? (
+                                <Lock className="w-4 h-4" />
+                              ) : level.isCompleted ? (
+                                <CheckCircle2 className="w-4 h-4" />
+                              ) : (
+                                level.level
+                              )}
+                            </div>
+
+                            {/* Title */}
+                            <p
+                              className={`text-[10px] font-medium text-center ${
+                                level.isLocked ? "text-gray-500" : "text-white"
+                              }`}
+                            >
+                              {level.title}
+                            </p>
+
+                            {/* Stars for completed */}
+                            {level.isCompleted && (
+                              <div className="flex justify-center gap-0.5 mt-0.5">
+                                {[1, 2, 3].map((star) => (
+                                  <Star
+                                    key={star}
+                                    className={`w-2.5 h-2.5 ${
+                                      star <= level.stars
+                                        ? "fill-yellow-400 text-yellow-400"
+                                        : "text-[#2d2d44]"
+                                    }`}
+                                  />
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Current badge */}
+                            {level.isCurrent && (
+                              <p className="text-[8px] text-purple-400 text-center mt-0.5 font-bold uppercase">
+                                Continue
+                              </p>
+                            )}
+
+                            {/* Locked text */}
+                            {level.isLocked && (
+                              <p className="text-[8px] text-gray-600 text-center mt-0.5">
+                                Locked
+                              </p>
+                            )}
+
+                            {/* XP - only show for unlocked */}
+                            {!level.isLocked && (
+                              <div className="flex items-center justify-center gap-0.5 mt-0.5">
+                                <Zap
+                                  className="w-2.5 h-2.5"
+                                  style={{ color: topic.accentColor }}
+                                />
+                                <span
+                                  className="text-[9px] font-medium"
+                                  style={{ color: topic.accentColor }}
+                                >
+                                  +{level.xpReward}
+                                </span>
+                              </div>
                             )}
                           </div>
-
-                          {/* Title */}
-                          <p
-                            className={`text-[10px] font-medium text-center ${
-                              level.isLocked ? "text-gray-500" : "text-white"
-                            }`}
-                          >
-                            {level.title}
-                          </p>
-
-                          {/* Stars for completed */}
-                          {level.isCompleted && (
-                            <div className="flex justify-center gap-0.5 mt-0.5">
-                              {[1, 2, 3].map((star) => (
-                                <Star
-                                  key={star}
-                                  className={`w-2.5 h-2.5 ${
-                                    star <= level.stars
-                                      ? "fill-yellow-400 text-yellow-400"
-                                      : "text-[#2d2d44]"
-                                  }`}
-                                />
-                              ))}
-                            </div>
-                          )}
-
-                          {/* Current badge */}
-                          {level.isCurrent && (
-                            <p className="text-[8px] text-purple-400 text-center mt-0.5 font-bold uppercase">
-                              Continue
-                            </p>
-                          )}
-
-                          {/* Locked text */}
-                          {level.isLocked && (
-                            <p className="text-[8px] text-gray-600 text-center mt-0.5">
-                              Locked
-                            </p>
-                          )}
-
-                          {/* XP - only show for unlocked */}
-                          {!level.isLocked && (
-                            <div className="flex items-center justify-center gap-0.5 mt-0.5">
-                              <Zap
-                                className="w-2.5 h-2.5"
-                                style={{ color: topic.accentColor }}
-                              />
-                              <span
-                                className="text-[9px] font-medium"
-                                style={{ color: topic.accentColor }}
-                              >
-                                +{level.xpReward}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </button>
+                        </button>
+                      </div>
                     </div>
-                  </div>
+                  </ScrollReveal>
                 );
               })}
 
@@ -659,17 +684,15 @@ export default function TopicLevelPage() {
                     className={`relative w-full transition-all duration-200 ${!isAllCompleted ? "cursor-not-allowed" : "hover:scale-[1.02] cursor-pointer"}`}
                   >
                     <div
-                      className="p-3 rounded-xl border-2 bg-[#1a1a2e] flex flex-col items-center justify-center gap-1"
+                      className="p-3 border-2 bg-[#1a1a2e] flex flex-col items-center justify-center gap-1"
                       style={{
-                        borderColor: isAllCompleted
-                          ? topic.accentColor
-                          : "#2d2d44",
+                        borderColor: isAllCompleted ? "#fbbf24" : "#2d2d44",
                       }}
                     >
                       {isAllCompleted ? (
                         <Award
                           className="w-8 h-8"
-                          style={{ color: topic.accentColor }}
+                          style={{ color: "#fbbf24" }}
                         />
                       ) : (
                         <Lock className="w-6 h-6 text-gray-500" />
@@ -677,7 +700,7 @@ export default function TopicLevelPage() {
                       <p
                         className="text-xs font-bold"
                         style={{
-                          color: isAllCompleted ? topic.accentColor : "#6b7280",
+                          color: isAllCompleted ? "#fbbf24" : "#6b7280",
                         }}
                       >
                         Certificate
@@ -698,11 +721,11 @@ export default function TopicLevelPage() {
           {/* Level Modal */}
           {selectedLevel && (
             <div
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+              className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4"
               onClick={() => setSelectedLevel(null)}
             >
               <div
-                className="bg-[#1a1a2e]/95 backdrop-blur-xl rounded-2xl p-6 max-w-xs w-full border border-[#2d2d44] shadow-2xl shadow-black/50"
+                className="bg-[#1a1a2e]/60 backdrop-blur-xl pixel-box p-6 max-w-xs w-full border border-[#2d2d44] shadow-2xl shadow-black/50"
                 onClick={(e) => e.stopPropagation()}
               >
                 {(() => {
@@ -720,7 +743,7 @@ export default function TopicLevelPage() {
                               className="w-8 h-8 object-contain"
                             />
                           ) : (
-                            <Code
+                            <Code2
                               className="w-8 h-8"
                               style={{ color: topic.accentColor }}
                             />
@@ -770,13 +793,13 @@ export default function TopicLevelPage() {
                       <div className="flex gap-2">
                         <button
                           onClick={() => setSelectedLevel(null)}
-                          className="flex-1 py-2.5 bg-[#2d2d44] text-white rounded-lg font-medium hover:bg-[#3d3d5c]"
+                          className="flex-1 py-2.5 bg-[#2d2d44] text-white pixel-box font-medium hover:bg-[#3d3d5c] cursor-pointer"
                         >
                           Cancel
                         </button>
                         <button
                           onClick={startLevel}
-                          className="flex-1 py-2.5 text-white rounded-lg font-medium flex items-center justify-center gap-2"
+                          className="flex-1 py-2.5 text-white pixel-box font-medium flex items-center justify-center gap-2 cursor-pointer"
                           style={{ backgroundColor: topic.accentColor }}
                         >
                           <Play className="w-4 h-4" />
@@ -793,168 +816,108 @@ export default function TopicLevelPage() {
           {/* Certificate Modal */}
           {showCertificate && (
             <div
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+              className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4"
               onClick={() => setShowCertificate(false)}
             >
               <div
-                className="bg-gradient-to-br from-[#fffef8] to-[#faf6e9] rounded-xl p-4 max-w-md w-full text-center shadow-2xl border-4 border-[#c9a227]"
+                className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-lg p-3 max-w-lg w-full shadow-2xl"
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className="border-2 border-[#d4b854] p-4 rounded-lg relative">
-                  {/* Header */}
-                  <div className="flex items-center justify-center gap-3 mb-2">
-                    <div className="w-16 h-0.5 bg-gradient-to-r from-transparent via-[#c9a227] to-transparent" />
-                    <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-purple-700 rounded-full flex items-center justify-center text-white font-bold text-sm border-2 border-[#c9a227]">
+                <div className="bg-gradient-to-b from-[#fffffe] to-[#fff9eb] border-[3px] border-[#c9a227] rounded p-6 relative">
+                  {/* Corner decorations */}
+                  <div className="absolute top-2 left-2 w-10 h-10 border-l-2 border-t-2 border-[#c9a227]"></div>
+                  <div className="absolute top-2 right-2 w-10 h-10 border-r-2 border-t-2 border-[#c9a227]"></div>
+                  <div className="absolute bottom-2 left-2 w-10 h-10 border-l-2 border-b-2 border-[#c9a227]"></div>
+                  <div className="absolute bottom-2 right-2 w-10 h-10 border-r-2 border-b-2 border-[#c9a227]"></div>
+
+                  {/* Close button */}
+                  <button
+                    onClick={() => setShowCertificate(false)}
+                    className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+
+                  {/* Logo - Gold colored to match certificate */}
+                  <div className="flex justify-center mb-3">
+                    <div className="w-12 h-12 bg-gradient-to-br from-[#f4d03f] to-[#c9a227] rounded-full flex items-center justify-center text-[#5c4a1f] font-bold text-base border-2 border-[#c9a227] shadow-lg">
                       CL
                     </div>
-                    <div className="w-16 h-0.5 bg-gradient-to-r from-transparent via-[#c9a227] to-transparent" />
                   </div>
 
-                  <p className="text-[9px] text-[#8b7355] uppercase tracking-[4px] mb-1">
-                    Certificate of Completion
-                  </p>
-                  <h2
-                    className="text-xl font-semibold text-[#2d2418] mb-3"
-                    style={{ fontFamily: "Georgia, serif" }}
-                  >
-                    CodeLogic Academy
-                  </h2>
-
-                  {/* Topic badge */}
-                  <div
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-3"
-                    style={{
-                      backgroundColor: `${topic.accentColor}15`,
-                      border: `2px solid ${topic.accentColor}40`,
-                    }}
-                  >
-                    {topic.icon ? (
-                      <img
-                        src={topic.icon}
-                        alt={topic.name}
-                        className="w-6 h-6 object-contain"
-                      />
-                    ) : (
-                      <Code
-                        className="w-6 h-6"
-                        style={{ color: topic.accentColor }}
-                      />
-                    )}
-                    <span
-                      className="font-semibold text-[#2d2418]"
-                      style={{ fontFamily: "Georgia, serif" }}
-                    >
-                      {topic.name}
-                    </span>
-                  </div>
-
-                  <p className="text-[10px] text-[#8b7355] uppercase tracking-[2px] mb-1">
-                    This certificate is proudly presented to
-                  </p>
-                  <p
-                    className="text-lg font-semibold text-[#2d2418] mb-1 border-b border-[#c9a227] inline-block px-4 pb-1"
-                    style={{ fontFamily: "Georgia, serif" }}
-                  >
-                    {user?.display_name || user?.username || "Student"}
-                  </p>
-
-                  <p className="text-[10px] text-[#5c5040] mt-2 mb-3 leading-relaxed max-w-xs mx-auto">
-                    For successfully completing all {topic.totalLevels} levels
-                    of the {topic.name} course, demonstrating exceptional
-                    proficiency.
-                  </p>
-
-                  {/* Stars */}
-                  <div className="flex justify-center gap-1 mb-1">
-                    {[1, 2, 3].map((star) => {
-                      const avgStars = totalStars / topic.totalLevels;
-                      const filled = star <= Math.round(avgStars);
-                      return (
-                        <Star
-                          key={star}
-                          className={`w-5 h-5 ${filled ? "fill-[#d4af37] text-[#d4af37]" : "text-gray-300"}`}
-                        />
-                      );
-                    })}
-                  </div>
-                  <p className="text-[8px] text-[#8b7355] uppercase tracking-[2px] mb-2">
-                    Achievement Rating
-                  </p>
-
-                  {/* Stats */}
-                  <div className="flex justify-center gap-6 py-2 border-t border-b border-[#e8dcc8] mb-3">
-                    <div className="text-center">
-                      <p
-                        className="text-base font-semibold text-[#2d2418]"
-                        style={{ fontFamily: "Georgia, serif" }}
-                      >
-                        {topic.totalLevels}
-                      </p>
-                      <p className="text-[8px] text-[#8b7355] uppercase tracking-wider">
-                        Levels
-                      </p>
-                    </div>
-                    <div className="text-center">
-                      <p
-                        className="text-base font-semibold text-[#2d2418]"
-                        style={{ fontFamily: "Georgia, serif" }}
-                      >
-                        {totalStars}/{topic.totalLevels * 3}
-                      </p>
-                      <p className="text-[8px] text-[#8b7355] uppercase tracking-wider">
-                        Stars
-                      </p>
-                    </div>
-                    <div className="text-center">
-                      <p
-                        className="text-base font-semibold text-[#2d2418]"
-                        style={{ fontFamily: "Georgia, serif" }}
-                      >
-                        {certificateData.totalXpEarned.toLocaleString()}
-                      </p>
-                      <p className="text-[8px] text-[#8b7355] uppercase tracking-wider">
-                        XP Earned
-                      </p>
-                    </div>
-                  </div>
-
-                  {certificateData.completionDate && (
-                    <p className="text-[9px] text-[#8b7355]">
-                      Completed:{" "}
-                      {new Date(
-                        certificateData.completionDate,
-                      ).toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      })}
+                  <div className="text-center">
+                    <p className="text-[9px] text-[#8b7355] uppercase tracking-[4px] mb-1">
+                      Certificate of Completion
                     </p>
-                  )}
+                    <h2 className="text-xl font-serif font-bold text-[#2d2418] mb-3">
+                      CodeLogic Academy
+                    </h2>
 
-                  {/* Verified seal */}
-                  <div className="absolute -bottom-3 -right-3 w-14 h-14 bg-gradient-to-br from-[#f4d03f] to-[#c9a227] rounded-full flex items-center justify-center shadow-lg">
-                    <div className="w-10 h-10 bg-gradient-to-br from-[#fffef0] to-[#f4d03f] rounded-full border-2 border-[#c9a227] flex flex-col items-center justify-center">
-                      <span className="text-[6px] text-[#5c4a1f] uppercase font-semibold">
-                        Verified
-                      </span>
-                      <span className="text-sm text-[#5c4a1f] font-bold leading-none">
-                        ✓
+                    {/* Topic Badge - Dark background to match play section */}
+                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl mb-3 bg-[#0f0f1a] border-2 border-[#2d2d44]">
+                      {topic.icon ? (
+                        <img
+                          src={topic.icon}
+                          alt={topic.name}
+                          className="w-6 h-6 object-contain"
+                        />
+                      ) : (
+                        <Code2
+                          className="w-6 h-6"
+                          style={{ color: topic.accentColor }}
+                        />
+                      )}
+                      <span className="text-base font-serif font-semibold text-[#e2e2f0]">
+                        {topic.certificateTitle || topic.name}
                       </span>
                     </div>
+
+                    <p className="text-[10px] text-[#8b7355] tracking-wider mb-1 uppercase">
+                      This certificate is proudly presented to
+                    </p>
+                    <p className="text-lg font-serif font-semibold text-[#2d2418] mb-3 pb-2 border-b-2 border-[#c9a227]/40 inline-block px-6">
+                      {user?.display_name || user?.username || "Student"}
+                    </p>
+
+                    {/* Description */}
+                    <p className="text-sm text-[#5c4a1f] my-4">
+                      {topic.certificateDescription ||
+                        `For successfully completing the ${topic.name} course at CodeLogic Academy`}
+                    </p>
+
+                    {certificateData.completionDate && (
+                      <p className="text-xs text-[#8b7355] mt-2">
+                        Issued:{" "}
+                        {new Date(
+                          certificateData.completionDate,
+                        ).toLocaleDateString("en-US", {
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        })}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Seal */}
+                  <div className="absolute bottom-6 right-6 w-14 h-14 bg-gradient-to-br from-[#f4d03f] to-[#c9a227] rounded-full flex flex-col items-center justify-center text-[#5c4a1f] border-2 border-[#c9a227] shadow-lg">
+                    <span className="text-[6px] uppercase tracking-wider font-semibold">
+                      Verified
+                    </span>
+                    <span className="text-sm font-bold">✓</span>
                   </div>
                 </div>
 
-                <div className="flex gap-2 mt-4">
+                <div className="flex gap-2 mt-3">
                   <button
                     onClick={() => setShowCertificate(false)}
-                    className="flex-1 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors"
+                    className="flex-1 py-2.5 bg-gray-200 text-gray-700 font-medium hover:bg-gray-300 transition-colors"
+                    style={{ boxShadow: "3px 3px 0 0 rgba(0,0,0,0.2)" }}
                   >
                     Close
                   </button>
                   <button
                     onClick={() => {
-                      const avgStars = totalStars / topic.totalLevels;
-                      const filledStars = Math.round(avgStars);
                       const completionDateStr = certificateData.completionDate
                         ? new Date(
                             certificateData.completionDate,
@@ -989,462 +952,32 @@ export default function TopicLevelPage() {
                       const userName =
                         user?.display_name || user?.username || "Student";
 
-                      // SVG icon map for PDF
-                      const getTopicSVG = () => {
-                        const svgMap: { [key: string]: string } = {
-                          javascript: `<svg viewBox="0 0 48 48" width="48" height="48"><rect width="48" height="48" fill="#f7df1e" rx="4"/><path d="M12 36.4V33l3.6.2c.8 0 1.4-.6 1.4-1.4v-11.6h4v11.8c0 3.2-1.8 4.8-5 4.8-2.2 0-3.6-.2-4-.4zm14.6-.6c-1.2-.6-2-1.6-2.4-2.6l3.2-1.8c.4.8.8 1.2 1.4 1.6.6.4 1.2.4 2 .4 1 0 1.8-.4 1.8-1.2 0-1-1.2-1.4-2.8-2-1.8-.6-4.2-1.6-4.2-4.4 0-2.8 2.4-4.6 5.4-4.6 1.8 0 3.4.4 4.6 1.4l-2.8 2c-.6-.6-1.4-.8-2-.8-.8 0-1.4.4-1.4 1 0 .8 1 1.2 2.4 1.6 2.2.8 4.6 1.8 4.6 4.6 0 3-2.4 5.2-6 5.2-1.8 0-3.2-.4-4.4-1z" fill="#000"/></svg>`,
-                          python: `<svg viewBox="0 0 48 48" width="48" height="48"><path fill="#3776ab" d="M24 4c-3.4 0-6.4.2-8.8.8C11.4 5.8 10 7.6 10 10v4h12v2H8.6c-2 0-4 1.2-4.6 3.6-.6 2.8-.6 4.6 0 7.6.6 2.2 2 3.6 4 3.6H10v-3.2c0-2.4 2-4.4 4.6-4.4h9c2 0 3.4-1.4 3.4-3.4V10c0-2-1.6-3.4-3.4-4-1.2-.4-2.6-.6-3.8-.6-1.4-.2-2.6-.2-3.8-.2zm-5 4c.8 0 1.6.6 1.6 1.6s-.6 1.6-1.6 1.6-1.6-.6-1.6-1.6.6-1.6 1.6-1.6z"/><path fill="#ffc331" d="M37.2 17.2h-2v3.2c0 2.4-2 4.4-4.6 4.4h-9c-2 0-3.4 1.4-3.4 3.4v6.4c0 2 1.6 3 3.4 3.6 2.2.6 4.4.8 6.8 0 1.6-.4 3.4-1.4 3.4-3.6v-2.6h-8v-1h11.2c2 0 2.8-1.4 3.4-3.4.6-2 .6-4.2 0-6.8-.4-2-2.2-3-4-3.6zm-8.2 17.2c.8 0 1.6.6 1.6 1.6s-.6 1.6-1.6 1.6-1.6-.6-1.6-1.6.6-1.6 1.6-1.6z"/></svg>`,
-                          html: `<svg viewBox="0 0 48 48" width="48" height="48"><path fill="#e44d26" d="M8 4l3 34L24 44l13-6L40 4H8zm25 12H16.6l.4 5h15.4l-1.2 13-7.2 2-7.4-2-.4-6h4.8l.2 3 2.8.8 2.8-.8.2-4H14.2l-1-11h21.4l-.6 2z"/></svg>`,
-                          css: `<svg viewBox="0 0 48 48" width="48" height="48"><path fill="#264de4" d="M8 4l3 34L24 44l13-6L40 4H8zm25.2 11.8l-.2 1.6-.2 1-.2 1H16.6l.4 4h14.4l-.2 1.2-1.2 13.2-6 1.6-6-1.6-.4-5h4.2l.2 2.6 2 .6 2-.6.2-2.8.2-2.6H15.2l-1-11h19.2l-.2 1.8z"/></svg>`,
-                          react: `<svg viewBox="0 0 48 48" width="48" height="48"><circle cx="24" cy="24" r="4.4" fill="#61dafb"/><g fill="none" stroke="#61dafb" stroke-width="2"><ellipse rx="20" ry="8" cx="24" cy="24"/><ellipse rx="20" ry="8" cx="24" cy="24" transform="rotate(60 24 24)"/><ellipse rx="20" ry="8" cx="24" cy="24" transform="rotate(120 24 24)"/></g></svg>`,
-                          sql: `<svg viewBox="0 0 48 48" width="48" height="48"><ellipse cx="24" cy="12" rx="16" ry="6" fill="#336791"/><path fill="#336791" d="M8 12v24c0 3.3 7.2 6 16 6s16-2.7 16-6V12c0 3.3-7.2 6-16 6S8 15.3 8 12z"/></svg>`,
-                          bash: `<svg viewBox="0 0 48 48" width="48" height="48"><rect x="4" y="8" width="40" height="32" rx="4" fill="#2d2d2d"/><path fill="#4EAA25" d="M12 20l6 4-6 4v-3H8v-2h4v-3zm8 8h12v2H20v-2z"/></svg>`,
-                          java: `<svg viewBox="0 0 48 48" width="48" height="48"><path fill="#e76f00" d="M17.8 37.2s-1.8 1 1.2 1.4c3.6.6 5.6.4 9.6-.4 0 0 1 .6 2.6 1.2-9 3.8-20.4-.2-13.4-2.2zm-1.2-5s-2 1.4 1 1.8c4 .4 7 .4 12.4-.6 0 0 .8.8 2 1.2-10.8 3.2-23 .2-15.4-2.4z"/><path fill="#5382a1" d="M27 20.6c2.4 2.8-.6 5.2-.6 5.2s6.2-3.2 3.4-7.2c-2.6-3.6-4.6-5.6 6.4-11.8 0 0-17.4 4.4-9.2 13.8z"/></svg>`,
-                          cpp: `<svg viewBox="0 0 48 48" width="48" height="48"><circle cx="24" cy="24" r="20" fill="none" stroke="#00599C" stroke-width="3"/><path fill="#00599C" d="M18 16v16c0 1.2.8 2 2 2h4c4.4 0 8-3.6 8-8s-3.6-8-8-8h-6zm4 4h2c2.2 0 4 1.8 4 4s-1.8 4-4 4h-2v-8z"/><path fill="#00599C" d="M34 20h-2v2h-2v2h2v2h2v-2h2v-2h-2v-2z"/></svg>`,
-                        };
-                        return (
-                          svgMap[topicId] ||
-                          `<svg viewBox="0 0 48 48" width="48" height="48"><path fill="${topic.accentColor}" d="M14 16l-8 8 8 8 2.8-2.8L11.6 24l5.2-5.2L14 16zm20 0l8 8-8 8-2.8-2.8 5.2-5.2-5.2-5.2L34 16z"/></svg>`
-                        );
+                      const certData: CertData = {
+                        topicName: topic.name,
+                        topicId: topicId,
+                        topicIconHtml: getTopicIconForCertificate(
+                          topic.icon,
+                          topic.accentColor,
+                        ),
+                        accentColor: topic.accentColor,
+                        userName,
+                        completionDateStr,
+                        certificateId,
+                        category: categoryId,
+                        certificateTitle: topic.certificateTitle,
+                        certificateDescription: topic.certificateDescription,
                       };
 
-                      const starSVG = (filled: boolean) =>
-                        filled
-                          ? `<svg width="28" height="28" viewBox="0 0 24 24" fill="#d4af37" stroke="#b8960f" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`
-                          : `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
+                      const certContent = generateCertificateHTML(certData);
 
-                      const starsHTML = [1, 2, 3]
-                        .map((i) => starSVG(i <= filledStars))
-                        .join("");
-
-                      const certContent = `
-                        <!DOCTYPE html>
-                        <html>
-                          <head>
-                            <title>Certificate - ${topic.name} | CodeLogic Academy</title>
-                            <style>
-                              @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Montserrat:wght@400;500;600&display=swap');
-                              
-                              * { margin: 0; padding: 0; box-sizing: border-box; }
-                              
-                              @page {
-                                size: landscape;
-                                margin: 0;
-                              }
-                              
-                              html, body { 
-                                font-family: 'Montserrat', sans-serif;
-                                width: 100%;
-                                height: 100%;
-                                overflow: hidden;
-                              }
-                              
-                              .certificate-wrapper {
-                                width: 100vw;
-                                height: 100vh;
-                                background: linear-gradient(135deg, #fefcf3 0%, #faf6e9 50%, #f5f0dc 100%);
-                                display: flex;
-                                align-items: center;
-                                justify-content: center;
-                                padding: 20px;
-                              }
-                              
-                              .certificate {
-                                width: 100%;
-                                height: 100%;
-                                position: relative;
-                                background: linear-gradient(180deg, #fffffe 0%, #fffcf5 50%, #fff9eb 100%);
-                                border: 4px solid #c9a227;
-                                box-shadow: inset 0 0 0 2px #fff, inset 0 0 0 4px #e8d48b;
-                              }
-                              
-                              .corner {
-                                position: absolute;
-                                width: 100px;
-                                height: 100px;
-                              }
-                              .corner svg { width: 100%; height: 100%; }
-                              .corner-tl { top: 8px; left: 8px; }
-                              .corner-tr { top: 8px; right: 8px; transform: scaleX(-1); }
-                              .corner-bl { bottom: 8px; left: 8px; transform: scaleY(-1); }
-                              .corner-br { bottom: 8px; right: 8px; transform: scale(-1, -1); }
-                              
-                              .border-pattern {
-                                position: absolute;
-                                top: 25px;
-                                left: 25px;
-                                right: 25px;
-                                bottom: 25px;
-                                border: 2px solid #d4b854;
-                                pointer-events: none;
-                              }
-                              
-                              .content {
-                                position: relative;
-                                height: 100%;
-                                display: flex;
-                                flex-direction: column;
-                                align-items: center;
-                                justify-content: center;
-                                padding: 50px 80px;
-                                text-align: center;
-                              }
-                              
-                              .header-ornament {
-                                display: flex;
-                                align-items: center;
-                                gap: 20px;
-                                margin-bottom: 5px;
-                              }
-                              
-                              .ornament-line {
-                                width: 120px;
-                                height: 2px;
-                                background: linear-gradient(90deg, transparent, #c9a227, transparent);
-                              }
-                              
-                              .logo-badge {
-                                width: 60px;
-                                height: 60px;
-                                background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
-                                border-radius: 50%;
-                                display: flex;
-                                align-items: center;
-                                justify-content: center;
-                                color: white;
-                                font-weight: 700;
-                                font-size: 20px;
-                                letter-spacing: -1px;
-                                border: 3px solid #c9a227;
-                                box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
-                              }
-                              
-                              .certificate-label {
-                                font-size: 11px;
-                                color: #8b7355;
-                                text-transform: uppercase;
-                                letter-spacing: 8px;
-                                margin-bottom: 8px;
-                              }
-                              
-                              .academy-name {
-                                font-family: 'Cormorant Garamond', serif;
-                                font-size: 44px;
-                                color: #2d2418;
-                                font-weight: 600;
-                                margin-bottom: 20px;
-                                letter-spacing: 2px;
-                              }
-                              
-                              .topic-section {
-                                display: flex;
-                                align-items: center;
-                                justify-content: center;
-                                gap: 16px;
-                                padding: 14px 36px;
-                                background: linear-gradient(135deg, ${topic.accentColor}08, ${topic.accentColor}15);
-                                border: 2px solid ${topic.accentColor}30;
-                                border-radius: 60px;
-                                margin-bottom: 20px;
-                              }
-                              
-                              .topic-name {
-                                font-family: 'Cormorant Garamond', serif;
-                                font-size: 28px;
-                                color: #2d2418;
-                                font-weight: 600;
-                              }
-                              
-                              .awarded-text {
-                                font-size: 13px;
-                                color: #8b7355;
-                                letter-spacing: 3px;
-                                text-transform: uppercase;
-                                margin-bottom: 8px;
-                              }
-                              
-                              .recipient-name {
-                                font-family: 'Cormorant Garamond', serif;
-                                font-size: 38px;
-                                color: #2d2418;
-                                font-weight: 600;
-                                margin-bottom: 8px;
-                                position: relative;
-                                display: inline-block;
-                              }
-                              
-                              .recipient-name::after {
-                                content: '';
-                                position: absolute;
-                                bottom: -4px;
-                                left: 50%;
-                                transform: translateX(-50%);
-                                width: 80%;
-                                height: 2px;
-                                background: linear-gradient(90deg, transparent, #c9a227, transparent);
-                              }
-                              
-                              .description {
-                                font-size: 12px;
-                                color: #5c5040;
-                                line-height: 1.7;
-                                max-width: 580px;
-                                margin: 18px auto;
-                              }
-                              
-                              .stars-section {
-                                display: flex;
-                                align-items: center;
-                                justify-content: center;
-                                gap: 8px;
-                                margin: 12px 0;
-                              }
-                              
-                              .achievement-label {
-                                font-size: 10px;
-                                color: #8b7355;
-                                text-transform: uppercase;
-                                letter-spacing: 3px;
-                              }
-                              
-                              .stats-row {
-                                display: flex;
-                                justify-content: center;
-                                gap: 60px;
-                                margin: 18px 0;
-                                padding: 14px 0;
-                                border-top: 1px solid #e8dcc8;
-                                border-bottom: 1px solid #e8dcc8;
-                              }
-                              
-                              .stat-item { text-align: center; }
-                              
-                              .stat-value {
-                                font-family: 'Cormorant Garamond', serif;
-                                font-size: 24px;
-                                color: #2d2418;
-                                font-weight: 600;
-                              }
-                              
-                              .stat-label {
-                                font-size: 9px;
-                                color: #8b7355;
-                                text-transform: uppercase;
-                                letter-spacing: 2px;
-                                margin-top: 2px;
-                              }
-                              
-                              .footer-section {
-                                display: flex;
-                                justify-content: space-between;
-                                align-items: flex-end;
-                                width: 100%;
-                                max-width: 700px;
-                                margin-top: auto;
-                                padding-top: 15px;
-                              }
-                              
-                              .signature-block { text-align: center; }
-                              
-                              .signature-line {
-                                width: 160px;
-                                height: 1px;
-                                background: #5c5040;
-                                margin-bottom: 8px;
-                              }
-                              
-                              .signature-name {
-                                font-size: 12px;
-                                color: #5c5040;
-                                font-weight: 500;
-                              }
-                              
-                              .signature-title {
-                                font-size: 10px;
-                                color: #8b7355;
-                                margin-top: 2px;
-                              }
-                              
-                              .cert-info { text-align: right; }
-                              
-                              .cert-date, .cert-id {
-                                font-size: 10px;
-                                color: #8b7355;
-                                margin-bottom: 4px;
-                              }
-                              
-                              .seal {
-                                position: absolute;
-                                bottom: 50px;
-                                right: 100px;
-                                width: 90px;
-                                height: 90px;
-                              }
-                              
-                              .seal-outer {
-                                width: 100%;
-                                height: 100%;
-                                background: linear-gradient(135deg, #f4d03f 0%, #c9a227 50%, #f4d03f 100%);
-                                border-radius: 50%;
-                                display: flex;
-                                align-items: center;
-                                justify-content: center;
-                                box-shadow: 0 4px 20px rgba(201, 162, 39, 0.4);
-                              }
-                              
-                              .seal-inner {
-                                width: 70px;
-                                height: 70px;
-                                background: linear-gradient(135deg, #fffef0 0%, #f4d03f 100%);
-                                border-radius: 50%;
-                                display: flex;
-                                flex-direction: column;
-                                align-items: center;
-                                justify-content: center;
-                                border: 2px solid #c9a227;
-                              }
-                              
-                              .seal-text {
-                                font-size: 8px;
-                                color: #5c4a1f;
-                                text-transform: uppercase;
-                                letter-spacing: 1px;
-                                font-weight: 600;
-                              }
-                              
-                              .seal-check {
-                                font-size: 22px;
-                                color: #5c4a1f;
-                                font-weight: bold;
-                                line-height: 1;
-                              }
-                              
-                              .watermark {
-                                position: absolute;
-                                top: 50%;
-                                left: 50%;
-                                transform: translate(-50%, -50%);
-                                font-family: 'Cormorant Garamond', serif;
-                                font-size: 200px;
-                                color: rgba(201, 162, 39, 0.04);
-                                font-weight: 700;
-                                pointer-events: none;
-                                letter-spacing: -10px;
-                              }
-                              
-                              @media print {
-                                html, body {
-                                  width: 100%;
-                                  height: 100%;
-                                  print-color-adjust: exact;
-                                  -webkit-print-color-adjust: exact;
-                                }
-                                .certificate-wrapper {
-                                  width: 100%;
-                                  height: 100%;
-                                }
-                              }
-                            </style>
-                          </head>
-                          <body>
-                            <div class="certificate-wrapper">
-                              <div class="certificate">
-                                <div class="corner corner-tl">
-                                  <svg viewBox="0 0 100 100"><path d="M10 90 L10 10 L90 10" fill="none" stroke="#c9a227" stroke-width="2"/><path d="M10 70 L10 30 L30 10" fill="none" stroke="#d4b854" stroke-width="1"/><circle cx="10" cy="10" r="6" fill="#c9a227"/></svg>
-                                </div>
-                                <div class="corner corner-tr">
-                                  <svg viewBox="0 0 100 100"><path d="M10 90 L10 10 L90 10" fill="none" stroke="#c9a227" stroke-width="2"/><path d="M10 70 L10 30 L30 10" fill="none" stroke="#d4b854" stroke-width="1"/><circle cx="10" cy="10" r="6" fill="#c9a227"/></svg>
-                                </div>
-                                <div class="corner corner-bl">
-                                  <svg viewBox="0 0 100 100"><path d="M10 90 L10 10 L90 10" fill="none" stroke="#c9a227" stroke-width="2"/><path d="M10 70 L10 30 L30 10" fill="none" stroke="#d4b854" stroke-width="1"/><circle cx="10" cy="10" r="6" fill="#c9a227"/></svg>
-                                </div>
-                                <div class="corner corner-br">
-                                  <svg viewBox="0 0 100 100"><path d="M10 90 L10 10 L90 10" fill="none" stroke="#c9a227" stroke-width="2"/><path d="M10 70 L10 30 L30 10" fill="none" stroke="#d4b854" stroke-width="1"/><circle cx="10" cy="10" r="6" fill="#c9a227"/></svg>
-                                </div>
-                                
-                                <div class="border-pattern"></div>
-                                <div class="watermark">CL</div>
-                                
-                                <div class="content">
-                                  <div class="header-ornament">
-                                    <div class="ornament-line"></div>
-                                    <div class="logo-badge">CL</div>
-                                    <div class="ornament-line"></div>
-                                  </div>
-                                  
-                                  <div class="certificate-label">Certificate of Completion</div>
-                                  <div class="academy-name">CodeLogic Academy</div>
-                                  
-                                  <div class="topic-section">
-                                    ${getTopicSVG()}
-                                    <span class="topic-name">${topic.name}</span>
-                                  </div>
-                                  
-                                  <div class="awarded-text">This certificate is proudly presented to</div>
-                                  <div class="recipient-name">${userName}</div>
-                                  
-                                  <div class="description">
-                                    For successfully completing all ${topic.totalLevels} levels of the ${topic.name} course,
-                                    demonstrating exceptional proficiency and dedication in mastering the fundamentals
-                                    and advanced concepts of ${categoryId} development.
-                                  </div>
-                                  
-                                  <div class="stars-section">
-                                    ${starsHTML}
-                                  </div>
-                                  <div class="achievement-label">Achievement Rating</div>
-                                  
-                                  <div class="stats-row">
-                                    <div class="stat-item">
-                                      <div class="stat-value">${topic.totalLevels}</div>
-                                      <div class="stat-label">Levels Completed</div>
-                                    </div>
-                                    <div class="stat-item">
-                                      <div class="stat-value">${totalStars}/${topic.totalLevels * 3}</div>
-                                      <div class="stat-label">Stars Earned</div>
-                                    </div>
-                                    <div class="stat-item">
-                                      <div class="stat-value">${certificateData.totalXpEarned.toLocaleString()}</div>
-                                      <div class="stat-label">XP Earned</div>
-                                    </div>
-                                  </div>
-                                  
-                                  <div class="footer-section">
-                                    <div class="signature-block">
-                                      <div class="signature-line"></div>
-                                      <div class="signature-name">CodeLogic Team</div>
-                                      <div class="signature-title">Program Director</div>
-                                    </div>
-                                    
-                                    <div class="cert-info">
-                                      <div class="cert-date">Issued: ${completionDateStr}</div>
-                                      <div class="cert-id">Certificate ID: ${certificateId}</div>
-                                    </div>
-                                  </div>
-                                </div>
-                                
-                                <div class="seal">
-                                  <div class="seal-outer">
-                                    <div class="seal-inner">
-                                      <div class="seal-text">Verified</div>
-                                      <div class="seal-check">✓</div>
-                                      <div class="seal-text">Complete</div>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </body>
-                        </html>
-                      `;
                       const printWindow = window.open("", "_blank");
                       if (printWindow) {
                         printWindow.document.write(certContent);
                         printWindow.document.close();
                       }
                     }}
-                    className="flex-1 py-2 text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2"
-                    style={{ backgroundColor: topic.accentColor }}
+                    className="flex-1 py-2.5 bg-[#c9a227] hover:bg-[#d4b854] text-white pixel-box font-medium flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                    style={{ boxShadow: "3px 3px 0 0 rgba(0,0,0,0.3)" }}
                   >
                     <Download className="w-4 h-4" />
                     Download PDF
@@ -1453,6 +986,47 @@ export default function TopicLevelPage() {
               </div>
             </div>
           )}
+
+          {/* Out of Hearts Modal */}
+          <Modal
+            isOpen={showOutOfHearts}
+            onClose={() => setShowOutOfHearts(false)}
+          >
+            {/* Broken heart icon */}
+            <div className="relative w-16 h-16 mx-auto mb-4 rounded-xl flex items-center justify-center bg-red-500/20">
+              <Heart className="w-8 h-8 text-red-400" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-10 h-0.5 bg-red-400 rotate-45 rounded-full" />
+              </div>
+            </div>
+
+            <h2 className="text-xl font-bold text-white mb-2">
+              Out of Hearts!
+            </h2>
+            <p className="text-gray-400 text-sm mb-4">
+              You&apos;ve run out of hearts. Take a short break!
+            </p>
+
+            {/* Regeneration info */}
+            <div className="bg-[#0f0f1a] rounded-lg px-3 py-2 mb-4">
+              <div className="flex items-center justify-center gap-2 text-sm text-gray-400">
+                <Clock className="w-4 h-4 text-purple-400" />
+                <span>
+                  Regenerates 1 every{" "}
+                  <span className="text-purple-400 font-medium">2 minutes</span>
+                </span>
+              </div>
+            </div>
+
+            <ModalButton
+              onClick={() => {
+                setShowOutOfHearts(false);
+                setSelectedLevel(null);
+              }}
+            >
+              Close
+            </ModalButton>
+          </Modal>
         </div>
       </Sidebar>
     </ProtectedRoute>

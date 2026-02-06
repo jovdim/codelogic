@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/auth/RouteGuards";
 import { gameAPI } from "@/lib/api";
+import { Modal, ModalButton } from "@/components/ui/Modal";
 import {
   Heart,
   X,
@@ -17,6 +18,8 @@ import {
   Star,
   Circle,
   Loader2,
+  Code2,
+  Edit,
 } from "lucide-react";
 
 // Syntax highlighting function
@@ -191,13 +194,10 @@ export default function LevelQuizPage() {
         setHearts(response.data.hearts);
         setError(null);
 
-        // Initialize timer from storage or start fresh
-        const remaining = getRemainingTime(0);
-        setTimeLeft(remaining);
-        if (remaining === 30) {
-          // Fresh start - save the timestamp
-          saveTimerStart(0);
-        }
+        // Always start with fresh timer for new quiz attempt
+        clearTimerStorage();
+        setTimeLeft(30);
+        saveTimerStart(0);
       } catch (err: unknown) {
         const errorMessage =
           err instanceof Error ? err.message : "Failed to load questions";
@@ -425,7 +425,6 @@ export default function LevelQuizPage() {
     return (
       <ProtectedRoute>
         <div className="min-h-screen bg-gradient-to-b from-[#0f0f1a] to-[#1a1a2e] flex items-center justify-center">
-          <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-5" />
           <div className="relative text-center">
             <div className="w-16 h-16 mx-auto mb-4 bg-purple-500/20 rounded-2xl flex items-center justify-center border border-purple-500/30">
               <Loader2 className="w-8 h-8 text-purple-400 animate-spin" />
@@ -444,43 +443,41 @@ export default function LevelQuizPage() {
     return (
       <ProtectedRoute>
         <div className="min-h-screen bg-gradient-to-b from-[#0f0f1a] to-[#1a1a2e]">
-          <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
-          {/* Overlay */}
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-[#1a1a2e] rounded-2xl p-6 max-w-xs w-full text-center border border-[#2d2d44] shadow-2xl shadow-black/50">
-              <div
-                className={`w-16 h-16 mx-auto mb-4 rounded-xl flex items-center justify-center ${isNoHeartsError ? "bg-red-500/20" : "bg-purple-500/20"}`}
-              >
-                {isNoHeartsError ? (
-                  <Heart className="w-8 h-8 text-red-400" />
-                ) : (
-                  <X className="w-8 h-8 text-purple-400" />
-                )}
-              </div>
-
-              <h2 className="text-xl font-bold text-white mb-2">
-                {isNoHeartsError ? "No Hearts Remaining" : "Oops!"}
-              </h2>
-              <p className="text-gray-400 text-sm mb-4">
-                {isNoHeartsError ? "You need hearts to start a quiz." : error}
-              </p>
-
-              {isNoHeartsError && (
-                <div className="bg-[#0f0f1a] rounded-lg px-3 py-2 mb-4">
-                  <p className="text-gray-500 text-sm">
-                    Hearts regenerate 1 every 2 minutes
-                  </p>
-                </div>
+          <Modal isOpen={true} onClose={() => {}} showOverlay={true}>
+            <div
+              className={`w-16 h-16 mx-auto mb-4 rounded-xl flex items-center justify-center ${isNoHeartsError ? "bg-red-500/20" : "bg-purple-500/20"}`}
+            >
+              {isNoHeartsError ? (
+                <Heart className="w-8 h-8 text-red-400" />
+              ) : (
+                <X className="w-8 h-8 text-purple-400" />
               )}
+            </div>
 
+            <h2 className="text-xl font-bold text-white mb-2">
+              {isNoHeartsError ? "No Hearts Remaining" : "Oops!"}
+            </h2>
+            <p className="text-gray-400 text-sm mb-4">
+              {isNoHeartsError ? "You need hearts to start a quiz." : error}
+            </p>
+
+            {isNoHeartsError && (
+              <div className="bg-[#0f0f1a] rounded-lg px-3 py-2 mb-4">
+                <p className="text-gray-500 text-sm">
+                  Hearts regenerate 1 every 2 minutes
+                </p>
+              </div>
+            )}
+
+            <ModalButton variant="primary" accentColor="#8b5cf6">
               <Link
                 href={`/play/${categoryId}/${topicId}`}
-                className="block w-full py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg font-medium transition-colors"
+                className="flex items-center justify-center gap-2 w-full h-full"
               >
                 Go Back
               </Link>
-            </div>
-          </div>
+            </ModalButton>
+          </Modal>
         </div>
       </ProtectedRoute>
     );
@@ -491,188 +488,23 @@ export default function LevelQuizPage() {
     return (
       <ProtectedRoute>
         <div className="min-h-screen bg-gradient-to-b from-[#0f0f1a] to-[#1a1a2e]">
-          <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
-          {/* Overlay */}
-          <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4">
-            <div className="bg-[#1a1a2e] rounded-2xl p-6 max-w-xs w-full text-center border border-[#2d2d44] shadow-2xl shadow-black/50">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-xl flex items-center justify-center bg-gray-500/20">
-                <X className="w-8 h-8 text-gray-400" />
-              </div>
-              <h2 className="text-xl font-bold text-white mb-2">
-                No Questions
-              </h2>
-              <p className="text-gray-400 text-sm mb-4">
-                No questions found for this level.
-              </p>
+          <Modal isOpen={true} onClose={() => {}} showOverlay={true}>
+            <div className="w-16 h-16 mx-auto mb-4 rounded-xl flex items-center justify-center bg-gray-500/20">
+              <X className="w-8 h-8 text-gray-400" />
+            </div>
+            <h2 className="text-xl font-bold text-white mb-2">No Questions</h2>
+            <p className="text-gray-400 text-sm mb-4">
+              No questions found for this level.
+            </p>
+            <ModalButton variant="primary" accentColor="#8b5cf6">
               <Link
                 href={`/play/${categoryId}/${topicId}`}
-                className="block w-full py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg font-medium transition-colors"
+                className="flex items-center justify-center gap-2 w-full h-full"
               >
                 Go Back
               </Link>
-            </div>
-          </div>
-        </div>
-      </ProtectedRoute>
-    );
-  }
-
-  // Out of hearts (either from quiz or from trying to retry)
-  if ((hearts <= 0 && !showResult) || noHeartsError) {
-    return (
-      <ProtectedRoute>
-        <div className="min-h-screen bg-gradient-to-b from-[#0f0f1a] to-[#1a1a2e]">
-          <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
-          {/* Overlay */}
-          <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4">
-            <div className="bg-[#1a1a2e] rounded-2xl p-6 max-w-xs w-full text-center border border-[#2d2d44] shadow-2xl shadow-black/50">
-              {/* Broken heart icon */}
-              <div className="relative w-16 h-16 mx-auto mb-4 rounded-xl flex items-center justify-center bg-red-500/20">
-                <Heart className="w-8 h-8 text-red-400" />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-10 h-0.5 bg-red-400 rotate-45 rounded-full" />
-                </div>
-              </div>
-
-              <h2 className="text-xl font-bold text-white mb-2">
-                Out of Hearts!
-              </h2>
-              <p className="text-gray-400 text-sm mb-4">
-                You&apos;ve run out of hearts. Take a short break!
-              </p>
-
-              {/* Regeneration info */}
-              <div className="bg-[#0f0f1a] rounded-lg px-3 py-2 mb-4">
-                <div className="flex items-center justify-center gap-2 text-sm text-gray-400">
-                  <Clock className="w-4 h-4 text-purple-400" />
-                  <span>
-                    Regenerates 1 every{" "}
-                    <span className="text-purple-400 font-medium">
-                      2 minutes
-                    </span>
-                  </span>
-                </div>
-              </div>
-
-              {!noHeartsError && (
-                <div className="space-y-2 mb-4">
-                  <div className="flex justify-between text-sm px-3 py-2 bg-[#0f0f1a] rounded-lg">
-                    <span className="text-gray-400">Your Score</span>
-                    <span className="text-white font-medium">
-                      {score}/{totalQuestions}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm px-3 py-2 bg-[#0f0f1a] rounded-lg">
-                    <span className="text-gray-400">XP Earned</span>
-                    <span className="text-yellow-400 font-medium">
-                      +{xpEarned}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              <Link
-                href={`/play/${categoryId}/${topicId}`}
-                className="block w-full py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg font-medium transition-colors"
-              >
-                Go Back
-              </Link>
-            </div>
-          </div>
-        </div>
-      </ProtectedRoute>
-    );
-  }
-
-  // Results screen
-  if (showResult) {
-    const stars = getStars();
-    const passed = stars >= 1;
-
-    return (
-      <ProtectedRoute>
-        <div className="min-h-screen bg-gradient-to-b from-[#0f0f1a] to-[#1a1a2e] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-5" />
-          <div className="relative bg-[#1a1a2e]/95 backdrop-blur-xl rounded-3xl p-8 max-w-sm w-full text-center border border-[#2d2d44] shadow-2xl shadow-black/50">
-            {/* Decorative glow */}
-            <div
-              className={`absolute -top-20 left-1/2 -translate-x-1/2 w-40 h-40 ${passed ? "bg-yellow-500/20" : "bg-gray-500/20"} rounded-full blur-3xl`}
-            />
-
-            <div
-              className={`relative w-20 h-20 mx-auto mb-6 rounded-2xl flex items-center justify-center border ${
-                passed
-                  ? "bg-gradient-to-br from-yellow-500/30 to-yellow-600/10 border-yellow-500/30"
-                  : "bg-gradient-to-br from-gray-500/30 to-gray-600/10 border-gray-500/30"
-              }`}
-            >
-              <Trophy
-                className={`w-10 h-10 ${passed ? "text-yellow-400" : "text-gray-400"}`}
-              />
-            </div>
-            <h2 className="text-2xl font-bold text-white mb-1">
-              {passed ? "Level Complete!" : "Try Again"}
-            </h2>
-            <p className="text-gray-400 mb-4">Level {levelId}</p>
-
-            {/* Stars */}
-            <div className="flex justify-center gap-3 mb-6">
-              {[1, 2, 3].map((star) => (
-                <div
-                  key={star}
-                  className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                    star <= stars
-                      ? "bg-yellow-500/20 border border-yellow-500/30"
-                      : "bg-[#0f0f1a]/50 border border-[#2d2d44]"
-                  }`}
-                >
-                  <Star
-                    className={`w-6 h-6 ${
-                      star <= stars
-                        ? "text-yellow-400 fill-yellow-400"
-                        : "text-gray-600"
-                    }`}
-                  />
-                </div>
-              ))}
-            </div>
-
-            <div className="bg-[#0f0f1a]/80 rounded-xl p-4 mb-6 space-y-3 border border-[#2d2d44]">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-400">Score</span>
-                <span className="text-white font-medium">
-                  {score}/{totalQuestions}
-                </span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-400">Accuracy</span>
-                <span className="text-white font-medium">
-                  {Math.round((score / totalQuestions) * 100)}%
-                </span>
-              </div>
-              <div className="flex justify-between text-sm pt-3 border-t border-[#2d2d44]">
-                <span className="text-gray-400">XP Earned</span>
-                <span className="text-yellow-400 font-bold">+{xpEarned}</span>
-              </div>
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={restartQuiz}
-                className="flex-1 py-3 bg-[#2d2d44] hover:bg-[#3d3d5c] text-white rounded-xl font-semibold flex items-center justify-center gap-2 transition-colors"
-              >
-                <RotateCcw className="w-4 h-4" />
-                Retry
-              </button>
-              <Link
-                href={`/play/${categoryId}/${topicId}`}
-                className="flex-1 py-3 bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white rounded-xl font-semibold flex items-center justify-center gap-2 transition-all shadow-lg shadow-purple-500/25"
-              >
-                Continue
-                <ArrowRight className="w-4 h-4" />
-              </Link>
-            </div>
-          </div>
+            </ModalButton>
+          </Modal>
         </div>
       </ProtectedRoute>
     );
@@ -680,14 +512,46 @@ export default function LevelQuizPage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-[#0f0f1a]">
+      <div className="min-h-screen relative overflow-hidden bg-[#0f0f1a]">
+        {/* Simple background with floating elements */}
+        <div className="absolute inset-0">
+          {/* Floating particles */}
+          {[...Array(6)].map((_, i) => (
+            <div
+              key={i}
+              className="absolute rounded-full animate-bounce opacity-10"
+              style={{
+                left: `${15 + i * 15}%`,
+                top: `${20 + (i % 2) * 30}%`,
+                width: `${4 + (i % 3) * 2}px`,
+                height: `${4 + (i % 3) * 2}px`,
+                backgroundColor: i % 2 === 0 ? "#8b5cf6" : "#6366f1",
+                animationDelay: `${i * 0.8}s`,
+                animationDuration: `${6 + (i % 3) * 2}s`,
+              }}
+            />
+          ))}
+        </div>
+
+        {/* Pixel grid overlay */}
+        <div
+          className="fixed inset-0 pointer-events-none opacity-[0.015]"
+          style={{
+            backgroundImage: `
+              linear-gradient(to right, #ffffff 1px, transparent 1px),
+              linear-gradient(to bottom, #ffffff 1px, transparent 1px)
+            `,
+            backgroundSize: "8px 8px",
+          }}
+        />
+
         {/* Header */}
-        <div className="sticky top-0 z-40 bg-[#0f0f1a] border-b border-[#2d2d44]">
+        <div className="sticky top-0 z-40 bg-[#0f0f1a]/95 backdrop-blur-sm border-b border-[#2d2d44] shadow-lg">
           <div className="max-w-2xl mx-auto px-4 py-3">
             <div className="flex items-center justify-between mb-3">
               <Link
                 href={`/play/${categoryId}/${topicId}`}
-                className="p-2 text-gray-400 hover:text-white"
+                className="p-2 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-[#1a1a2e] cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </Link>
@@ -695,42 +559,40 @@ export default function LevelQuizPage() {
               <div className="flex items-center gap-3">
                 {/* Timer */}
                 <div
-                  className={`flex items-center gap-1 px-2 py-1 rounded-lg text-sm ${
+                  className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-sm font-semibold transition-all ${
                     timeLeft <= 10
-                      ? "bg-red-500/20 text-red-400"
-                      : "bg-[#1a1a2e] text-gray-400"
+                      ? "bg-red-500/20 text-red-400 border border-red-500/30 shadow-lg shadow-red-500/20"
+                      : "bg-[#1a1a2e] text-gray-400 border border-[#2d2d44]"
                   }`}
                 >
                   <Clock className="w-4 h-4" />
-                  <span className="font-mono font-bold">{timeLeft}s</span>
+                  <span className="font-mono">{timeLeft}s</span>
                 </div>
 
                 {/* Hearts */}
                 <div
-                  className={`flex items-center gap-1 px-2 py-1 bg-red-500/20 rounded-lg transition-all ${heartShake ? "animate-pulse scale-110" : ""}`}
+                  className={`flex items-center gap-1 px-3 py-1.5 bg-red-500/20 rounded-xl border border-red-500/30 transition-all ${heartShake ? "animate-pulse scale-110 shadow-lg shadow-red-500/30" : ""}`}
                 >
                   <Heart
                     className={`w-4 h-4 text-red-500 fill-red-500 ${heartShake ? "animate-bounce" : ""}`}
                   />
-                  <span className="text-red-400 font-bold text-sm">
+                  <span className="text-red-400 font-bold">
                     {hearts}/{user?.max_hearts || 10}
                   </span>
                 </div>
 
                 {/* XP */}
-                <div className="flex items-center gap-1 px-2 py-1 bg-yellow-500/20 rounded-lg">
+                <div className="flex items-center gap-1 px-3 py-1.5 bg-yellow-500/20 rounded-xl border border-yellow-500/30">
                   <Star className="w-4 h-4 text-yellow-400" />
-                  <span className="text-yellow-400 font-bold text-sm">
-                    {xpEarned}
-                  </span>
+                  <span className="text-yellow-400 font-bold">{xpEarned}</span>
                 </div>
               </div>
             </div>
 
             {/* Progress Bar */}
-            <div className="h-2 bg-[#1a1a2e] rounded-full overflow-hidden">
+            <div className="h-3 bg-[#1a1a2e] rounded-full overflow-hidden border border-[#2d2d44]">
               <div
-                className="h-full bg-purple-500 transition-all duration-300"
+                className="h-full bg-purple-500 transition-all duration-500 ease-out"
                 style={{ width: `${progress}%` }}
               />
             </div>
@@ -738,55 +600,63 @@ export default function LevelQuizPage() {
         </div>
 
         {/* Question */}
-        <div className="max-w-2xl mx-auto px-4 py-6">
-          <div className="mb-6">
-            <div className="flex items-center gap-2 mb-3">
+        <div className="relative max-w-2xl mx-auto px-4 py-8 animate-in fade-in duration-500">
+          <div className="mb-8 animate-in slide-in-from-bottom-4 duration-700 delay-200">
+            <div className="flex items-center gap-3 mb-4">
               {question.question_type === "find-error" && (
-                <span className="px-2 py-1 bg-red-500/20 text-red-400 text-xs rounded-full">
+                <div className="px-3 py-1.5 bg-red-500/20 text-red-400 text-sm rounded-full border border-red-500/30 font-medium animate-in zoom-in duration-500 delay-300 flex items-center gap-1">
+                  <X className="w-3 h-3" />
                   Find the Error
-                </span>
+                </div>
               )}
               {question.question_type === "output" && (
-                <span className="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs rounded-full">
-                  What&apos;s the Output?
-                </span>
+                <div className="px-3 py-1.5 bg-blue-500/20 text-blue-400 text-sm rounded-full border border-blue-500/30 font-medium animate-in zoom-in duration-500 delay-300 flex items-center gap-1">
+                  <Code2 className="w-3 h-3" />
+                  What's the Output?
+                </div>
               )}
               {question.question_type === "fill-blank" && (
-                <span className="px-2 py-1 bg-green-500/20 text-green-400 text-xs rounded-full">
+                <div className="px-3 py-1.5 bg-green-500/20 text-green-400 text-sm rounded-full border border-green-500/30 font-medium animate-in zoom-in duration-500 delay-300 flex items-center gap-1">
+                  <Edit className="w-3 h-3" />
                   Fill in the Blank
-                </span>
+                </div>
               )}
-              <span className="text-gray-500 text-sm">
+              <div className="px-3 py-1.5 bg-[#1a1a2e] text-gray-400 text-sm rounded-full border border-[#2d2d44] font-medium animate-in zoom-in duration-500 delay-400">
                 {currentQuestion + 1} / {totalQuestions}
-              </span>
+              </div>
             </div>
-            <h2 className="text-lg font-bold text-white">
-              {question.question_text}
-            </h2>
+            <div className="pixel-box p-6 relative overflow-hidden animate-in slide-in-from-left-4 duration-700 delay-500">
+              <h2 className="text-xl font-bold text-white relative z-10 leading-relaxed">
+                {question.question_text}
+              </h2>
+            </div>
           </div>
 
-          {/* Code Block - Terminal Style */}
+          {/* Code Block - Simple Terminal Style */}
           {question.code_snippet && (
-            <div className="mb-6 rounded-xl overflow-hidden border border-[#2d2d44] shadow-2xl">
+            <div className="mb-6 pixel-box overflow-hidden">
               {/* Terminal Header */}
-              <div className="flex items-center justify-between px-4 py-2.5 bg-[#1e1e2e]">
-                <div className="flex items-center gap-2">
+              <div className="flex items-center justify-between px-4 py-3 bg-[#1a1a2e] border-b border-[#2d2d44]">
+                <div className="flex items-center gap-3">
                   <div className="flex items-center gap-1.5">
                     <Circle className="w-3 h-3 text-red-500 fill-red-500" />
                     <Circle className="w-3 h-3 text-yellow-500 fill-yellow-500" />
                     <Circle className="w-3 h-3 text-green-500 fill-green-500" />
                   </div>
+                  <span className="text-xs text-gray-400 font-medium">
+                    Terminal
+                  </span>
                 </div>
-                <div className="flex items-center gap-2 px-3 py-1 bg-[#0d0d14] rounded-md">
-                  <span className="text-xs text-gray-500 font-medium">
-                    script.js
+                <div className="flex items-center gap-2 px-3 py-1 bg-[#0f0f1a] rounded border border-[#2d2d44]">
+                  <span className="text-xs text-gray-400 font-medium">
+                    code
                   </span>
                 </div>
                 <div className="w-12" />
               </div>
 
               {/* Code Content */}
-              <div className="bg-[#0d0d14] p-4 font-mono text-sm overflow-x-auto">
+              <div className="bg-[#0f0f1a] p-4 font-mono text-sm overflow-x-auto">
                 {question.code_snippet.split("\n").map((line, idx) => (
                   <div
                     key={idx}
@@ -808,8 +678,8 @@ export default function LevelQuizPage() {
             </div>
           )}
 
-          {/* Options */}
-          <div className="space-y-3 mb-6">
+          {/* Options - Clean Design */}
+          <div className="space-y-3 mb-8">
             {question.options.map((option, index) => {
               const isCorrect = index === question.correct_answer;
               const isSelected = selectedAnswer === index;
@@ -821,70 +691,258 @@ export default function LevelQuizPage() {
                   key={index}
                   onClick={() => handleAnswer(index)}
                   disabled={isAnswered}
-                  className={`w-full p-4 text-left rounded-xl border-2 transition-all ${
+                  className={`w-full p-4 text-left rounded-lg border-2 transition-all duration-300 ease-out cursor-pointer transform hover:scale-[1.02] hover:shadow-lg animate-in slide-in-from-right-4 ${
                     showCorrect
-                      ? "bg-green-500/10 border-green-500 text-green-400"
+                      ? "bg-green-50 border-green-500 text-green-700 dark:bg-green-900/20 dark:border-green-500 dark:text-green-400 shadow-md"
                       : showWrong
-                        ? "bg-red-500/10 border-red-500 text-red-400"
+                        ? "bg-red-50 border-red-500 text-red-700 dark:bg-red-900/20 dark:border-red-500 dark:text-red-400 shadow-md"
                         : isSelected
-                          ? "bg-purple-500/10 border-purple-500 text-purple-400"
-                          : "bg-[#1a1a2e] border-[#2d2d44] text-gray-300 hover:border-[#3d3d5c]"
-                  } ${isAnswered && !isSelected && !isCorrect ? "opacity-50" : ""}`}
+                          ? "bg-purple-50 border-purple-500 text-purple-700 dark:bg-purple-900/20 dark:border-purple-500 dark:text-purple-400 shadow-md"
+                          : "bg-white border-gray-300 text-gray-700 hover:border-gray-400 hover:bg-gray-50 dark:bg-[#1a1a2e] dark:border-[#2d2d44] dark:text-gray-300 dark:hover:border-[#3d3d5c] dark:hover:bg-[#252540]"
+                  } ${isAnswered && !isSelected && !isCorrect ? "opacity-50 cursor-not-allowed hover:scale-100" : ""}`}
+                  style={{ animationDelay: `${700 + index * 150}ms` }}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <span
-                        className={`w-7 h-7 flex items-center justify-center rounded-lg text-sm font-bold ${
+                        className={`w-7 h-7 flex items-center justify-center rounded text-sm font-bold ${
                           showCorrect
-                            ? "bg-green-500/20"
+                            ? "bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-200"
                             : showWrong
-                              ? "bg-red-500/20"
-                              : "bg-[#0f0f1a]"
+                              ? "bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-200"
+                              : "bg-gray-100 text-gray-800 dark:bg-[#0f0f1a] dark:text-gray-400"
                         }`}
                       >
                         {String.fromCharCode(65 + index)}
                       </span>
                       <span className="font-medium">{option}</span>
                     </div>
-                    {showCorrect && <Check className="w-5 h-5" />}
-                    {showWrong && <X className="w-5 h-5" />}
+                    {showCorrect && (
+                      <Check className="w-5 h-5 text-green-600 dark:text-green-400" />
+                    )}
+                    {showWrong && (
+                      <X className="w-5 h-5 text-red-600 dark:text-red-400" />
+                    )}
                   </div>
                 </button>
               );
             })}
           </div>
 
-          {/* Explanation */}
+          {/* Explanation - Clean */}
           {isAnswered && (
-            <div className="bg-[#1a1a2e] rounded-xl p-4 mb-6 border border-[#2d2d44]">
-              <h4
-                className={`font-bold mb-1 ${
-                  selectedAnswer === question.correct_answer
-                    ? "text-green-400"
-                    : "text-yellow-400"
-                }`}
-              >
-                {selectedAnswer === question.correct_answer
-                  ? "Correct!"
-                  : "Explanation"}
-              </h4>
-              <p className="text-gray-400 text-sm">{question.explanation}</p>
+            <div className="pixel-box p-6 mb-8">
+              <div className="flex items-center gap-3 mb-3">
+                <div
+                  className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                    selectedAnswer === question.correct_answer
+                      ? "bg-green-500/20 text-green-400"
+                      : "bg-red-500/20 text-red-400"
+                  }`}
+                >
+                  {selectedAnswer === question.correct_answer ? (
+                    <Check className="w-5 h-5" />
+                  ) : (
+                    <X className="w-5 h-5" />
+                  )}
+                </div>
+                <h4
+                  className={`text-lg font-bold ${
+                    selectedAnswer === question.correct_answer
+                      ? "text-green-400"
+                      : "text-red-400"
+                  }`}
+                >
+                  {selectedAnswer === question.correct_answer
+                    ? "Correct! Well Done!"
+                    : "Incorrect - Learn from this"}
+                </h4>
+              </div>
+              <p className="text-gray-300 text-base leading-relaxed pl-11">
+                {question.explanation}
+              </p>
             </div>
           )}
 
-          {/* Next Button */}
+          {/* Next Button - Clean */}
           {isAnswered && (
-            <button
-              onClick={nextQuestion}
-              className="w-full py-3 bg-purple-500 text-white rounded-xl font-bold hover:bg-purple-600 transition-colors"
-            >
-              {currentQuestion < totalQuestions - 1
-                ? "Next Question"
-                : "See Results"}
-            </button>
+            <div className="flex justify-center animate-in fade-in duration-500 delay-1000">
+              <button
+                onClick={nextQuestion}
+                className="group px-6 py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-bold transition-all duration-300 ease-out pixel-box cursor-pointer transform hover:scale-105 hover:shadow-lg animate-in zoom-in duration-500 delay-1200"
+              >
+                <div className="flex items-center gap-2">
+                  <span>
+                    {currentQuestion < totalQuestions - 1
+                      ? "Next Question"
+                      : "View Results"}
+                  </span>
+                  <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
+                </div>
+              </button>
+            </div>
           )}
         </div>
       </div>
+
+      {/* Results Modal */}
+      {showResult && (
+        <Modal
+          isOpen={true}
+          onClose={() => {}}
+          maxWidth="max-w-sm"
+          showOverlay={true}
+        >
+          {(() => {
+            const stars = getStars();
+            const passed = stars >= 1;
+
+            return (
+              <>
+                {/* Decorative glow */}
+                <div
+                  className={`absolute -top-20 left-1/2 -translate-x-1/2 w-40 h-40 ${passed ? "bg-yellow-500/20" : "bg-gray-500/20"} rounded-full blur-3xl`}
+                />
+
+                <div
+                  className={`relative w-20 h-20 mx-auto mb-6 rounded-2xl flex items-center justify-center border ${
+                    passed
+                      ? "bg-yellow-500/20 border-yellow-500/30"
+                      : "bg-gray-500/20 border-gray-500/30"
+                  }`}
+                >
+                  <Trophy
+                    className={`w-10 h-10 ${passed ? "text-yellow-400" : "text-gray-400"}`}
+                  />
+                </div>
+                <h2 className="text-2xl font-bold text-white mb-1">
+                  {passed ? "Level Complete!" : "Try Again"}
+                </h2>
+                <p className="text-gray-400 mb-4">Level {levelId}</p>
+
+                {/* Stars */}
+                <div className="flex justify-center gap-3 mb-6">
+                  {[1, 2, 3].map((star) => (
+                    <div
+                      key={star}
+                      className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                        star <= stars
+                          ? "bg-yellow-500/20 border border-yellow-500/30"
+                          : "bg-[#0f0f1a]/50 border border-[#2d2d44]"
+                      }`}
+                    >
+                      <Star
+                        className={`w-6 h-6 ${
+                          star <= stars
+                            ? "text-yellow-400 fill-yellow-400"
+                            : "text-gray-600"
+                        }`}
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                <div className="bg-[#0f0f1a]/80 rounded-xl p-4 mb-6 space-y-3 border border-[#2d2d44]">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-400">Score</span>
+                    <span className="text-white font-medium">
+                      {score}/{totalQuestions}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-400">Accuracy</span>
+                    <span className="text-white font-medium">
+                      {Math.round((score / totalQuestions) * 100)}%
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm pt-3 border-t border-[#2d2d44]">
+                    <span className="text-gray-400">XP Earned</span>
+                    <span className="text-yellow-400 font-bold">
+                      +{xpEarned}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <ModalButton onClick={restartQuiz}>
+                    <div className="flex items-center justify-center gap-2">
+                      <RotateCcw className="w-4 h-4" />
+                      Retry
+                    </div>
+                  </ModalButton>
+                  <ModalButton variant="primary" accentColor="#8b5cf6">
+                    <Link
+                      href={`/play/${categoryId}/${topicId}`}
+                      className="flex items-center justify-center gap-2 w-full h-full"
+                    >
+                      Continue
+                      <ArrowRight className="w-4 h-4" />
+                    </Link>
+                  </ModalButton>
+                </div>
+              </>
+            );
+          })()}
+        </Modal>
+      )}
+
+      {/* Out of Hearts Modal */}
+      {((hearts <= 0 && !showResult) || noHeartsError) && (
+        <Modal
+          isOpen={true}
+          onClose={() => {}}
+          maxWidth="max-w-sm"
+          showOverlay={true}
+        >
+          {/* Broken heart icon */}
+          <div className="relative w-16 h-16 mx-auto mb-4 rounded-xl flex items-center justify-center bg-red-500/20">
+            <Heart className="w-8 h-8 text-red-400" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-10 h-0.5 bg-red-400 rotate-45 rounded-full" />
+            </div>
+          </div>
+
+          <h2 className="text-xl font-bold text-white mb-2">Out of Hearts!</h2>
+          <p className="text-gray-400 text-sm mb-4">
+            You&apos;ve run out of hearts. Take a short break!
+          </p>
+
+          {/* Regeneration info */}
+          <div className="bg-[#0f0f1a] rounded-lg px-3 py-2 mb-4">
+            <div className="flex items-center justify-center gap-2 text-sm text-gray-400">
+              <Clock className="w-4 h-4 text-purple-400" />
+              <span>
+                Regenerates 1 every{" "}
+                <span className="text-purple-400 font-medium">2 minutes</span>
+              </span>
+            </div>
+          </div>
+
+          {!noHeartsError && (
+            <div className="space-y-2 mb-4">
+              <div className="flex justify-between text-sm px-3 py-2 bg-[#0f0f1a] rounded-lg">
+                <span className="text-gray-400">Your Score</span>
+                <span className="text-white font-medium">
+                  {score}/{totalQuestions}
+                </span>
+              </div>
+              <div className="flex justify-between text-sm px-3 py-2 bg-[#0f0f1a] rounded-lg">
+                <span className="text-gray-400">XP Earned</span>
+                <span className="text-yellow-400 font-medium">+{xpEarned}</span>
+              </div>
+            </div>
+          )}
+
+          <ModalButton variant="primary" accentColor="#8b5cf6">
+            <Link
+              href={`/play/${categoryId}/${topicId}`}
+              className="flex items-center justify-center gap-2 w-full h-full"
+            >
+              Go Back
+            </Link>
+          </ModalButton>
+        </Modal>
+      )}
     </ProtectedRoute>
   );
 }

@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/auth/RouteGuards";
 import Sidebar from "@/components/layout/Sidebar";
+import { ScrollReveal } from "@/components/ui/ScrollAnimations";
 import api from "@/lib/api";
 import {
   Zap,
@@ -44,55 +45,55 @@ interface Category {
   totalXP: number;
 }
 
-// Color mapping
+// Color mapping - simplified to solid colors
 const colorMap: Record<
   string,
-  { gradient: string; border: string; hoverBorder: string }
+  { bg: string; border: string; hoverBorder: string }
 > = {
   "#8b5cf6": {
-    gradient: "from-violet-500 to-purple-500",
+    bg: "bg-violet-500",
     border: "border-violet-500/30",
     hoverBorder: "hover:border-violet-500",
   },
   "#10b981": {
-    gradient: "from-emerald-500 to-teal-500",
+    bg: "bg-emerald-500",
     border: "border-emerald-500/30",
     hoverBorder: "hover:border-emerald-500",
   },
   "#f59e0b": {
-    gradient: "from-amber-500 to-orange-500",
+    bg: "bg-amber-500",
     border: "border-amber-500/30",
     hoverBorder: "hover:border-amber-500",
   },
   "#3b82f6": {
-    gradient: "from-blue-500 to-indigo-500",
+    bg: "bg-blue-500",
     border: "border-blue-500/30",
     hoverBorder: "hover:border-blue-500",
   },
   "#ef4444": {
-    gradient: "from-red-500 to-rose-500",
+    bg: "bg-red-500",
     border: "border-red-500/30",
     hoverBorder: "hover:border-red-500",
   },
   "#ec4899": {
-    gradient: "from-pink-500 to-rose-500",
+    bg: "bg-pink-500",
     border: "border-pink-500/30",
     hoverBorder: "hover:border-pink-500",
   },
   "#06b6d4": {
-    gradient: "from-cyan-500 to-teal-500",
+    bg: "bg-cyan-500",
     border: "border-cyan-500/30",
     hoverBorder: "hover:border-cyan-500",
   },
   "#84cc16": {
-    gradient: "from-lime-500 to-green-500",
+    bg: "bg-lime-500",
     border: "border-lime-500/30",
     hoverBorder: "hover:border-lime-500",
   },
 };
 
 const defaultColors = {
-  gradient: "from-slate-500 to-gray-500",
+  bg: "bg-slate-500",
   border: "border-slate-500/30",
   hoverBorder: "hover:border-slate-500",
 };
@@ -224,9 +225,7 @@ export default function CategoryPage() {
             </div>
 
             {/* Category Stats */}
-            <div
-              className={`pixel-box p-5 mb-8 bg-gradient-to-r ${colors.gradient.replace("from-", "from-").replace("to-", "to-")}/10`}
-            >
+            <div className={`pixel-box p-5 mb-8 ${colors.bg}/10`}>
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="flex items-center gap-6">
                   <div className="text-center">
@@ -256,7 +255,7 @@ export default function CategoryPage() {
                       </p>
                     </div>
                     <div
-                      className={`w-12 h-12 bg-gradient-to-br ${colors.gradient} rounded-xl flex items-center justify-center`}
+                      className={`w-12 h-12 ${colors.bg} rounded-xl flex items-center justify-center`}
                     >
                       <Star className="w-6 h-6 text-white" />
                     </div>
@@ -279,7 +278,7 @@ export default function CategoryPage() {
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                {category.topics.map((topic) => {
+                {category.topics.map((topic, index) => {
                   const currentLevel = topicProgress[topic.slug] || 1;
                   const isCompleted = currentLevel > topic.totalLevels;
                   const displayLevel = isCompleted
@@ -290,87 +289,89 @@ export default function CategoryPage() {
                     : Math.max(0, currentLevel - 1);
 
                   return (
-                    <Link
-                      key={topic.id}
-                      href={`/play/${categorySlug}/${topic.slug}`}
-                      className={`block pixel-box p-5 h-full ${colors.border} ${colors.hoverBorder} transition-all duration-200 hover:scale-[1.02]`}
-                    >
-                      {/* Icon and Level */}
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="w-14 h-14 bg-[#0f0f1a] flex items-center justify-center rounded-lg overflow-hidden border border-[#2d2d44]">
-                          {topic.icon ? (
-                            <img
-                              src={topic.icon}
-                              alt={topic.name}
-                              className="w-9 h-9 object-contain"
-                            />
+                    <ScrollReveal key={topic.id} delay={0.1 + index * 0.05}>
+                      <Link
+                        key={topic.id}
+                        href={`/play/${categorySlug}/${topic.slug}`}
+                        className={`block pixel-box p-5 h-full ${colors.border} ${colors.hoverBorder} transition-all duration-200 hover:scale-[1.02]`}
+                      >
+                        {/* Icon and Level */}
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="w-14 h-14 bg-[#0f0f1a] flex items-center justify-center rounded-lg overflow-hidden border border-[#2d2d44]">
+                            {topic.icon ? (
+                              <img
+                                src={topic.icon}
+                                alt={topic.name}
+                                className="w-9 h-9 object-contain"
+                              />
+                            ) : (
+                              <Code className="w-8 h-8 text-white" />
+                            )}
+                          </div>
+
+                          {isCompleted ? (
+                            <div className="flex items-center gap-2 px-3 py-1.5 bg-green-500/20 border border-green-500/30 rounded-lg">
+                              <CheckCircle className="w-4 h-4 text-green-400" />
+                              <span className="text-green-400 text-sm font-medium">
+                                Complete
+                              </span>
+                            </div>
                           ) : (
-                            <Code className="w-8 h-8 text-white" />
+                            <div className="text-right">
+                              <div className="text-xs text-gray-500 uppercase tracking-wide">
+                                Level
+                              </div>
+                              <div className="text-xl font-bold text-white">
+                                {displayLevel}
+                                <span className="text-sm text-gray-500 font-normal">
+                                  /{topic.totalLevels}
+                                </span>
+                              </div>
+                            </div>
                           )}
                         </div>
 
-                        {isCompleted ? (
-                          <div className="flex items-center gap-2 px-3 py-1.5 bg-green-500/20 border border-green-500/30 rounded-lg">
-                            <CheckCircle className="w-4 h-4 text-green-400" />
-                            <span className="text-green-400 text-sm font-medium">
-                              Complete
+                        {/* Title and Description */}
+                        <h3 className="text-lg font-bold text-white mb-1">
+                          {topic.name}
+                        </h3>
+                        <p className="text-xs text-gray-400 mb-3 line-clamp-2">
+                          {topic.description}
+                        </p>
+
+                        {/* Progress Bar */}
+                        <div className="mb-3">
+                          <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+                            <span>Progress</span>
+                            <span>
+                              {completedLevels}/{topic.totalLevels}
                             </span>
                           </div>
-                        ) : (
-                          <div className="text-right">
-                            <div className="text-xs text-gray-500 uppercase tracking-wide">
-                              Level
-                            </div>
-                            <div className="text-xl font-bold text-white">
-                              {displayLevel}
-                              <span className="text-sm text-gray-500 font-normal">
-                                /{topic.totalLevels}
-                              </span>
-                            </div>
+                          <div className="h-1.5 bg-[#0a0a12] rounded-full overflow-hidden">
+                            <div
+                              className={`h-full ${isCompleted ? "bg-green-500" : colors.bg}`}
+                              style={{
+                                width: `${(completedLevels / topic.totalLevels) * 100}%`,
+                              }}
+                            />
                           </div>
-                        )}
-                      </div>
+                        </div>
 
-                      {/* Title and Description */}
-                      <h3 className="text-lg font-bold text-white mb-1">
-                        {topic.name}
-                      </h3>
-                      <p className="text-xs text-gray-400 mb-3 line-clamp-2">
-                        {topic.description}
-                      </p>
-
-                      {/* Progress Bar */}
-                      <div className="mb-3">
-                        <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
-                          <span>Progress</span>
-                          <span>
-                            {completedLevels}/{topic.totalLevels}
-                          </span>
+                        {/* XP and Play Button */}
+                        <div className="flex items-center justify-between mt-auto">
+                          <div className="flex items-center gap-1 text-yellow-400 text-sm">
+                            <Zap className="w-4 h-4" />
+                            <span className="font-medium">
+                              +{topic.xpReward} XP
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1 text-sm font-medium text-purple-400">
+                            {isCompleted ? "Review" : "Play"}
+                            <ChevronRight className="w-4 h-4" />
+                          </div>
                         </div>
-                        <div className="h-1.5 bg-[#0a0a12] rounded-full overflow-hidden">
-                          <div
-                            className={`h-full ${isCompleted ? "bg-green-500" : `bg-gradient-to-r ${colors.gradient}`}`}
-                            style={{
-                              width: `${(completedLevels / topic.totalLevels) * 100}%`,
-                            }}
-                          />
-                        </div>
-                      </div>
-
-                      {/* XP and Play Button */}
-                      <div className="flex items-center justify-between mt-auto">
-                        <div className="flex items-center gap-1 text-yellow-400 text-sm">
-                          <Zap className="w-4 h-4" />
-                          <span className="font-medium">
-                            +{topic.xpReward} XP
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1 text-sm font-medium text-purple-400">
-                          {isCompleted ? "Review" : "Play"}
-                          <ChevronRight className="w-4 h-4" />
-                        </div>
-                      </div>
-                    </Link>
+                      </Link>
+                    </ScrollReveal>
                   );
                 })}
               </div>
@@ -383,11 +384,10 @@ export default function CategoryPage() {
                   <Star className="w-5 h-5 text-yellow-400" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-white mb-1">Pro Tip</h3>
+                  <h3 className="font-bold text-white mb-1">Tip</h3>
                   <p className="text-gray-400 text-sm">
-                    Complete quizzes to earn XP and level up. Higher levels
-                    unlock more advanced topics. Build answer streaks for bonus
-                    XP!
+                    Quiz more to earn more XP. Rack up XP and level up as you
+                    go!
                   </p>
                 </div>
               </div>

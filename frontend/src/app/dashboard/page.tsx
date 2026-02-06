@@ -57,6 +57,27 @@ interface RecentActivity {
   icon: string;
 }
 
+interface Category {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  icon: string | null;
+  color: string;
+  topics: string[];
+  topicCount: number;
+  totalQuestions: number;
+  totalXP: number;
+}
+
+interface PopularTopic {
+  categorySlug: string;
+  topicSlug: string;
+  name: string;
+  description: string;
+  icon: string | null;
+}
+
 // Achievements - unlocked by reaching specific levels
 const achievementsList = [
   {
@@ -124,6 +145,8 @@ export default function DashboardPage() {
   const [dailyChallenges, setDailyChallenges] = useState<DailyChallenge[]>([]);
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
   const [hoursUntilReset, setHoursUntilReset] = useState(8);
+  const [popularTopics, setPopularTopics] = useState<PopularTopic[]>([]);
+  const [popularTopicsLoading, setPopularTopicsLoading] = useState(true);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -134,6 +157,73 @@ export default function DashboardPage() {
 
     // Trigger animation
     setTimeout(() => setAnimateStats(true), 100);
+
+    // Fetch popular topics for Quick Start
+    const fetchPopularTopics = async () => {
+      try {
+        // Define popular topics to show
+        const popularTopicConfigs = [
+          {
+            categorySlug: "frontend",
+            topicSlug: "html",
+            displayName: "HTML",
+            description: "Web Structure & Semantics",
+          },
+          {
+            categorySlug: "backend",
+            topicSlug: "python",
+            displayName: "Python",
+            description: "Backend Development",
+          },
+          {
+            categorySlug: "frontend",
+            topicSlug: "javascript",
+            displayName: "JavaScript",
+            description: "Interactive Web Development",
+          },
+        ];
+
+        const topics: PopularTopic[] = [];
+
+        for (const config of popularTopicConfigs) {
+          try {
+            const response = await gameAPI.getTopic(
+              config.categorySlug,
+              config.topicSlug,
+            );
+            const topicData = response.data;
+            topics.push({
+              categorySlug: config.categorySlug,
+              topicSlug: config.topicSlug,
+              name: config.displayName,
+              description: config.description,
+              icon: topicData.icon,
+            });
+          } catch (error) {
+            console.error(
+              `Failed to fetch topic ${config.categorySlug}/${config.topicSlug}:`,
+              error,
+            );
+            // Add fallback without icon
+            topics.push({
+              categorySlug: config.categorySlug,
+              topicSlug: config.topicSlug,
+              name: config.displayName,
+              description: config.description,
+              icon: null,
+            });
+          }
+        }
+
+        setPopularTopics(topics);
+        setPopularTopicsLoading(false);
+      } catch (error) {
+        console.error("Failed to fetch popular topics:", error);
+        // Set empty array as fallback
+        setPopularTopics([]);
+        setPopularTopicsLoading(false);
+      }
+    };
 
     // Fetch daily stats
     const fetchDailyStats = async () => {
@@ -154,7 +244,7 @@ export default function DashboardPage() {
             total: 3,
             xpReward: 150,
             icon: "Target",
-            color: "from-blue-500 to-cyan-500",
+            color: "green",
           },
           {
             id: 2,
@@ -164,7 +254,7 @@ export default function DashboardPage() {
             total: 1,
             xpReward: 200,
             icon: "Star",
-            color: "from-yellow-500 to-orange-500",
+            color: "green",
           },
           {
             id: 3,
@@ -174,7 +264,7 @@ export default function DashboardPage() {
             total: 5,
             xpReward: 100,
             icon: "Flame",
-            color: "from-orange-500 to-red-500",
+            color: "green",
           },
         ]);
       } finally {
@@ -185,6 +275,7 @@ export default function DashboardPage() {
     // Only fetch if user is authenticated
     if (user) {
       fetchDailyStats();
+      fetchPopularTopics();
     }
   }, [user]);
 
@@ -328,7 +419,7 @@ export default function DashboardPage() {
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 bg-cyan-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg shadow-cyan-500/20">
+                    <div className="w-16 h-16 bg-cyan-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg ">
                       <Gamepad2 className="w-8 h-8 text-white" />
                     </div>
                     <div>
@@ -386,7 +477,7 @@ export default function DashboardPage() {
                             >
                               <div className="flex items-center gap-3">
                                 <div
-                                  className={`w-10 h-10 bg-gradient-to-br ${challenge.color} rounded-lg flex items-center justify-center ${isComplete ? "opacity-50" : ""}`}
+                                  className={`w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center ${isComplete ? "opacity-50" : ""}`}
                                 >
                                   <Icon className="w-5 h-5 text-white" />
                                 </div>
@@ -536,61 +627,73 @@ export default function DashboardPage() {
                     </div>
 
                     <div className="space-y-3">
-                      <Link
-                        href="/play/frontend/javascript"
-                        className="block p-3 bg-[#0a0a12] rounded-lg hover:bg-[#12121f] transition-colors group"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-lg flex items-center justify-center font-bold text-black text-sm group-hover:scale-110 transition-transform">
-                            JS
-                          </div>
-                          <div className="flex-1">
-                            <span className="font-medium text-white">
-                              JavaScript
-                            </span>
-                            <p className="text-xs text-gray-500">
-                              Frontend Development
-                            </p>
-                          </div>
-                          <ChevronRight className="w-4 h-4 text-gray-500 group-hover:text-white group-hover:translate-x-1 transition-all" />
-                        </div>
-                      </Link>
-                      <Link
-                        href="/play/backend/python"
-                        className="block p-3 bg-[#0a0a12] rounded-lg hover:bg-[#12121f] transition-colors group"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                            <Code className="w-5 h-5 text-white" />
-                          </div>
-                          <div className="flex-1">
-                            <span className="font-medium text-white">
-                              Python
-                            </span>
-                            <p className="text-xs text-gray-500">
-                              Backend Development
-                            </p>
-                          </div>
-                          <ChevronRight className="w-4 h-4 text-gray-500 group-hover:text-white group-hover:translate-x-1 transition-all" />
-                        </div>
-                      </Link>
+                      {popularTopicsLoading
+                        ? // Skeleton loading states
+                          Array.from({ length: 3 }).map((_, index) => (
+                            <div
+                              key={index}
+                              className="p-3 bg-[#0a0a12] rounded-lg animate-pulse"
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-lg bg-[#1a1a2e]"></div>
+                                <div className="flex-1">
+                                  <div className="h-4 bg-[#1a1a2e] rounded mb-1 w-20"></div>
+                                  <div className="h-3 bg-[#1a1a2e] rounded w-32"></div>
+                                </div>
+                                <div className="w-4 h-4 bg-[#1a1a2e] rounded"></div>
+                              </div>
+                            </div>
+                          ))
+                        : // Show popular topics with their real icons
+                          popularTopics.map((topic) => (
+                            <Link
+                              key={`${topic.categorySlug}-${topic.topicSlug}`}
+                              href={`/play/${topic.categorySlug}/${topic.topicSlug}`}
+                              className="block p-3 bg-[#0a0a12] rounded-lg hover:bg-[#12121f] transition-colors group"
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform overflow-hidden">
+                                  {topic.icon ? (
+                                    <img
+                                      src={topic.icon}
+                                      alt={topic.name}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  ) : (
+                                    <div className="w-full h-full bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center font-bold text-white text-sm">
+                                      {topic.name.substring(0, 2).toUpperCase()}
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="flex-1">
+                                  <span className="font-medium text-white">
+                                    {topic.name}
+                                  </span>
+                                  <p className="text-xs text-gray-500">
+                                    {topic.description}
+                                  </p>
+                                </div>
+                                <ChevronRight className="w-4 h-4 text-gray-500 group-hover:text-white group-hover:translate-x-1 transition-all" />
+                              </div>
+                            </Link>
+                          ))}
                       <Link
                         href="/play"
-                        className="block p-3 bg-cyan-500/10 border border-cyan-500/30 rounded-lg hover:bg-cyan-500/20 transition-colors group"
+                        className="block p-3 bg-purple-500/10 border border-purple-500/30 rounded-lg hover:bg-purple-500/20 transition-colors group"
                       >
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-cyan-600 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                          <div className="w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
                             <Play className="w-5 h-5 text-white" />
                           </div>
                           <div className="flex-1">
-                            <span className="font-medium text-cyan-400">
+                            <span className="font-medium text-purple-400">
                               Browse All Topics
                             </span>
                             <p className="text-xs text-gray-500">
                               Explore more categories
                             </p>
                           </div>
-                          <ChevronRight className="w-4 h-4 text-cyan-400 group-hover:translate-x-1 transition-all" />
+                          <ChevronRight className="w-4 h-4 text-blue-400 group-hover:translate-x-1 transition-all" />
                         </div>
                       </Link>
                     </div>
