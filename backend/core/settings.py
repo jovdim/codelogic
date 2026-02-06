@@ -128,7 +128,7 @@ if USE_SPACES:
     AWS_ACCESS_KEY_ID = os.getenv('DO_SPACES_ACCESS_KEY')
     AWS_SECRET_ACCESS_KEY = os.getenv('DO_SPACES_SECRET_KEY')
     AWS_STORAGE_BUCKET_NAME = os.getenv('DO_SPACES_BUCKET_NAME')
-    AWS_S3_REGION_NAME = os.getenv('DO_SPACES_REGION', 'nyc3')
+    AWS_S3_REGION_NAME = os.getenv('DO_SPACES_REGION', 'sgp1')
     AWS_S3_ENDPOINT_URL = f'https://{AWS_S3_REGION_NAME}.digitaloceanspaces.com'
     AWS_S3_OBJECT_PARAMETERS = {
         'CacheControl': 'max-age=86400',
