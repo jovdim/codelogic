@@ -26,7 +26,6 @@ class Command(BaseCommand):
             defaults={
                 'name': 'Frontend', 
                 'description': 'Master the art of creating stunning web interfaces with HTML, CSS, JavaScript, and more.',
-                'icon': 'Code', 
                 'color': '#8b5cf6', 
                 'order': 1
             }
@@ -38,7 +37,6 @@ class Command(BaseCommand):
             defaults={
                 'name': 'Backend', 
                 'description': 'Learn to build robust server applications with Python, Node.js, databases, and APIs.',
-                'icon': 'Server', 
                 'color': '#10b981', 
                 'order': 2
             }
@@ -50,7 +48,6 @@ class Command(BaseCommand):
             defaults={
                 'name': 'DevOps',
                 'description': 'Master deployment, CI/CD, containers, databases, and cloud infrastructure.',
-                'icon': 'Cloud',
                 'color': '#f59e0b',
                 'order': 3
             }
