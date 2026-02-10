@@ -241,6 +241,7 @@ class SubmitAnswerView(APIView):
         else:
             if user.current_hearts > 0:
                 user.current_hearts -= 1
+                user.last_heart_update = timezone.now()
                 user.save()
                 heart_lost = True
         

@@ -185,6 +185,9 @@ export default function LevelQuizPage() {
     const fetchQuestions = async () => {
       try {
         setLoading(true);
+        // Refresh user data to ensure latest heart count
+        await refreshUser();
+        
         const response = await gameAPI.getQuizQuestions(
           categoryId,
           topicId,

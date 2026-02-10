@@ -169,21 +169,21 @@ function ProfileSettings({ user, updateUser }: ProfileSettingsProps) {
       {/* Account Info */}
       <div className="mb-6 space-y-3 pb-6 border-b border-[#2d2d44]">
         <div className="flex items-center gap-3 text-gray-400">
-          <Mail className="w-5 h-5" />
-          <span>{user.email}</span>
+          <Mail className="w-5 h-5 shrink-0" />
+          <span className="break-all">{user.email}</span>
           {user.is_email_verified && (
-            <span className="flex items-center gap-1 text-green-400 text-sm">
+            <span className="flex items-center gap-1 text-green-400 text-sm shrink-0">
               <Shield className="w-4 h-4" />
               Verified
             </span>
           )}
         </div>
         <div className="flex items-center gap-3 text-gray-400">
-          <User className="w-5 h-5" />
-          <span>@{user.username}</span>
+          <User className="w-5 h-5 shrink-0" />
+          <span className="break-all">@{user.username}</span>
         </div>
         <div className="flex items-center gap-3 text-gray-400">
-          <Calendar className="w-5 h-5" />
+          <Calendar className="w-5 h-5 shrink-0" />
           <span>
             Joined {user.member_since} ({user.days_since_joined} days ago)
           </span>
@@ -195,8 +195,8 @@ function ProfileSettings({ user, updateUser }: ProfileSettingsProps) {
         <h3 className="text-sm font-medium text-gray-300 mb-4">Your Avatar</h3>
 
         {/* Current Avatar Display */}
-        <div className="flex items-center gap-6 mb-6">
-          <div className="relative">
+        <div className="flex flex-col sm:flex-row items-center gap-6 mb-6 text-center sm:text-left">
+          <div className="relative shrink-0">
             <div className="w-24 h-24 rounded-xl overflow-hidden border-3 border-purple-500 shadow-lg shadow-purple-500/25">
               <img
                 src={`/avatars/avatar-${selectedAvatar}.png`}
@@ -368,6 +368,7 @@ function ProfileSettings({ user, updateUser }: ProfileSettingsProps) {
           type="submit"
           disabled={
             isLoading ||
+            displayName === (user.display_name || "") ||
             (!user.can_change_display_name && displayName !== user.display_name)
           }
           className="btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"

@@ -98,9 +98,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const updateUserHearts = (hearts: number) => {
-    if (user) {
-      setUser({ ...user, current_hearts: hearts });
-    }
+    setUser((prevUser) => {
+      if (!prevUser) return null;
+      return { ...prevUser, current_hearts: hearts };
+    });
   };
 
   const refreshUser = async () => {
