@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { getCached, setCache } from "@/lib/dataCache";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/auth/RouteGuards";
@@ -18,7 +19,7 @@ import {
   Loader2,
   Code,
 } from "lucide-react";
-import api from "@/lib/api";
+import { gameAPI } from "@/lib/api";
 
 // Category type
 interface Category {
@@ -105,14 +106,23 @@ export default function PlayPage() {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await api.get("/game/categories/");
+        const cached = getCached<Category[]>("categories");
+        if (cached) {
+          setCategories(cached);
+          setLoading(false);
+          return;
+        }
+
+        const response = await gameAPI.getCategories();
         setCategories(response.data);
+        setCache("categories", response.data);
       } catch (error) {
         console.error("Failed to fetch categories:", error);
       } finally {
         setLoading(false);
       }
     };
+
     fetchCategories();
   }, []);
 

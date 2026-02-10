@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/auth/RouteGuards";
 import { gameAPI } from "@/lib/api";
+import { invalidateCache } from "@/lib/dataCache";
 import { Modal, ModalButton } from "@/components/ui/Modal";
 import {
   Heart,
@@ -412,6 +413,12 @@ export default function LevelQuizPage() {
           }
           // Refresh user data to update XP/hearts in context and sidebar
           await refreshUser();
+          
+          // Invalidate caches to ensure progress is updated
+          if (user) {
+            invalidateCache(`topic_${categoryId}_${topicId}_${user.id}`);
+            invalidateCache(`category_progress_${categoryId}_${user.id}`);
+          }
         } catch (err) {
           console.error("Failed to submit quiz result:", err);
         }

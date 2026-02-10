@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { getCached, setCache } from "@/lib/dataCache";
 import { useAuth } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/auth/RouteGuards";
 import Sidebar from "@/components/layout/Sidebar";
@@ -94,10 +95,19 @@ export default function CertificatesPage() {
   useEffect(() => {
     const fetchCertificates = async () => {
       try {
+        const cached = getCached<Certificate[]>("certificates");
+        if (cached) {
+          setCertificates(cached);
+          setLoading(false);
+          return;
+        }
+
         const response = await gameAPI.getCertificates();
-        setCertificates(response.data.certificates || []);
-      } catch (err) {
-        console.error("Failed to fetch certificates:", err);
+        const certificatesData = response.data.certificates || [];
+        setCertificates(certificatesData);
+        setCache("certificates", certificatesData);
+      } catch (error) {
+        console.error("Failed to fetch certificates:", error);
       } finally {
         setLoading(false);
       }

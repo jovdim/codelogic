@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { getCached, setCache } from "@/lib/dataCache";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/layout/Navbar";
@@ -64,6 +65,7 @@ export default function LearnPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedLanguage, setSelectedLanguage] = useState("all");
+  const [selectedDifficulty, setSelectedDifficulty] = useState("all"); // Added selectedDifficulty state
   const [showFilters, setShowFilters] = useState(false);
   const [showLoginOverlay, setShowLoginOverlay] = useState(false);
   const [selectedResourceSlug, setSelectedResourceSlug] = useState<
@@ -71,34 +73,51 @@ export default function LearnPage() {
   >(null);
   const { isAuthenticated } = useAuth();
 
-  const fetchResources = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const response = await gameAPI.getResources({
-        search: searchQuery || undefined,
-        category: selectedCategory !== "all" ? selectedCategory : undefined,
-        language: selectedLanguage !== "all" ? selectedLanguage : undefined,
-      });
-
-      setResources(response.data.resources);
-      setFilters({
-        categories: response.data.filters.categories || [],
-        languages: response.data.filters.languages || [],
-      });
-    } catch (error) {
-      console.error("Failed to fetch resources:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [searchQuery, selectedCategory, selectedLanguage]);
-
   useEffect(() => {
+    const fetchResources = async () => {
+      setIsLoading(true);
+      try {
+        const cacheKey = `resources_${selectedCategory}_${selectedLanguage}_${selectedDifficulty}_${searchQuery}`;
+        const cached = getCached<LearningResource[]>(cacheKey);
+
+        if (cached) {
+          setResources(cached);
+          setIsLoading(false);
+          return;
+        }
+
+        const response = await gameAPI.getResources({
+          search: searchQuery || undefined,
+          category: selectedCategory !== "all" ? selectedCategory : undefined,
+          language: selectedLanguage !== "all" ? selectedLanguage : undefined,
+          difficulty: selectedDifficulty !== "all" ? selectedDifficulty : undefined, // Added difficulty to API call
+        });
+
+        const resourcesData = response.data.resources || [];
+        setResources(resourcesData);
+        setFilters({
+          categories: response.data.filters.categories || [],
+          languages: response.data.filters.languages || [],
+        });
+        setCache(cacheKey, resourcesData); // Cache the resources
+      } catch (error) {
+        console.error("Failed to fetch resources:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
     const debounce = setTimeout(() => {
       fetchResources();
     }, 300);
 
     return () => clearTimeout(debounce);
-  }, [fetchResources]);
+  }, [
+    selectedCategory,
+    selectedLanguage,
+    selectedDifficulty,
+    searchQuery,
+  ]);
 
   const handleResourceClick = (resourceSlug: string, e: React.MouseEvent) => {
     if (!isAuthenticated) {

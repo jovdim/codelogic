@@ -8,6 +8,7 @@ import { ProtectedRoute } from "@/components/auth/RouteGuards";
 import Sidebar from "@/components/layout/Sidebar";
 import { ScrollReveal } from "@/components/ui/ScrollAnimations";
 import api from "@/lib/api";
+import { getCached, setCache } from "@/lib/dataCache";
 import {
   Zap,
   ChevronRight,
@@ -114,8 +115,16 @@ export default function CategoryPage() {
   useEffect(() => {
     const fetchCategory = async () => {
       try {
+        const cacheKey = `category_${categorySlug}`;
+        const cached = getCached<Category>(cacheKey);
+        if (cached) {
+          setCategory(cached);
+          setLoading(false);
+          return;
+        }
         const response = await api.get(`/game/categories/${categorySlug}/`);
         setCategory(response.data);
+        setCache(cacheKey, response.data);
         setError(false);
       } catch (err) {
         console.error("Failed to fetch category:", err);
@@ -132,6 +141,13 @@ export default function CategoryPage() {
     const fetchProgress = async () => {
       if (!category || !user) return;
 
+      const cacheKey = `category_progress_${categorySlug}_${user.id}`;
+      const cached = getCached<{ [key: string]: number }>(cacheKey);
+      if (cached) {
+        setTopicProgress(cached);
+        return;
+      }
+
       const progressMap: { [key: string]: number } = {};
       for (const topic of category.topics) {
         try {
@@ -145,6 +161,7 @@ export default function CategoryPage() {
         }
       }
       setTopicProgress(progressMap);
+      setCache(cacheKey, progressMap);
     };
     fetchProgress();
   }, [category, user, categorySlug]);

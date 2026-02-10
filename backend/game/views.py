@@ -9,6 +9,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.db.models import F, Q, Count, Sum
+from django.db.models.functions import Coalesce
 import random
 
 from .models import Category, Topic, Question, QuizAttempt, UserProgress, LearningResource
@@ -34,25 +35,22 @@ class CategoryListView(APIView):
     def get(self, request):
         categories = Category.objects.filter(is_active=True).prefetch_related(
             'topics'
+        ).annotate(
+            total_questions=Count(
+                'topics__questions',
+                filter=Q(topics__questions__is_active=True)
+            ),
+            total_xp=Coalesce(
+                Sum('topics__questions__xp_reward', filter=Q(topics__questions__is_active=True)),
+                0
+            )
         ).order_by('order', 'name')
         
         result = []
         for cat in categories:
             topics = cat.topics.filter(is_active=True).order_by('order', 'name')
             topic_names = [t.name for t in topics]
-            topic_count = topics.count()
-            
-            # Calculate total questions
-            total_questions = Question.objects.filter(
-                topic__category=cat, 
-                is_active=True
-            ).count()
-            
-            # Calculate total XP for category (sum of all questions XP)
-            total_xp = Question.objects.filter(
-                topic__category=cat, 
-                is_active=True
-            ).aggregate(total=Sum('xp_reward'))['total'] or 0
+            topic_count = len(topic_names)
             
             # Build icon URL
             icon_url = None
@@ -68,8 +66,8 @@ class CategoryListView(APIView):
                 'color': cat.color,
                 'topics': topic_names,
                 'topicCount': topic_count,
-                'totalQuestions': total_questions,
-                'totalXP': total_xp,
+                'totalQuestions': cat.total_questions,
+                'totalXP': cat.total_xp,
             })
         
         return Response(result)
@@ -86,14 +84,12 @@ class CategoryDetailView(APIView):
             return Response({'error': 'Category not found'}, status=status.HTTP_404_NOT_FOUND)
         
         topics = category.topics.filter(is_active=True).annotate(
-            question_count=Count('questions', filter=Q(questions__is_active=True))
+            question_count=Count('questions', filter=Q(questions__is_active=True)),
+            topic_xp=Coalesce(Sum('questions__xp_reward', filter=Q(questions__is_active=True)), 0)
         ).order_by('order', 'name')
         
-        # Calculate total XP
-        total_xp = Question.objects.filter(
-            topic__category=category,
-            is_active=True
-        ).aggregate(total=Sum('xp_reward'))['total'] or 0
+        # Calculate total XP from annotated topics
+        total_xp = sum(t.topic_xp for t in topics)
         
         # Build category icon URL
         category_icon_url = None
@@ -102,10 +98,6 @@ class CategoryDetailView(APIView):
         
         topics_data = []
         for topic in topics:
-            topic_xp = topic.questions.filter(is_active=True).aggregate(
-                total=Sum('xp_reward')
-            )['total'] or 0
-            
             # Build topic icon URL (fallback to category icon)
             topic_icon_url = None
             if topic.icon_file:
@@ -120,7 +112,7 @@ class CategoryDetailView(APIView):
                 'description': topic.description,
                 'icon': topic_icon_url,
                 'totalLevels': topic.total_levels,
-                'xpReward': topic_xp,
+                'xpReward': topic.topic_xp,
                 'questionCount': topic.question_count,
             })
         
@@ -428,6 +420,11 @@ class UserDailyStatsView(APIView):
         recent_activity = []
         for attempt in recent_attempts:
             time_ago = self._time_ago(attempt.completed_at)
+            # Use actual topic icon URL if available, fallback to hardcoded icon name
+            topic_icon = self._get_topic_icon(attempt.topic.name)
+            if attempt.topic.icon_file:
+                topic_icon = request.build_absolute_uri(attempt.topic.icon_file.url)
+            
             recent_activity.append({
                 'id': str(attempt.id),
                 'type': 'quiz',
@@ -435,7 +432,7 @@ class UserDailyStatsView(APIView):
                 'score': f"{attempt.score}/{attempt.total_questions}",
                 'xp': attempt.xp_earned,
                 'time': time_ago,
-                'icon': self._get_topic_icon(attempt.topic.name),
+                'icon': topic_icon,
             })
         
         # Daily challenges

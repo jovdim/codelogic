@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { getCached, setCache } from "@/lib/dataCache";
 import Navbar from "@/components/layout/Navbar";
 import {
   ScrollReveal,
@@ -33,7 +34,31 @@ export default function LeaderboardPage() {
   useEffect(() => {
     const fetchLeaderboard = async () => {
       try {
-        setLoading(true);
+        setLoading(true); // Keep setLoading(true) here for initial load or cache miss
+
+        const cached = getCached<LeaderboardEntry[]>("leaderboard");
+        if (cached) {
+          // Add rank to each entry for cached data as well
+          const rankedCachedData = cached.map(
+            (entry: LeaderboardEntry, index: number) => ({
+              ...entry,
+              rank: index + 1,
+            }),
+          );
+          setLeaderboard(rankedCachedData);
+          setLoading(false);
+          // Find user's rank if logged in for cached data
+          if (user) {
+            const userEntry = rankedCachedData.find(
+              (e: LeaderboardEntry) => e.username === user.username,
+            );
+            if (userEntry) {
+              setUserRank(userEntry.rank);
+            }
+          }
+          return;
+        }
+
         const response = await gameAPI.getLeaderboard();
         const data = response.data.leaderboard || [];
         // Add rank to each entry
@@ -44,6 +69,7 @@ export default function LeaderboardPage() {
           }),
         );
         setLeaderboard(rankedData);
+        setCache("leaderboard", data); // Cache the raw data, not the ranked data
 
         // Find user's rank if logged in
         if (user) {

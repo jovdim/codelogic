@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/auth/RouteGuards";
+import { getCached, setCache } from "@/lib/dataCache";
 import { gameAPI } from "@/lib/api";
 import Sidebar from "@/components/layout/Sidebar";
 import { ScrollReveal } from "@/components/ui/ScrollAnimations";
@@ -271,8 +272,17 @@ export default function TopicLevelPage() {
   useEffect(() => {
     const fetchTopicData = async () => {
       try {
-        const response = await gameAPI.getTopic(categoryId, topicId);
-        const data = response.data;
+        const cacheKey = `topic_${categoryId}_${topicId}_${user?.id || 'guest'}`;
+        const cached = getCached<any>(cacheKey);
+        
+        let data;
+        if (cached) {
+          data = cached;
+        } else {
+          const response = await gameAPI.getTopic(categoryId, topicId);
+          data = response.data;
+          setCache(cacheKey, data);
+        }
 
         // Set topic data from API
         setTopic({
