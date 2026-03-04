@@ -437,7 +437,7 @@ export default function AboutPage() {
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                 <a
-                  href="mailto:hello@codelogic.com"
+                  href="mailto:codelogicstudent@gmail.com"
                   className="inline-flex items-center gap-2 px-6 py-3 text-white font-bold rounded-xl transition-all hover:scale-105"
                   style={{
                     background: "var(--gradient-purple)",
