@@ -116,6 +116,26 @@ class Question(models.Model):
         return f"{self.topic.name} L{self.level}: {self.question_text[:50]}"
 
 
+class Lesson(models.Model):
+    """Short lesson slides shown before quiz questions in a level."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name='lessons')
+    level = models.PositiveIntegerField(default=1)
+    title = models.CharField(max_length=200)
+    content = models.TextField(help_text='Main lesson text - keep it short and simple')
+    code_example = models.TextField(blank=True, help_text='Optional code example to show')
+    tip = models.TextField(blank=True, help_text='Optional quick tip or fun fact')
+    order = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = 'lessons'
+        ordering = ['topic', 'level', 'order']
+
+    def __str__(self):
+        return f"{self.topic.name} L{self.level}: {self.title}"
+
+
 class UserProgress(models.Model):
     """Track user progress on each topic."""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

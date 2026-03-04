@@ -12,11 +12,12 @@ from django.db.models import F, Q, Count, Sum
 from django.db.models.functions import Coalesce
 import random
 
-from .models import Category, Topic, Question, QuizAttempt, UserProgress, LearningResource
+from .models import Category, Topic, Question, QuizAttempt, UserProgress, LearningResource, Lesson
 from .serializers import (
     CategorySerializer, TopicSerializer, TopicWithProgressSerializer,
     QuestionSerializer, LeaderboardUserSerializer,
-    LearningResourceListSerializer, LearningResourceDetailSerializer
+    LearningResourceListSerializer, LearningResourceDetailSerializer,
+    LessonSerializer
 )
 
 User = get_user_model()
@@ -192,8 +193,13 @@ class QuizQuestionsView(APIView):
             total_questions=len(questions)
         )
         
+        # Get lessons for this level
+        lessons = Lesson.objects.filter(topic=topic, level=level, is_active=True).order_by('order')
+        lesson_data = LessonSerializer(lessons, many=True).data
+        
         serializer = QuestionSerializer(questions, many=True)
         return Response({
+            'lessons': lesson_data,
             'questions': serializer.data,
             'topic': topic.name,
             'level': level,

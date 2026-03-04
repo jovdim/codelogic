@@ -6,11 +6,12 @@ Provides a powerful, user-friendly admin interface for non-developers.
 from django.contrib import admin
 from django.contrib.admin import AdminSite
 from django.utils.html import format_html
+from django.db import models
 from django.db.models import Count, Avg
 from django.contrib import messages
 from django import forms
 
-from .models import Category, Topic, Question, LearningResource, Certificate, UserCertificate
+from .models import Category, Topic, Question, LearningResource, Certificate, UserCertificate, Lesson
 from .models_settings import SiteSettings
 
 
@@ -119,6 +120,21 @@ class CategoryAdmin(admin.ModelAdmin):
 # TOPIC ADMIN
 # ============================================================
 
+class LessonInline(admin.StackedInline):
+    model = Lesson
+    extra = 1
+    fields = ['level', 'title', 'content', 'code_example', 'tip', 'order', 'is_active']
+    show_change_link = True
+    ordering = ['level', 'order']
+    can_delete = True
+    
+    verbose_name_plural = "Lessons"
+    
+    formfield_overrides = {
+        models.TextField: {'widget': forms.Textarea(attrs={'rows': 4, 'style': 'width: 95%;'})},
+    }
+
+
 class QuestionInline(admin.TabularInline):
     model = Question
     extra = 0
@@ -146,7 +162,7 @@ class TopicAdmin(admin.ModelAdmin):
     list_editable = ['is_active']
     search_fields = ['name', 'description']
     ordering = ['category', 'order', 'name']
-    inlines = [QuestionInline]
+    inlines = [LessonInline, QuestionInline]
     
     fieldsets = (
         ('Basic Info', {
@@ -431,3 +447,50 @@ class CertificateAdmin(admin.ModelAdmin):
         return False
 
 
+# ============================================================
+# LESSON ADMIN
+# ============================================================
+
+@admin.register(Lesson)
+class LessonAdmin(admin.ModelAdmin):
+    list_display = ['short_title', 'topic', 'level', 'has_code', 'has_tip', 'order', 'is_active']
+    list_filter = ['topic__category', 'topic', 'level', 'is_active']
+    search_fields = ['title', 'content', 'code_example', 'tip']
+    list_editable = ['level', 'order', 'is_active']
+    ordering = ['topic', 'level', 'order']
+    list_per_page = 50
+    
+    fieldsets = (
+        ('Lesson', {
+            'fields': ('topic', 'level', 'title', 'content'),
+            'description': 'Basic lesson information'
+        }),
+        ('Code Example (Optional)', {
+            'fields': ('code_example',),
+            'classes': ('collapse',),
+            'description': 'Add a code example to illustrate the concept'
+        }),
+        ('Tip (Optional)', {
+            'fields': ('tip',),
+            'classes': ('collapse',),
+            'description': 'A quick tip or helpful note'
+        }),
+        ('Settings', {
+            'fields': ('order', 'is_active')
+        }),
+    )
+    
+    def short_title(self, obj):
+        text = obj.title[:50] + '...' if len(obj.title) > 50 else obj.title
+        return text
+    short_title.short_description = 'Title'
+    
+    def has_code(self, obj):
+        return bool(obj.code_example)
+    has_code.boolean = True
+    has_code.short_description = 'Code'
+    
+    def has_tip(self, obj):
+        return bool(obj.tip)
+    has_tip.boolean = True
+    has_tip.short_description = 'Tip'

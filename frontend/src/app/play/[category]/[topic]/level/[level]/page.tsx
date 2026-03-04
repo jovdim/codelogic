@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback, ReactNode } from "react";
+import { useState, useEffect, useCallback, useRef, ReactNode } from "react";
+import { BookOpen, Lightbulb } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
@@ -8,6 +9,7 @@ import { ProtectedRoute } from "@/components/auth/RouteGuards";
 import { gameAPI } from "@/lib/api";
 import { invalidateCache } from "@/lib/dataCache";
 import { Modal, ModalButton } from "@/components/ui/Modal";
+import { useSoundEffects } from "@/hooks/useSoundEffects";
 import {
   Heart,
   X,
@@ -105,6 +107,15 @@ const highlightCode = (code: string): ReactNode[] => {
 // Question types
 type QuestionType = "multiple-choice" | "find-error" | "fill-blank" | "output";
 
+interface Lesson {
+  id: string;
+  title: string;
+  content: string;
+  code_example?: string;
+  tip?: string;
+  order: number;
+}
+
 interface Question {
   id: string;
   question_type: QuestionType;
@@ -120,11 +131,16 @@ export default function LevelQuizPage() {
   const params = useParams();
   const router = useRouter();
   const { user, refreshUser, updateUserHearts } = useAuth();
+  const { play: playSound } = useSoundEffects();
   const categoryId = params.category as string;
   const topicId = params.topic as string;
   const levelId = parseInt(params.level as string) || 1;
+  const lastTickRef = useRef<number>(0);
 
   // State
+  const [lessons, setLessons] = useState<Lesson[]>([]);
+  const [currentLesson, setCurrentLesson] = useState(0);
+  const [showingLessons, setShowingLessons] = useState(true);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [attemptId, setAttemptId] = useState<string>("");
   const [loading, setLoading] = useState(true);
@@ -193,15 +209,21 @@ export default function LevelQuizPage() {
           topicId,
           levelId,
         );
+        const lessonData = response.data.lessons || [];
+        setLessons(lessonData);
+        setCurrentLesson(0);
+        setShowingLessons(lessonData.length > 0);
         setQuestions(response.data.questions);
         setAttemptId(response.data.attempt_id);
         setHearts(response.data.hearts);
         setError(null);
 
-        // Always start with fresh timer for new quiz attempt
+        // Only start timer after lessons are done
         clearTimerStorage();
-        setTimeLeft(30);
-        saveTimerStart(0);
+        if (lessonData.length === 0) {
+          setTimeLeft(30);
+          saveTimerStart(0);
+        }
       } catch (err: unknown) {
         const errorMessage =
           err instanceof Error ? err.message : "Failed to load questions";
@@ -223,8 +245,21 @@ export default function LevelQuizPage() {
 
   const question = questions[currentQuestion];
   const totalQuestions = questions.length;
-  const progress =
-    totalQuestions > 0 ? ((currentQuestion + 1) / totalQuestions) * 100 : 0;
+  const totalSteps = lessons.length + totalQuestions;
+  const currentStep = showingLessons ? currentLesson + 1 : lessons.length + currentQuestion + 1;
+  const progress = totalSteps > 0 ? (currentStep / totalSteps) * 100 : 0;
+
+  // Lesson navigation
+  const nextLesson = () => {
+    if (currentLesson < lessons.length - 1) {
+      setCurrentLesson(prev => prev + 1);
+    } else {
+      // Done with lessons, start quiz
+      setShowingLessons(false);
+      setTimeLeft(30);
+      saveTimerStart(0);
+    }
+  };
 
   // Handle timeout - defined before timer effect to avoid reference issues
   const handleTimeout = useCallback(() => {
@@ -233,6 +268,7 @@ export default function LevelQuizPage() {
       const newHearts = Math.max(0, hearts - 1);
       setHearts(newHearts);
       setHeartsLost((prev) => prev + 1);
+      playSound("heartLost");
 
       // Trigger heart shake animation
       setHeartShake(true);
@@ -248,11 +284,11 @@ export default function LevelQuizPage() {
       // Stay on the same question, just reset the timer
       // Timer will automatically reset to 30 in the interval
     }
-  }, [isAnswered, hearts, clearTimerStorage]);
+  }, [isAnswered, hearts, clearTimerStorage, playSound]);
 
   // Timer - uses stored timestamp to prevent reload abuse
   useEffect(() => {
-    if (isAnswered || showResult || loading || !question) return;
+    if (isAnswered || showResult || loading || !question || showingLessons) return;
 
     const timer = setInterval(() => {
       // Calculate remaining time from stored start timestamp
@@ -265,6 +301,11 @@ export default function LevelQuizPage() {
         setTimeLeft(30);
       } else {
         setTimeLeft(remaining);
+        // Timer warning sounds
+        if (remaining <= 5 && remaining > 0 && remaining !== lastTickRef.current) {
+          lastTickRef.current = remaining;
+          playSound(remaining <= 3 ? "countdown" : "timerTick");
+        }
       }
     }, 1000);
 
@@ -275,9 +316,11 @@ export default function LevelQuizPage() {
     currentQuestion,
     loading,
     question,
+    showingLessons,
     getRemainingTime,
     saveTimerStart,
     handleTimeout,
+    playSound,
   ]);
 
   const handleAnswer = async (answerIndex: number) => {
@@ -285,17 +328,22 @@ export default function LevelQuizPage() {
 
     setSelectedAnswer(answerIndex);
     setIsAnswered(true);
+    lastTickRef.current = 0; // Reset tick ref for next question
 
     const isCorrect = answerIndex === question.correct_answer;
 
     if (isCorrect) {
+      playSound("correct");
       // XP: 10 base per correct answer (matching backend)
       const baseXP = 10;
       setScore((prev) => prev + 1);
       setXpEarned((prev) => prev + baseXP);
     } else {
+      playSound("wrong");
       setHearts((prev) => Math.max(0, prev - 1));
       setHeartsLost((prev) => prev + 1);
+      // Play heart lost sound after a brief delay
+      setTimeout(() => playSound("heartLost"), 300);
     }
 
     // Sync with backend to deduct hearts in database
@@ -397,6 +445,14 @@ export default function LevelQuizPage() {
   };
 
   // Submit quiz results when quiz is completed (only once)
+  // Play result sound when quiz ends
+  useEffect(() => {
+    if (showResult && totalQuestions > 0) {
+      const passed = score / totalQuestions >= 0.5;
+      playSound(passed ? "levelComplete" : "levelFailed");
+    }
+  }, [showResult]);
+
   useEffect(() => {
     if (showResult && totalQuestions > 0 && !quizSubmitted) {
       setQuizSubmitted(true); // Prevent duplicate submissions
@@ -493,8 +549,8 @@ export default function LevelQuizPage() {
     );
   }
 
-  // No questions
-  if (!question) {
+  // No questions (only show this after lessons are done)
+  if (!question && !showingLessons) {
     return (
       <ProtectedRoute>
         <div className="min-h-screen bg-gradient-to-b from-[#0f0f1a] to-[#1a1a2e]">
@@ -519,6 +575,9 @@ export default function LevelQuizPage() {
       </ProtectedRoute>
     );
   }
+
+  // Current lesson for the lesson phase
+  const lesson = showingLessons && lessons.length > 0 ? lessons[currentLesson] : null;
 
   return (
     <ProtectedRoute>
@@ -567,17 +626,27 @@ export default function LevelQuizPage() {
               </Link>
 
               <div className="flex items-center gap-3">
-                {/* Timer */}
-                <div
-                  className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-sm font-semibold transition-all ${
-                    timeLeft <= 10
-                      ? "bg-red-500/20 text-red-400 border border-red-500/30 shadow-lg shadow-red-500/20"
-                      : "bg-[#1a1a2e] text-gray-400 border border-[#2d2d44]"
-                  }`}
-                >
-                  <Clock className="w-4 h-4" />
-                  <span className="font-mono">{timeLeft}s</span>
-                </div>
+                {/* Timer - hidden during lessons */}
+                {!showingLessons && (
+                  <div
+                    className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-sm font-semibold transition-all ${
+                      timeLeft <= 10
+                        ? "bg-red-500/20 text-red-400 border border-red-500/30 shadow-lg shadow-red-500/20"
+                        : "bg-[#1a1a2e] text-gray-400 border border-[#2d2d44]"
+                    }`}
+                  >
+                    <Clock className="w-4 h-4" />
+                    <span className="font-mono">{timeLeft}s</span>
+                  </div>
+                )}
+
+                {/* Lesson indicator - shown during lessons */}
+                {showingLessons && (
+                  <div className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-sm font-semibold bg-purple-500/20 text-purple-400 border border-purple-500/30">
+                    <BookOpen className="w-4 h-4" />
+                    <span>{currentLesson + 1}/{lessons.length}</span>
+                  </div>
+                )}
 
                 {/* Hearts */}
                 <div
@@ -609,7 +678,93 @@ export default function LevelQuizPage() {
           </div>
         </div>
 
-        {/* Question */}
+        {/* Lesson Card - shown during lesson phase */}
+        {showingLessons && lesson && (
+          <div className="relative max-w-2xl mx-auto px-4 py-8 animate-in fade-in duration-500" key={`lesson-${currentLesson}`}>
+            {/* Lesson badge */}
+            <div className="flex items-center gap-3 mb-6 animate-in slide-in-from-bottom-4 duration-700">
+              <div className="px-3 py-1.5 bg-purple-500/20 text-purple-400 text-sm rounded-full border border-purple-500/30 font-medium flex items-center gap-1">
+                <BookOpen className="w-3 h-3" />
+                Lesson
+              </div>
+              <div className="px-3 py-1.5 bg-[#1a1a2e] text-gray-400 text-sm rounded-full border border-[#2d2d44] font-medium">
+                {currentLesson + 1} / {lessons.length}
+              </div>
+            </div>
+
+            {/* Lesson title */}
+            <div className="pixel-box p-6 mb-6 relative overflow-hidden animate-in slide-in-from-left-4 duration-700 delay-200">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-purple-500/20 border border-purple-500/30 shrink-0">
+                  <BookOpen className="w-5 h-5 text-purple-400" />
+                </div>
+                <h2 className="text-xl font-bold text-white leading-relaxed">{lesson.title}</h2>
+              </div>
+              <p className="text-gray-300 text-base leading-relaxed pl-[52px]">{lesson.content}</p>
+            </div>
+
+            {/* Code example */}
+            {lesson.code_example && (
+              <div className="mb-6 pixel-box overflow-hidden animate-in slide-in-from-right-4 duration-700 delay-400">
+                {/* Terminal Header */}
+                <div className="flex items-center justify-between px-4 py-3 bg-[#1a1a2e] border-b border-[#2d2d44]">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1.5">
+                      <Circle className="w-3 h-3 text-red-500 fill-red-500" />
+                      <Circle className="w-3 h-3 text-yellow-500 fill-yellow-500" />
+                      <Circle className="w-3 h-3 text-green-500 fill-green-500" />
+                    </div>
+                    <span className="text-xs text-gray-400 font-medium">Example</span>
+                  </div>
+                  <div className="flex items-center gap-2 px-3 py-1 bg-[#0f0f1a] rounded border border-[#2d2d44]">
+                    <span className="text-xs text-gray-400 font-medium">code</span>
+                  </div>
+                  <div className="w-12" />
+                </div>
+                {/* Code Content */}
+                <div className="bg-[#0f0f1a] p-4 font-mono text-sm overflow-x-auto">
+                  {lesson.code_example.split("\n").map((line, idx) => (
+                    <div key={idx} className="flex items-start leading-6">
+                      <span className="w-8 text-gray-600 select-none text-right pr-4 shrink-0">{idx + 1}</span>
+                      <code className="flex-1">{highlightCode(line)}</code>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Tip box */}
+            {lesson.tip && (
+              <div className="mb-8 pixel-box p-4 border-l-4 border-purple-500 animate-in slide-in-from-bottom-4 duration-700 delay-600">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-purple-500/20 shrink-0 mt-0.5">
+                    <Lightbulb className="w-4 h-4 text-purple-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-purple-400 mb-1">Did you know?</p>
+                    <p className="text-gray-300 text-sm leading-relaxed">{lesson.tip}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Got it button */}
+            <div className="flex justify-center animate-in fade-in duration-500 delay-800">
+              <button
+                onClick={nextLesson}
+                className="group px-8 py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-bold transition-all duration-300 ease-out pixel-box cursor-pointer transform hover:scale-105 hover:shadow-lg"
+              >
+                <div className="flex items-center gap-2">
+                  <span>{currentLesson < lessons.length - 1 ? "Got it" : "Start Quiz"}</span>
+                  <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
+                </div>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Question - only shown after lessons are done */}
+        {!showingLessons && question && (
         <div className="relative max-w-2xl mx-auto px-4 py-8 animate-in fade-in duration-500">
           <div className="mb-8 animate-in slide-in-from-bottom-4 duration-700 delay-200">
             <div className="flex items-center gap-3 mb-4">
@@ -793,6 +948,7 @@ export default function LevelQuizPage() {
             </div>
           )}
         </div>
+        )}
       </div>
 
       {/* Results Modal */}

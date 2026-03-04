@@ -290,233 +290,217 @@
 </div>
 
 <!-- Certificate Previews -->
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Montserrat:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  .cert-card {
+    background: linear-gradient(180deg, #fffffe 0%, #fffcf5 50%, #fff9eb 100%);
+    border: 3px solid #c9a227;
+    border-radius: 4px;
+    padding: 20px 16px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    box-shadow: inset 0 0 0 1.5px #fff, inset 0 0 0 3px #e8d48b;
+  }
+  .cert-card:hover { border-color: #d4af37; box-shadow: inset 0 0 0 1.5px #fff, inset 0 0 0 3px #e8d48b, 0 4px 16px rgba(201,162,39,0.2); }
+  .cert-inner-border {
+    position: absolute; top: 8px; left: 8px; right: 8px; bottom: 8px;
+    border: 1.5px solid #d4b854; pointer-events: none;
+  }
+  .cert-corner { position: absolute; width: 40px; height: 40px; }
+  .cert-corner svg { width: 100%; height: 100%; }
+  .cert-corner-tl { top: 4px; left: 4px; }
+  .cert-corner-tr { top: 4px; right: 4px; transform: scaleX(-1); }
+  .cert-corner-bl { bottom: 4px; left: 4px; transform: scaleY(-1); }
+  .cert-corner-br { bottom: 4px; right: 4px; transform: scale(-1,-1); }
+  .cert-watermark {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    font-family: 'Cormorant Garamond', serif; font-size: 80px;
+    color: rgba(201,162,39,0.05); font-weight: 700; pointer-events: none;
+    letter-spacing: -4px;
+  }
+  .cert-ornament-line {
+    width: 40px; height: 1.5px;
+    background: linear-gradient(90deg, transparent, #c9a227, transparent);
+  }
+  .cert-logo-badge {
+    width: 28px; height: 28px;
+    background: linear-gradient(135deg, #f4d03f 0%, #c9a227 100%);
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    color: #5c4a1f; font-weight: 700; font-size: 9px; letter-spacing: -0.5px;
+    border: 2px solid #c9a227; box-shadow: 0 2px 6px rgba(201,162,39,0.3);
+  }
+  .cert-label {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 7px; color: #8b7355; text-transform: uppercase;
+    letter-spacing: 4px; margin-bottom: 4px;
+  }
+  .cert-academy {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 20px; color: #2d2418; font-weight: 600;
+    margin-bottom: 10px; letter-spacing: 1px;
+  }
+  .cert-topic-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 8px 16px; background: #0f0f1a;
+    border: 1.5px solid #2d2d44; border-radius: 8px; margin-bottom: 10px;
+  }
+  .cert-topic-name {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 15px; color: #e2e2f0; font-weight: 600;
+  }
+  .cert-awarded-text {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 7px; color: #8b7355; letter-spacing: 2px;
+    text-transform: uppercase; margin-bottom: 4px;
+  }
+  .cert-recipient {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 18px; color: #2d2418; font-weight: 600;
+    margin-bottom: 4px; position: relative; display: inline-block;
+    padding-bottom: 4px;
+    border-bottom: 1.5px solid transparent;
+    border-image: linear-gradient(90deg, transparent, #c9a227, transparent) 1;
+  }
+  .cert-description {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 8px; color: #5c5040; line-height: 1.6;
+    max-width: 260px; margin: 8px auto;
+  }
+  .cert-seal {
+    position: absolute; bottom: 16px; right: 16px;
+    width: 42px; height: 42px;
+  }
+  .cert-seal-outer {
+    width: 100%; height: 100%;
+    background: linear-gradient(135deg, #f4d03f 0%, #c9a227 50%, #f4d03f 100%);
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 8px rgba(201,162,39,0.4);
+  }
+  .cert-seal-inner {
+    width: 32px; height: 32px;
+    background: linear-gradient(135deg, #fffef0 0%, #f4d03f 100%);
+    border-radius: 50%; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    border: 1.5px solid #c9a227;
+  }
+  .cert-seal-text { font-size: 5px; color: #5c4a1f; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; line-height: 1; }
+  .cert-seal-check { font-size: 12px; color: #5c4a1f; font-weight: bold; line-height: 1; }
+  .cert-footer {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    margin-top: 12px; padding-top: 8px;
+    border-top: 1px solid #e8dcc8;
+  }
+  .cert-sig-line { width: 70px; height: 1px; background: #5c5040; margin-bottom: 4px; }
+  .cert-sig-name { font-family: 'Montserrat', sans-serif; font-size: 7px; color: #5c5040; font-weight: 500; }
+  .cert-sig-title { font-family: 'Montserrat', sans-serif; font-size: 6px; color: #8b7355; margin-top: 1px; }
+  .cert-meta { font-family: 'Montserrat', sans-serif; font-size: 7px; color: #8b7355; text-align: right; }
+  .cert-actions {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 10px; padding-top: 6px;
+  }
+</style>
+
 <div class="pixel-box" style="padding: 20px; margin-top: 20px">
   <h2 class="section-title">
     Certificate Previews ({{ certificates|length }} certificates)
   </h2>
   <p style="color: #6b7280; font-size: 12px; margin-bottom: 15px">
-    Preview of all available certificates. Each topic automatically has a
-    certificate.
+    Preview of all available certificates. This is how they appear to users on
+    the frontend.
   </p>
 
   <div
     style="
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 15px;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
     "
   >
     {% for cert in certificates %}
-    <div
-      style="
-        background: linear-gradient(
-          180deg,
-          #fffffe 0%,
-          #fffcf5 50%,
-          #fff9eb 100%
-        );
-        border: 2px solid #c9a227;
-        border-radius: 8px;
-        padding: 15px;
-        text-align: center;
-        position: relative;
-      "
-    >
-      <!-- Gold border pattern -->
-      <div
-        style="
-          position: absolute;
-          top: 4px;
-          left: 4px;
-          right: 4px;
-          bottom: 4px;
-          border: 1px solid #d4b854;
-          border-radius: 4px;
-          pointer-events: none;
-        "
-      ></div>
-
-      <!-- Header -->
-      <div
-        style="
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 10px;
-          margin-bottom: 8px;
-        "
-      >
-        <div
-          style="
-            width: 30px;
-            height: 1px;
-            background: linear-gradient(
-              90deg,
-              transparent,
-              #c9a227,
-              transparent
-            );
-          "
-        ></div>
-        <div
-          style="
-            width: 24px;
-            height: 24px;
-            background: linear-gradient(135deg, #f4d03f, #c9a227);
-            border-radius: 50%;
-            border: 2px solid #c9a227;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-          "
-        >
-          <span style="color: #5c4a1f; font-size: 10px; font-weight: 700"
-            >CL</span
-          >
+    <div>
+      <div class="cert-card">
+        <!-- Corner ornaments -->
+        <div class="cert-corner cert-corner-tl">
+          <svg viewBox="0 0 100 100"><path d="M10 90 L10 10 L90 10" fill="none" stroke="#c9a227" stroke-width="2.5"/><path d="M10 70 L10 30 L30 10" fill="none" stroke="#d4b854" stroke-width="1.5"/><circle cx="10" cy="10" r="5" fill="#c9a227"/></svg>
         </div>
-        <div
-          style="
-            width: 30px;
-            height: 1px;
-            background: linear-gradient(
-              90deg,
-              transparent,
-              #c9a227,
-              transparent
-            );
-          "
-        ></div>
+        <div class="cert-corner cert-corner-tr">
+          <svg viewBox="0 0 100 100"><path d="M10 90 L10 10 L90 10" fill="none" stroke="#c9a227" stroke-width="2.5"/><path d="M10 70 L10 30 L30 10" fill="none" stroke="#d4b854" stroke-width="1.5"/><circle cx="10" cy="10" r="5" fill="#c9a227"/></svg>
+        </div>
+        <div class="cert-corner cert-corner-bl">
+          <svg viewBox="0 0 100 100"><path d="M10 90 L10 10 L90 10" fill="none" stroke="#c9a227" stroke-width="2.5"/><path d="M10 70 L10 30 L30 10" fill="none" stroke="#d4b854" stroke-width="1.5"/><circle cx="10" cy="10" r="5" fill="#c9a227"/></svg>
+        </div>
+        <div class="cert-corner cert-corner-br">
+          <svg viewBox="0 0 100 100"><path d="M10 90 L10 10 L90 10" fill="none" stroke="#c9a227" stroke-width="2.5"/><path d="M10 70 L10 30 L30 10" fill="none" stroke="#d4b854" stroke-width="1.5"/><circle cx="10" cy="10" r="5" fill="#c9a227"/></svg>
+        </div>
+
+        <div class="cert-inner-border"></div>
+        <div class="cert-watermark">CL</div>
+
+        <div style="position: relative; z-index: 1;">
+          <!-- Header ornament -->
+          <div style="display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 6px;">
+            <div class="cert-ornament-line"></div>
+            <div class="cert-logo-badge">CL</div>
+            <div class="cert-ornament-line"></div>
+          </div>
+
+          <div class="cert-label">Certificate of Completion</div>
+          <div class="cert-academy">CodeLogic Academy</div>
+
+          <!-- Topic badge -->
+          <div class="cert-topic-badge">
+            {% if cert.icon_url %}
+            <img src="{{ cert.icon_url }}" style="width: 22px; height: 22px; object-fit: contain;" alt="{{ cert.topic.name }}" />
+            {% else %}
+            <svg viewBox="0 0 48 48" width="22" height="22"><path fill="#e2e2f0" d="M14 16l-8 8 8 8 2.8-2.8L11.6 24l5.2-5.2L14 16zm20 0l8 8-8 8-2.8-2.8 5.2-5.2-5.2-5.2L34 16zM20 36l4-24h4l-4 24h-4z"/></svg>
+            {% endif %}
+            <span class="cert-topic-name">{{ cert.title|default:cert.topic.name }}</span>
+          </div>
+
+          <div class="cert-awarded-text">This certificate is proudly presented to</div>
+          <div class="cert-recipient">[Recipient Name]</div>
+
+          <div class="cert-description">
+            {{ cert.description|default:"For successfully completing the course, demonstrating proficiency and dedication in mastering the fundamentals and concepts of development." }}
+          </div>
+
+          <!-- Footer -->
+          <div class="cert-footer">
+            <div style="text-align: left;">
+              <div class="cert-sig-line"></div>
+              <div class="cert-sig-name">CodeLogic Team</div>
+              <div class="cert-sig-title">Program Director</div>
+            </div>
+            <div class="cert-meta">
+              <div>Issued: [Date]</div>
+              <div>Certificate ID: [ID]</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Gold seal -->
+        <div class="cert-seal">
+          <div class="cert-seal-outer">
+            <div class="cert-seal-inner">
+              <div class="cert-seal-text">Verified</div>
+              <div class="cert-seal-check">✓</div>
+              <div class="cert-seal-text">Complete</div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <p
-        style="
-          font-size: 8px;
-          color: #8b7355;
-          text-transform: uppercase;
-          letter-spacing: 2px;
-          margin-bottom: 4px;
-        "
-      >
-        Certificate of Completion
-      </p>
-      <p
-        style="
-          font-family: Georgia, serif;
-          font-size: 14px;
-          color: #2d2418;
-          font-weight: 600;
-          margin-bottom: 10px;
-        "
-      >
-        CodeLogic Academy
-      </p>
-
-      <!-- Topic Badge -->
-      <div
-        style="
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          padding: 6px 12px;
-          background: #0f0f1a;
-          border: 2px solid #2d2d44;
-          border-radius: 8px;
-          margin-bottom: 8px;
-        "
-      >
-        {% if cert.icon_url %}
-        <img
-          src="{{ cert.icon_url }}"
-          style="width: 20px; height: 20px; object-fit: contain"
-          alt="{{ cert.topic.name }}"
-        />
-        {% else %}
-        <span
-          style="
-            width: 20px;
-            height: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #e2e2f0;
-          "
-          >📜</span
-        >
-        {% endif %}
-        <span
-          style="
-            font-family: Georgia, serif;
-            font-size: 12px;
-            font-weight: 600;
-            color: #e2e2f0;
-          "
-          >{{ cert.topic.name }}</span
-        >
-      </div>
-
-      <!-- Recipient placeholder -->
-      <p
-        style="
-          font-size: 8px;
-          color: #8b7355;
-          text-transform: uppercase;
-          letter-spacing: 1px;
-          margin-bottom: 2px;
-        "
-      >
-        Presented to
-      </p>
-      <p
-        style="
-          font-family: Georgia, serif;
-          font-size: 12px;
-          color: #2d2418;
-          font-weight: 500;
-          padding-bottom: 4px;
-          border-bottom: 1px solid #c9a22740;
-          display: inline-block;
-          padding: 0 20px;
-          margin-bottom: 6px;
-        "
-      >
-        [Recipient Name]
-      </p>
-
-      <!-- Description -->
-      <p style="font-size: 9px; color: #5c5040; margin: 8px 0">
-        For completing the {{ cert.topic.name }} course
-      </p>
-
-      <!-- Category & Awarded Count -->
-      <div
-        style="
-          display: flex;
-          justify-content: space-between;
-          font-size: 9px;
-          padding-top: 6px;
-          border-top: 1px solid #e8dcc8;
-        "
-      >
-        <span style="color: #8b7355">{{ cert.topic.category.name }}</span>
-        <span
-          style="color: {% if cert.awarded_to.count > 0 %}#22c55e{% else %}#8b7355{% endif %}; font-weight: 600;"
-        >
+      <!-- Actions below the card -->
+      <div class="cert-actions">
+        <span style="font-size: 9px; color: {% if cert.awarded_to.count > 0 %}#22c55e{% else %}#8b7355{% endif %}; font-weight: 600;">
           {{ cert.awarded_to.count }} awarded
         </span>
+        <a href="{% url 'admin:game_certificate_change' cert.pk %}"
+          style="font-size: 10px; color: #a78bfa; text-decoration: none;">
+          Edit Certificate →
+        </a>
       </div>
-
-      <!-- Edit Link -->
-      <a
-        href="{% url 'admin:game_certificate_change' cert.pk %}"
-        style="
-          display: inline-block;
-          margin-top: 8px;
-          font-size: 10px;
-          color: #7c3aed;
-          text-decoration: none;
-        "
-        >Edit Certificate →</a
-      >
     </div>
     {% empty %}
     <p style="color: #6b7280; grid-column: 1 / -1">

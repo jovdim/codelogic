@@ -4,9 +4,16 @@ Serializers for game API.
 
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import Category, Topic, Question, QuizAttempt, UserProgress, LearningResource
+from .models import Category, Topic, Question, QuizAttempt, UserProgress, LearningResource, Lesson
 
 User = get_user_model()
+
+
+class LessonSerializer(serializers.ModelSerializer):
+    """Serializer for lesson slides shown before quiz questions."""
+    class Meta:
+        model = Lesson
+        fields = ['id', 'title', 'content', 'code_example', 'tip', 'order']
 
 
 class CategorySerializer(serializers.ModelSerializer):
