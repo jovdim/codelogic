@@ -350,7 +350,7 @@ class LeaderboardView(APIView):
     permission_classes = [AllowAny]
     
     def get(self, request):
-        limit = int(request.query_params.get('limit', 100))
+        limit = min(int(request.query_params.get('limit', 15)), 15)
         # Exclude staff and superusers from leaderboard
         users = User.objects.filter(
             is_active=True,
