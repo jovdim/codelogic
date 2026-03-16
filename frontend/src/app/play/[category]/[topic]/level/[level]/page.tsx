@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef, ReactNode } from "react";
+import confetti from "canvas-confetti";
 import { BookOpen, Lightbulb } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -342,8 +343,6 @@ export default function LevelQuizPage() {
       playSound("wrong");
       setHearts((prev) => Math.max(0, prev - 1));
       setHeartsLost((prev) => prev + 1);
-      // Play heart lost sound after a brief delay
-      setTimeout(() => playSound("heartLost"), 300);
     }
 
     // Sync with backend to deduct hearts in database
@@ -450,6 +449,30 @@ export default function LevelQuizPage() {
     if (showResult && totalQuestions > 0) {
       const passed = score / totalQuestions >= 0.5;
       playSound(passed ? "levelComplete" : "levelFailed");
+
+      if (passed) {
+        // Fire confetti burst from both sides
+        const end = Date.now() + 2000;
+        const colors = ["#a855f7", "#facc15", "#22d3ee", "#f472b6", "#34d399"];
+
+        (function frame() {
+          confetti({
+            particleCount: 3,
+            angle: 60,
+            spread: 55,
+            origin: { x: 0, y: 0.6 },
+            colors,
+          });
+          confetti({
+            particleCount: 3,
+            angle: 120,
+            spread: 55,
+            origin: { x: 1, y: 0.6 },
+            colors,
+          });
+          if (Date.now() < end) requestAnimationFrame(frame);
+        })();
+      }
     }
   }, [showResult]);
 
@@ -854,6 +877,7 @@ export default function LevelQuizPage() {
               return (
                 <button
                   key={index}
+                  data-no-click-sound
                   onClick={() => handleAnswer(index)}
                   disabled={isAnswered}
                   className={`w-full p-4 text-left rounded-lg border-2 transition-all duration-300 ease-out cursor-pointer transform hover:scale-[1.02] hover:shadow-lg animate-in slide-in-from-right-4 ${

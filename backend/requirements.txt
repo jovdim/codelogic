@@ -10,6 +10,9 @@ dj-database-url>=2.1.0
 # CORS
 django-cors-headers>=4.3.0
 
+# Debug Toolbar
+django-debug-toolbar>=4.2.0
+
 # Static files & Production
 whitenoise>=6.6.0
 gunicorn>=21.2.0

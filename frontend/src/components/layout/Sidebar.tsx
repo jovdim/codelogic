@@ -24,7 +24,10 @@ import {
   Play,
   Award,
   Clock,
+  Music,
+  VolumeX,
 } from "lucide-react";
+import { useBackgroundMusic } from "@/hooks/useBackgroundMusic";
 
 // Heart regeneration time in minutes (must match backend)
 const HEART_REGEN_MINUTES = 2;
@@ -55,6 +58,7 @@ export default function Sidebar({ children }: SidebarProps) {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const pathname = usePathname();
   const { user, logout, isAuthenticated, refreshUser } = useAuth();
+  const { isPlaying, toggle: toggleMusic } = useBackgroundMusic();
 
   // Close mobile menu on route change
   useEffect(() => {
@@ -190,12 +194,11 @@ export default function Sidebar({ children }: SidebarProps) {
           style={{ borderBottom: "1px solid var(--border-color)" }}
         >
           <Link href="/" className="flex items-center gap-3">
-            <div
-              className="w-10 h-10 flex items-center justify-center pixel-box shrink-0"
-              style={{ background: "var(--primary)" }}
-            >
-              <Code2 className="w-6 h-6 text-white" />
-            </div>
+            <img
+              src="/logo/codelogic-logo.svg"
+              alt="CodeLogic"
+              className="w-10 h-10 shrink-0"
+            />
             {!isCollapsed && (
               <span className="text-xl font-bold text-white">CodeLogic</span>
             )}
@@ -498,6 +501,42 @@ export default function Sidebar({ children }: SidebarProps) {
             </>
           )}
 
+          {/* Music Toggle */}
+          <button
+            onClick={toggleMusic}
+            className={`relative flex items-center gap-3 px-3 py-3 transition-all duration-300 w-full cursor-pointer hover:scale-[1.02]
+              ${isCollapsed ? "justify-center px-2" : ""}
+            `}
+            style={{
+              background: isPlaying ? "rgba(var(--primary-rgb), 0.2)" : "transparent",
+              borderLeft: isPlaying ? "4px solid var(--primary)" : "4px solid transparent",
+              color: isPlaying ? "var(--primary-light)" : "var(--muted)",
+            }}
+            title={isCollapsed ? (isPlaying ? "Pause Music" : "Play Music") : undefined}
+          >
+            <div
+              className="relative shrink-0"
+              style={{ animation: isPlaying ? "musicBounce 1.5s ease-in-out infinite" : "none" }}
+            >
+              {isPlaying ? (
+                <Music className="w-5 h-5" />
+              ) : (
+                <VolumeX className="w-5 h-5" />
+              )}
+              {isPlaying && (
+                <span
+                  className="absolute -top-1 -right-1 w-2 h-2 rounded-full animate-pulse"
+                  style={{ background: "var(--secondary)" }}
+                />
+              )}
+            </div>
+            {!isCollapsed && (
+              <span className="font-medium">
+                {isPlaying ? "Music On" : "Music Off"}
+              </span>
+            )}
+          </button>
+
           {/* Collapse Toggle */}
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
@@ -536,16 +575,32 @@ export default function Sidebar({ children }: SidebarProps) {
             href={isAuthenticated ? "/dashboard" : "/"}
             className="flex items-center gap-2"
           >
-            <div
-              className="w-8 h-8 flex items-center justify-center pixel-box"
-              style={{ background: "var(--primary)" }}
-            >
-              <Code2 className="w-5 h-5 text-white" />
-            </div>
+            <img
+              src="/logo/codelogic-logo.svg"
+              alt="CodeLogic"
+              className="w-8 h-8"
+            />
             <span className="font-bold text-white">CodeLogic</span>
           </Link>
           {isAuthenticated && user ? (
             <div className="flex items-center gap-2">
+              <button
+                onClick={toggleMusic}
+                className="relative w-9 h-9 pixel-box flex items-center justify-center transition-all duration-300 cursor-pointer"
+                style={{
+                  animation: isPlaying ? "musicBounce 1.5s ease-in-out infinite" : "none",
+                  borderColor: isPlaying ? "var(--primary)" : undefined,
+                }}
+              >
+                {isPlaying ? (
+                  <Music className="w-4 h-4" style={{ color: "var(--primary-light)" }} />
+                ) : (
+                  <VolumeX className="w-4 h-4" style={{ color: "var(--muted)" }} />
+                )}
+                {isPlaying && (
+                  <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full animate-pulse" style={{ background: "var(--secondary)" }} />
+                )}
+              </button>
               <div
                 className="w-8 h-8 rounded-lg overflow-hidden"
                 style={{ border: "2px solid rgba(var(--primary-rgb), 0.5)" }}

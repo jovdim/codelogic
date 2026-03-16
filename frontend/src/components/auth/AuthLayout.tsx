@@ -13,12 +13,11 @@ export function AuthLayout({ children, title, subtitle }: AuthLayoutProps) {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4 py-8">
       <Link href="/" className="flex items-center gap-2 mb-8">
-        <div
-          className="w-12 h-12 flex items-center justify-center pixel-box"
-          style={{ background: "var(--primary)" }}
-        >
-          <Code2 className="w-6 h-6 text-white" />
-        </div>
+        <img
+          src="/logo/codelogic-logo.svg"
+          alt="CodeLogic"
+          className="w-12 h-12"
+        />
         <div className="flex flex-col">
           <span className="text-2xl font-bold text-white tracking-tight">
             CodeLogic

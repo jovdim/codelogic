@@ -28,6 +28,8 @@ function findClickableParent(el: HTMLElement | null, maxDepth = 5): boolean {
   let current = el;
   let depth = 0;
   while (current && depth < maxDepth) {
+    // Skip elements that opt out of the global click sound
+    if (current.dataset.noClickSound !== undefined) return false;
     if (isClickable(current)) return true;
     current = current.parentElement;
     depth++;

@@ -77,12 +77,11 @@ export default function LoginOverlay({
 
         {/* Logo */}
         <div className="flex items-center justify-center gap-2 mb-6">
-          <div
-            className="w-12 h-12 flex items-center justify-center pixel-box"
-            style={{ background: "var(--primary)" }}
-          >
-            <Code2 className="w-6 h-6 text-white" />
-          </div>
+          <img
+            src="/logo/codelogic-logo.svg"
+            alt="CodeLogic"
+            className="w-12 h-12"
+          />
           <div className="flex flex-col">
             <span className="text-2xl font-bold text-white tracking-tight">
               CodeLogic

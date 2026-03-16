@@ -25,7 +25,7 @@ export const metadata: Metadata = {
   description:
     "A pixel-art gamified quiz platform for learning programming languages",
   icons: {
-    icon: "/logo/codelogic-logo.png",
+    icon: "/logo/codelogic-logo.svg",
   },
 };
 

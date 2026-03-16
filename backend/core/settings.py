@@ -17,6 +17,20 @@ DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
+# Debug Toolbar - allow all IPs in development
+if DEBUG:
+    INTERNAL_IPS = [
+        '127.0.0.1',
+        'localhost',
+        '0.0.0.0',
+    ]
+    # Show toolbar on all requests (including AJAX/API)
+    DEBUG_TOOLBAR_CONFIG = {
+        'SHOW_TOOLBAR_CALLBACK': lambda request: True,
+    }
+else:
+    INTERNAL_IPS = []
+
 # Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -31,6 +45,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
     'storages',
+    'debug_toolbar',
     # Local apps
     'accounts',
     'game',
@@ -40,6 +55,7 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -169,6 +185,9 @@ SIMPLE_JWT = {
 CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:3000,http://127.0.0.1:3000').split(',')
 
 CORS_ALLOW_CREDENTIALS = True
+
+# CSRF settings
+CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_TRUSTED_ORIGINS', 'http://localhost:3000,http://127.0.0.1:3000').split(',')
 
 
 

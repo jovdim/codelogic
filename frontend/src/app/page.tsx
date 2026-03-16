@@ -52,7 +52,10 @@ import {
   GraduationCap,
   BarChart3,
   Lightbulb,
+  Music,
+  VolumeX,
 } from "lucide-react";
+import { useBackgroundMusic } from "@/hooks/useBackgroundMusic";
 
 const demoQuestions = [
   {
@@ -494,6 +497,7 @@ function HeroQuiz({
 export default function Home() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { isPlaying, toggle: toggleMusic } = useBackgroundMusic();
   const [showLoginOverlay, setShowLoginOverlay] = useState(false);
   const [loginMessage, setLoginMessage] = useState("");
   const [quizKey, setQuizKey] = useState(0);
@@ -546,12 +550,11 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 group">
-            <div
-              className="w-10 h-10 flex items-center justify-center pixel-box group-hover:scale-105 transition-transform"
-              style={{ background: "var(--gradient-purple)" }}
-            >
-              <Code2 className="w-6 h-6 text-white" />
-            </div>
+            <img
+              src="/logo/codelogic-logo.svg"
+              alt="CodeLogic"
+              className="w-10 h-10 group-hover:scale-105 transition-transform"
+            />
             <div className="flex flex-col">
               <span className="text-xl font-bold text-white">CodeLogic</span>
               <span
@@ -586,6 +589,7 @@ export default function Home() {
                 style={{ background: "var(--card-bg)" }}
               />
             ) : isAuthenticated && user ? (
+              <>
               <Link
                 href="/dashboard"
                 className="flex items-center gap-3 px-4 py-2 rounded-lg transition-all group"
@@ -643,6 +647,29 @@ export default function Home() {
                   style={{ color: "var(--muted)" }}
                 />
               </Link>
+              {/* Music Toggle */}
+              <button
+                onClick={toggleMusic}
+                className="relative w-10 h-10 pixel-box flex items-center justify-center transition-all duration-300 hover:scale-110 cursor-pointer"
+                style={{
+                  animation: isPlaying ? "musicBounce 1.5s ease-in-out infinite" : "none",
+                  borderColor: isPlaying ? "var(--primary)" : undefined,
+                }}
+                title={isPlaying ? "Pause music" : "Play music"}
+              >
+                {isPlaying ? (
+                  <Music className="w-5 h-5" style={{ color: "var(--primary-light)" }} />
+                ) : (
+                  <VolumeX className="w-5 h-5" style={{ color: "var(--muted)" }} />
+                )}
+                {isPlaying && (
+                  <span
+                    className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full animate-pulse"
+                    style={{ background: "var(--secondary)" }}
+                  />
+                )}
+              </button>
+              </>
             ) : (
               <>
                 <Link
@@ -665,18 +692,37 @@ export default function Home() {
             )}
           </div>
 
-          {/* Mobile Menu Button */}
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 hover:text-white"
-            style={{ color: "var(--muted)" }}
-          >
-            {mobileMenuOpen ? (
-              <X className="w-6 h-6" />
-            ) : (
-              <Menu className="w-6 h-6" />
-            )}
-          </button>
+          {/* Mobile Menu + Music Toggle */}
+          <div className="md:hidden flex items-center gap-1">
+            <button
+              onClick={toggleMusic}
+              className="relative w-9 h-9 pixel-box flex items-center justify-center transition-all duration-300 cursor-pointer"
+              style={{
+                animation: isPlaying ? "musicBounce 1.5s ease-in-out infinite" : "none",
+                borderColor: isPlaying ? "var(--primary)" : undefined,
+              }}
+            >
+              {isPlaying ? (
+                <Music className="w-4 h-4" style={{ color: "var(--primary-light)" }} />
+              ) : (
+                <VolumeX className="w-4 h-4" style={{ color: "var(--muted)" }} />
+              )}
+              {isPlaying && (
+                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full animate-pulse" style={{ background: "var(--secondary)" }} />
+              )}
+            </button>
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="p-2 hover:text-white"
+              style={{ color: "var(--muted)" }}
+            >
+              {mobileMenuOpen ? (
+                <X className="w-6 h-6" />
+              ) : (
+                <Menu className="w-6 h-6" />
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Mobile Menu */}
@@ -1609,12 +1655,11 @@ export default function Home() {
               {/* Brand */}
               <div className="col-span-1 md:col-span-2">
                 <Link href="/" className="flex items-center gap-2 mb-4">
-                  <div
-                    className="w-10 h-10 flex items-center justify-center pixel-box"
-                    style={{ background: "var(--gradient-purple)" }}
-                  >
-                    <Code2 className="w-6 h-6 text-white" />
-                  </div>
+                  <img
+                    src="/logo/codelogic-logo.svg"
+                    alt="CodeLogic"
+                    className="w-10 h-10"
+                  />
                   <span className="text-xl font-bold text-white">
                     CodeLogic
                   </span>

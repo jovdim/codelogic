@@ -14,12 +14,11 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
           <div className="col-span-1 md:col-span-2">
             <Link href="/" className="flex items-center gap-2 mb-4">
-              <div
-                className="w-10 h-10 flex items-center justify-center pixel-box"
-                style={{ background: "var(--gradient-purple)" }}
-              >
-                <Code2 className="w-6 h-6 text-white" />
-              </div>
+              <img
+                src="/logo/codelogic-logo.svg"
+                alt="CodeLogic"
+                className="w-10 h-10"
+              />
               <span className="text-xl font-bold text-white">CodeLogic</span>
             </Link>
             <p className="text-sm max-w-xs" style={{ color: "var(--muted)" }}>
