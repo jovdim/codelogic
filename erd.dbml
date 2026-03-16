@@ -1,0 +1,172 @@
+// CodeLogic ERD - Paste this at https://dbdiagram.io
+
+Table users {
+  id uuid [pk]
+  email varchar(255) [unique, not null]
+  username varchar(50) [unique, not null]
+  password varchar [not null]
+  display_name varchar(100)
+  last_display_name_change datetime
+  avatar int [default: 1, note: '1-5 preset avatars']
+  bio text
+  is_active boolean [default: true]
+  is_staff boolean [default: false]
+  is_email_verified boolean [default: false]
+  date_joined datetime
+  last_active datetime
+  xp int [default: 0]
+  level int [default: 1]
+  max_hearts int [default: 10]
+  current_hearts int [default: 10]
+  last_heart_update datetime
+  current_streak int [default: 0]
+  longest_streak int [default: 0]
+  last_activity_date date
+}
+
+Table email_verification_tokens {
+  id uuid [pk]
+  user_id uuid [not null, ref: > users.id]
+  token varchar(64) [unique, not null]
+  created_at datetime
+  expires_at datetime
+  is_used boolean [default: false]
+}
+
+Table password_reset_tokens {
+  id uuid [pk]
+  user_id uuid [not null, ref: > users.id]
+  token varchar(64) [unique, not null]
+  created_at datetime
+  expires_at datetime
+  is_used boolean [default: false]
+}
+
+Table categories {
+  id uuid [pk]
+  name varchar(100) [unique, not null]
+  slug varchar(100) [unique, not null]
+  description text
+  icon_file varchar
+  color varchar(7) [default: '#7c3aed']
+  order int [default: 0]
+  is_active boolean [default: true]
+}
+
+Table topics {
+  id uuid [pk]
+  category_id uuid [not null, ref: > categories.id]
+  name varchar(100) [not null]
+  slug varchar(100) [not null]
+  description text
+  icon_file varchar
+  order int [default: 0]
+  total_levels int [default: 15]
+  is_active boolean [default: true]
+
+  indexes {
+    (category_id, slug) [unique]
+  }
+}
+
+Table questions {
+  id uuid [pk]
+  topic_id uuid [not null, ref: > topics.id]
+  level int [default: 1]
+  question_type varchar(20) [not null, note: 'multiple-choice, find-error, fill-blank, output']
+  question_text text [not null]
+  code_snippet text
+  options json
+  correct_answer int [default: 0]
+  explanation text
+  highlight_line int
+  xp_reward int [default: 10]
+  order int [default: 0]
+  is_active boolean [default: true]
+}
+
+Table lessons {
+  id uuid [pk]
+  topic_id uuid [not null, ref: > topics.id]
+  level int [default: 1]
+  title varchar(200) [not null]
+  content text [not null]
+  code_example text
+  tip text
+  order int [default: 0]
+  is_active boolean [default: true]
+}
+
+Table user_progress {
+  id uuid [pk]
+  user_id uuid [not null, ref: > users.id]
+  topic_id uuid [not null, ref: > topics.id]
+  current_level int [default: 1]
+  highest_level_completed int [default: 0]
+  total_xp_earned int [default: 0]
+  total_questions_answered int [default: 0]
+  correct_answers int [default: 0]
+  last_played datetime
+
+  indexes {
+    (user_id, topic_id) [unique]
+  }
+}
+
+Table quiz_attempts {
+  id uuid [pk]
+  user_id uuid [not null, ref: > users.id]
+  topic_id uuid [not null, ref: > topics.id]
+  level int [not null]
+  score int [default: 0]
+  total_questions int [default: 0]
+  xp_earned int [default: 0]
+  hearts_lost int [default: 0]
+  completed boolean [default: false]
+  passed boolean [default: false]
+  started_at datetime
+  completed_at datetime
+}
+
+Table learning_resources {
+  id uuid [pk]
+  title varchar(200) [not null]
+  slug varchar(200) [unique, not null]
+  description text [not null]
+  category varchar(50) [note: 'web-development, programming, data, mobile, devops, other']
+  language varchar(50)
+  difficulty varchar(20) [note: 'beginner, intermediate, advanced']
+  pdf_file varchar [not null]
+  thumbnail varchar
+  pages int [default: 1]
+  read_time varchar(50)
+  views int [default: 0]
+  is_active boolean [default: true]
+  is_featured boolean [default: false]
+  created_at datetime
+  updated_at datetime
+}
+
+Table certificates {
+  id uuid [pk]
+  topic_id uuid [unique, not null, ref: - topics.id]
+  title varchar(200)
+  description text
+  icon_file varchar
+  created_at datetime
+  updated_at datetime
+}
+
+Table user_certificates {
+  id uuid [pk]
+  user_id uuid [not null, ref: > users.id]
+  certificate_id uuid [not null, ref: > certificates.id]
+  total_stars int [default: 0]
+  total_xp_earned int [default: 0]
+  completion_date datetime
+  certificate_code varchar(20) [unique, not null]
+
+  indexes {
+    (user_id, certificate_id) [unique]
+  }
+}
