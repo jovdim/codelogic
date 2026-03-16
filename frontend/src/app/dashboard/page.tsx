@@ -316,7 +316,7 @@ export default function DashboardPage() {
                     <div className="flex items-center gap-4">
                       {/* Avatar/Level Badge */}
                       <div className="relative">
-                        <div className="w-20 h-20 rounded-xl overflow-hidden shadow-lg shadow-purple-500/25 border-2 border-purple-500/50">
+                        <div className="w-20 h-20 rounded-xl overflow-hidden border-2 border-purple-500/50">
                           <img
                             src={`/avatars/avatar-${user.avatar || 1}.png`}
                             alt="Avatar"
@@ -419,7 +419,7 @@ export default function DashboardPage() {
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 bg-cyan-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg ">
+                    <div className="w-16 h-16 bg-cyan-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
                       <Gamepad2 className="w-8 h-8 text-white" />
                     </div>
                     <div>

@@ -329,7 +329,7 @@ function HeroQuiz({
   if (isComplete) {
     return (
       <div className="text-center py-8">
-        <div className="w-20 h-20 bg-gradient-to-br from-yellow-400 to-orange-500 mx-auto mb-4 rounded-2xl flex items-center justify-center shadow-lg shadow-orange-500/30">
+        <div className="w-20 h-20 bg-gradient-to-br from-yellow-400 to-orange-500 mx-auto mb-4 rounded-2xl flex items-center justify-center ">
           <Trophy className="w-10 h-10 text-white" />
         </div>
         <h3 className="text-2xl font-bold text-white mb-2">Awesome!</h3>
@@ -863,10 +863,9 @@ export default function Home() {
                   <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 sm:gap-4 pt-2">
                     <Link
                       href={isAuthenticated ? "/dashboard" : "/register"}
-                      className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 text-white font-bold text-base sm:text-lg rounded-xl transition-all flex items-center justify-center gap-2 sm:gap-3 group shadow-2xl hover:scale-105 hover:shadow-purple-500/30"
+                      className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 text-white font-bold text-base sm:text-lg rounded-xl transition-all flex items-center justify-center gap-2 sm:gap-3 group hover:scale-105"
                       style={{
                         background: "var(--primary)",
-                        boxShadow: "0 15px 50px rgba(var(--primary-rgb), 0.4)",
                       }}
                     >
                       <Play className="w-5 h-5" />
@@ -1440,7 +1439,6 @@ export default function Home() {
                 className="inline-flex items-center gap-2 px-8 py-4 text-white font-bold rounded-xl transition-all group hover:scale-105"
                 style={{
                   background: "var(--gradient-purple)",
-                  boxShadow: "0 10px 40px rgba(124, 58, 237, 0.3)",
                 }}
               >
                 <Gamepad2 className="w-5 h-5" />
@@ -1597,7 +1595,6 @@ export default function Home() {
               className="w-16 h-16 mx-auto mb-6 rounded-2xl flex items-center justify-center"
               style={{
                 background: "var(--primary)",
-                boxShadow: "0 8px 32px rgba(var(--primary-rgb), 0.3)",
               }}
             >
               <Rocket className="w-8 h-8 text-white" />
@@ -1624,7 +1621,6 @@ export default function Home() {
                 className="w-full sm:w-auto px-8 py-4 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 group hover:scale-105"
                 style={{
                   background: "var(--primary)",
-                  boxShadow: "0 4px 20px rgba(var(--primary-rgb), 0.4)",
                 }}
               >
                 <Gamepad2 className="w-5 h-5" />

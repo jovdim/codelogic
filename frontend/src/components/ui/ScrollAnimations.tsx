@@ -401,7 +401,6 @@ export function ScrollToTop() {
       className="fixed bottom-6 right-6 z-50 w-12 h-12 text-white rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110"
       style={{
         background: "var(--primary)",
-        boxShadow: "0 10px 25px rgba(var(--primary-rgb), 0.3)",
       }}
       aria-label="Scroll to top"
     >
