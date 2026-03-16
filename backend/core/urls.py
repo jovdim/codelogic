@@ -28,14 +28,14 @@ def admin_dashboard(request):
     
     context = {
         'title': 'Dashboard',
-        'total_users': User.objects.count(),
+        'total_users': User.objects.filter(is_email_verified=True).count(),
         'total_categories': Category.objects.count(),
         'total_topics': Topic.objects.count(),
         'total_questions': Question.objects.count(),
         'total_resources': LearningResource.objects.count(),
         'total_certificates': Certificate.objects.count(),
         'total_awarded': UserCertificate.objects.count(),
-        'recent_users': User.objects.order_by('-date_joined')[:5],
+        'recent_users': User.objects.filter(is_email_verified=True).order_by('-date_joined')[:5],
         'categories_with_topics': categories_with_topics,
         'certificates': certificates,
         'recent_certificates': UserCertificate.objects.select_related('user', 'certificate__topic').order_by('-completion_date')[:5],

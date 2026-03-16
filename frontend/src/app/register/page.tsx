@@ -26,6 +26,7 @@ export default function RegisterPage() {
 
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
+  const [resendCooldown, setResendCooldown] = useState(0);
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -41,6 +42,13 @@ export default function RegisterPage() {
   const [emailAvailable, setEmailAvailable] = useState<boolean | null>(null);
   const [checkingUsername, setCheckingUsername] = useState(false);
   const [checkingEmail, setCheckingEmail] = useState(false);
+
+  // Resend cooldown timer
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [resendCooldown]);
 
   // Password requirements
   const passwordRequirements = [
@@ -158,17 +166,20 @@ export default function RegisterPage() {
               Did not receive the email? Check your spam folder or{" "}
               <button
                 onClick={async () => {
+                  if (resendCooldown > 0) return;
                   try {
                     await authAPI.resendVerification(email);
                     alert("Verification email resent!");
+                    setResendCooldown(60);
                   } catch {
                     alert("Failed to resend email. Please try again.");
                   }
                 }}
-                className="underline hover:opacity-80"
+                disabled={resendCooldown > 0}
+                className={`underline ${resendCooldown > 0 ? "opacity-50 cursor-not-allowed" : "hover:opacity-80"}`}
                 style={{ color: "var(--primary-light)" }}
               >
-                resend it
+                {resendCooldown > 0 ? `resend in ${resendCooldown}s` : "resend it"}
               </button>
             </p>
             <Link href="/login" className="btn-secondary inline-block mt-4">

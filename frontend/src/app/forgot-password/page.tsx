@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import { PublicRoute } from "@/components/auth/RouteGuards";
@@ -12,6 +12,13 @@ export default function ForgotPasswordPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setTimeout(() => setCooldown(cooldown - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [cooldown]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,6 +28,7 @@ export default function ForgotPasswordPage() {
     try {
       await authAPI.requestPasswordReset(email);
       setSuccess(true);
+      setCooldown(60);
     } catch {
       setError("An error occurred. Please try again.");
     } finally {
@@ -97,7 +105,7 @@ export default function ForgotPasswordPage() {
 
           <button
             type="submit"
-            disabled={isLoading}
+            disabled={isLoading || cooldown > 0}
             className="btn-primary w-full flex items-center justify-center gap-2"
           >
             {isLoading ? (
@@ -105,6 +113,8 @@ export default function ForgotPasswordPage() {
                 <Loader2 className="w-5 h-5 animate-spin" />
                 Sending...
               </>
+            ) : cooldown > 0 ? (
+              `Send again in ${cooldown}s`
             ) : (
               "Send Reset Link"
             )}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
@@ -21,6 +21,13 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [showResendVerification, setShowResendVerification] = useState(false);
   const [resendMessage, setResendMessage] = useState("");
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [resendCooldown]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,10 +56,12 @@ export default function LoginPage() {
   };
 
   const handleResendVerification = async () => {
+    if (resendCooldown > 0) return;
     try {
       await authAPI.resendVerification(email);
       setResendMessage("Verification email sent! Please check your inbox.");
       setShowResendVerification(false);
+      setResendCooldown(60);
     } catch {
       setResendMessage("Failed to send verification email. Please try again.");
     }
@@ -74,10 +83,11 @@ export default function LoginPage() {
                   <button
                     type="button"
                     onClick={handleResendVerification}
-                    className="underline mt-1 text-sm hover:opacity-80"
+                    disabled={resendCooldown > 0}
+                    className={`underline mt-1 text-sm ${resendCooldown > 0 ? "opacity-50 cursor-not-allowed" : "hover:opacity-80"}`}
                     style={{ color: "var(--primary-light)" }}
                   >
-                    Resend verification email
+                    {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend verification email"}
                   </button>
                 )}
               </div>

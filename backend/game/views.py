@@ -354,6 +354,7 @@ class LeaderboardView(APIView):
         # Exclude staff and superusers from leaderboard
         users = User.objects.filter(
             is_active=True,
+            is_email_verified=True,
             is_staff=False,
             is_superuser=False
         ).order_by('-xp', '-current_streak')[:limit]
