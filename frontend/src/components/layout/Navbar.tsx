@@ -97,7 +97,6 @@ export default function Navbar({ children }: NavbarProps) {
                 style={{ background: "var(--card-bg)" }}
               />
             ) : isAuthenticated && user ? (
-              <>
               <Link
                 href="/dashboard"
                 className="flex items-center gap-3 px-4 py-2 rounded-lg transition-all group"
@@ -159,29 +158,6 @@ export default function Navbar({ children }: NavbarProps) {
                   style={{ color: "var(--muted)" }}
                 />
               </Link>
-              {/* Music Toggle */}
-              <button
-                onClick={toggleMusic}
-                className="relative w-10 h-10 pixel-box flex items-center justify-center transition-all duration-300 hover:scale-110 cursor-pointer"
-                style={{
-                  animation: isPlaying ? "musicBounce 1.5s ease-in-out infinite" : "none",
-                  borderColor: isPlaying ? "var(--primary)" : undefined,
-                }}
-                title={isPlaying ? "Pause music" : "Play music"}
-              >
-                {isPlaying ? (
-                  <Music className="w-5 h-5" style={{ color: "var(--primary-light)" }} />
-                ) : (
-                  <VolumeX className="w-5 h-5" style={{ color: "var(--muted)" }} />
-                )}
-                {isPlaying && (
-                  <span
-                    className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full animate-pulse"
-                    style={{ background: "var(--secondary)" }}
-                  />
-                )}
-              </button>
-              </>
             ) : (
               <>
                 <Link
@@ -201,6 +177,28 @@ export default function Navbar({ children }: NavbarProps) {
                 </Link>
               </>
             )}
+            {/* Music Toggle - always visible */}
+            <button
+              onClick={toggleMusic}
+              className="relative w-10 h-10 pixel-box flex items-center justify-center transition-all duration-300 hover:scale-110 cursor-pointer"
+              style={{
+                animation: isPlaying ? "musicBounce 1.5s ease-in-out infinite" : "none",
+                borderColor: isPlaying ? "var(--primary)" : undefined,
+              }}
+              title={isPlaying ? "Pause music" : "Play music"}
+            >
+              {isPlaying ? (
+                <Music className="w-5 h-5" style={{ color: "var(--primary-light)" }} />
+              ) : (
+                <VolumeX className="w-5 h-5" style={{ color: "var(--muted)" }} />
+              )}
+              {isPlaying && (
+                <span
+                  className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full animate-pulse"
+                  style={{ background: "var(--secondary)" }}
+                />
+              )}
+            </button>
           </div>
 
           {/* Mobile Music Toggle + Menu Button */}
