@@ -2,7 +2,7 @@
 
 A pixel-art styled gamified quiz platform for learning programming concepts.
 
-## 🎮 Features
+## Features
 
 - **Interactive Quizzes**: Multiple choice, find the error, what's the output, fill-in-the-blank
 - **Gamification**: XP system, levels, streaks, hearts/lives
@@ -11,7 +11,7 @@ A pixel-art styled gamified quiz platform for learning programming concepts.
 - **Learning Resources**: PDF guides and tutorials
 - **User Profiles**: Customizable avatars, display names
 
-## 🛠 Tech Stack
+## Tech Stack
 
 **Frontend:**
 
@@ -27,7 +27,7 @@ A pixel-art styled gamified quiz platform for learning programming concepts.
 - PostgreSQL
 - JWT Authentication
 
-## 🚀 Deployment
+## Deployment
 
 See [DEPLOYMENT.md](./DEPLOYMENT.md) for full deployment instructions.
 
@@ -38,7 +38,7 @@ See [DEPLOYMENT.md](./DEPLOYMENT.md) for full deployment instructions.
 - Database: Digital Ocean Managed PostgreSQL
 - Email: Gmail SMTP
 
-## 💻 Local Development
+## Local Development
 
 ### Backend Setup
 
@@ -69,7 +69,7 @@ npm run dev
 - Backend API: http://localhost:8000/api
 - Admin: http://localhost:8000/admin
 
-## 📝 Environment Variables
+## Environment Variables
 
 ### Backend
 
@@ -90,6 +90,6 @@ npm run dev
 | --------------------- | --------------- |
 | `NEXT_PUBLIC_API_URL` | Backend API URL |
 
-## 📄 License
+## License
 
 MIT License
