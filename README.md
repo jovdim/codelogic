@@ -90,6 +90,3 @@ npm run dev
 | --------------------- | --------------- |
 | `NEXT_PUBLIC_API_URL` | Backend API URL |
 
-## License
-
-MIT License
