@@ -27,42 +27,55 @@ import {
   Palette,
   Database,
   Layout,
-  Linkedin,
-  Github,
-  Twitter,
+  Facebook,
 } from "lucide-react";
 
 export default function AboutPage() {
   const team = [
     {
       name: "Ayes, Kevin Jones R.",
-      role: "UX/UI Designer",
+      role: "Full Stack Developer",
       image: "/team/team-1.jpg",
-      socials: { linkedin: "#", twitter: "#" },
+      socials: {
+        email: "kvinayes@gmail.com",
+        facebook: "https://www.facebook.com/kevin.183136",
+      },
     },
     {
       name: "Cantoria, Hanna Hazel",
       role: "Documentation lead",
       image: "/team/team-2.jpg",
-      socials: { linkedin: "#", twitter: "#" },
+      socials: {
+        email: "hannacantoria35@gmail.com",
+        facebook: "https://www.facebook.com/me.hannahhh",
+      },
     },
     {
       name: "Arceo, Geris Aisen D.",
-      role: "Quality Assurance  ",
+      role: "Quality Assurance",
       image: "/team/team-3.jpg",
-      socials: { linkedin: "#", github: "#", twitter: "#" },
+      socials: {
+        email: "arceogerisaisen@gmail.com",
+        facebook: "https://www.facebook.com/geris.arceo",
+      },
     },
     {
       name: "Cabero, Marc Gemmerson D.",
-      role: "Full Stack Developer",
+      role: "UX/UI Designer",
       image: "/team/team-4.jpg",
-      socials: { linkedin: "#", github: "#" },
+      socials: {
+        email: "marccabero08@gmail.com",
+        facebook: "https://www.facebook.com/marc.cabero.3",
+      },
     },
     {
       name: "Sierra, Ejay D.",
       role: "Research Lead",
       image: "/team/team-5.jpg",
-      socials: { linkedin: "#", twitter: "#" },
+      socials: {
+        email: "ejaysierra711@gmail.com",
+        facebook: "https://www.facebook.com/ejay.sierra.17",
+      },
     },
   ];
 
@@ -234,31 +247,29 @@ export default function AboutPage() {
 
                       {/* Social Links - pushed to bottom */}
                       <div className="flex items-center gap-2 mt-auto">
-                        {member.socials.linkedin && (
+                        {member.socials.email && (
                           <a
-                            href={member.socials.linkedin}
+                            href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(member.socials.email)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label={`Email ${member.name}`}
+                            title={member.socials.email}
                             className="w-9 h-9 rounded-lg flex items-center justify-center text-gray-400 hover:text-purple-400 hover:bg-purple-500/10 transition-all"
                             style={{ background: "rgba(255,255,255,0.05)" }}
                           >
-                            <Linkedin className="w-4 h-4" />
+                            <Mail className="w-4 h-4" />
                           </a>
                         )}
-                        {member.socials.github && (
+                        {member.socials.facebook && (
                           <a
-                            href={member.socials.github}
+                            href={member.socials.facebook}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label={`${member.name} on Facebook`}
                             className="w-9 h-9 rounded-lg flex items-center justify-center text-gray-400 hover:text-purple-400 hover:bg-purple-500/10 transition-all"
                             style={{ background: "rgba(255,255,255,0.05)" }}
                           >
-                            <Github className="w-4 h-4" />
-                          </a>
-                        )}
-                        {member.socials.twitter && (
-                          <a
-                            href={member.socials.twitter}
-                            className="w-9 h-9 rounded-lg flex items-center justify-center text-gray-400 hover:text-purple-400 hover:bg-purple-500/10 transition-all"
-                            style={{ background: "rgba(255,255,255,0.05)" }}
-                          >
-                            <Twitter className="w-4 h-4" />
+                            <Facebook className="w-4 h-4" />
                           </a>
                         )}
                       </div>
@@ -309,31 +320,29 @@ export default function AboutPage() {
 
                       {/* Social Links - pushed to bottom */}
                       <div className="flex items-center gap-2 mt-auto">
-                        {member.socials.linkedin && (
+                        {member.socials.email && (
                           <a
-                            href={member.socials.linkedin}
+                            href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(member.socials.email)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label={`Email ${member.name}`}
+                            title={member.socials.email}
                             className="w-9 h-9 rounded-lg flex items-center justify-center text-gray-400 hover:text-purple-400 hover:bg-purple-500/10 transition-all"
                             style={{ background: "rgba(255,255,255,0.05)" }}
                           >
-                            <Linkedin className="w-4 h-4" />
+                            <Mail className="w-4 h-4" />
                           </a>
                         )}
-                        {member.socials.github && (
+                        {member.socials.facebook && (
                           <a
-                            href={member.socials.github}
+                            href={member.socials.facebook}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label={`${member.name} on Facebook`}
                             className="w-9 h-9 rounded-lg flex items-center justify-center text-gray-400 hover:text-purple-400 hover:bg-purple-500/10 transition-all"
                             style={{ background: "rgba(255,255,255,0.05)" }}
                           >
-                            <Github className="w-4 h-4" />
-                          </a>
-                        )}
-                        {member.socials.twitter && (
-                          <a
-                            href={member.socials.twitter}
-                            className="w-9 h-9 rounded-lg flex items-center justify-center text-gray-400 hover:text-purple-400 hover:bg-purple-500/10 transition-all"
-                            style={{ background: "rgba(255,255,255,0.05)" }}
-                          >
-                            <Twitter className="w-4 h-4" />
+                            <Facebook className="w-4 h-4" />
                           </a>
                         )}
                       </div>
