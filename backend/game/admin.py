@@ -11,8 +11,109 @@ from django.db.models import Count, Avg
 from django.contrib import messages
 from django import forms
 
-from .models import Category, Topic, Question, LearningResource, Certificate, UserCertificate, Lesson
+import base64
+
+from .models import Category, Topic, Question, LearningResource, Certificate, UserCertificate, Lesson, QuizAttempt
 from .models_settings import SiteSettings
+
+
+# ============================================================
+# Helpers
+# ============================================================
+
+def _photo_thumbnail(photo_bytes, size_px=64):
+    """
+    Render an inline thumbnail of a verification photo for the admin.
+    Bytes are JPEG; we embed them as a data URI so no extra request is needed.
+    """
+    if not photo_bytes:
+        return format_html('<span style="color:#9ca3af">no photo</span>')
+    b64 = base64.b64encode(bytes(photo_bytes)).decode('ascii')
+    return format_html(
+        '<img src="data:image/jpeg;base64,{}" '
+        'style="width:{}px;height:{}px;object-fit:cover;border-radius:6px;'
+        'transform:scaleX(-1);box-shadow:0 1px 3px rgba(0,0,0,0.2)" />',
+        b64, size_px, size_px,
+    )
+
+
+# ============================================================
+# QUIZ ATTEMPT ADMIN - browse all attempts + their face photos
+# ============================================================
+
+@admin.register(QuizAttempt)
+class QuizAttemptAdmin(admin.ModelAdmin):
+    list_display = ['photo_thumb', 'user', 'topic', 'level', 'score_display', 'stars', 'completed', 'verification_captured_at']
+    list_select_related = ['user', 'topic', 'topic__category']
+    list_filter = ['completed', 'passed', 'topic__category', 'level']
+    search_fields = ['user__email', 'user__username', 'topic__name']
+    ordering = ['-verification_captured_at', '-started_at']
+    list_per_page = 30
+    readonly_fields = [
+        'id', 'user', 'topic', 'level',
+        'score', 'total_questions', 'stars', 'xp_earned', 'hearts_lost',
+        'completed', 'passed', 'started_at', 'completed_at',
+        'verification_captured_at', 'photo_full',
+    ]
+    fields = readonly_fields  # everything is read-only; nothing to edit
+
+    def photo_thumb(self, obj):
+        return _photo_thumbnail(obj.verification_photo, size_px=56)
+    photo_thumb.short_description = 'Photo'
+
+    def photo_full(self, obj):
+        return _photo_thumbnail(obj.verification_photo, size_px=240)
+    photo_full.short_description = 'Verification photo'
+
+    def score_display(self, obj):
+        if not obj.completed:
+            return format_html('<span style="color:#9ca3af">in progress</span>')
+        return f'{obj.score}/{obj.total_questions}'
+    score_display.short_description = 'Score'
+
+    def has_add_permission(self, request):
+        return False  # attempts are created by the quiz flow only
+
+    def has_change_permission(self, request, obj=None):
+        return False  # never editable
+
+    def has_delete_permission(self, request, obj=None):
+        # Allow delete in case staff needs to wipe a sensitive photo manually.
+        return super().has_delete_permission(request, obj)
+
+
+class QuizAttemptInline(admin.TabularInline):
+    """
+    Read-only inline of a user's recent quiz attempts, shown on the User
+    admin detail page. Each row includes the verification photo thumbnail
+    so you can scan a user's history at a glance.
+    """
+    model = QuizAttempt
+    fk_name = 'user'
+    extra = 0
+    can_delete = False
+    show_change_link = True
+    verbose_name_plural = 'Recent quiz attempts (with verification photos)'
+    fields = ['photo_thumb', 'topic', 'level', 'score_display', 'stars', 'completed', 'verification_captured_at']
+    readonly_fields = fields
+    ordering = ['-verification_captured_at', '-started_at']
+
+    def photo_thumb(self, obj):
+        return _photo_thumbnail(obj.verification_photo, size_px=56)
+    photo_thumb.short_description = 'Photo'
+
+    def score_display(self, obj):
+        if not obj.completed:
+            return format_html('<span style="color:#9ca3af">in progress</span>')
+        return f'{obj.score}/{obj.total_questions}'
+    score_display.short_description = 'Score'
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request).select_related('topic')
+        return qs.order_by('-verification_captured_at', '-started_at')
 
 
 # ============================================================

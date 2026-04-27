@@ -145,10 +145,6 @@ export const gameAPI = {
     );
   },
 
-  // Admin: list verification photos for review
-  adminListVerifications: (page = 1) =>
-    api.get(`/game/admin/verifications/?page=${page}`),
-
   // Submit an answer
   submitAnswer: (data: {
     question_id: string;

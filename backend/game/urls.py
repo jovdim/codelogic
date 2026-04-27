@@ -26,7 +26,4 @@ urlpatterns = [
     path('resources/', views.LearningResourceListView.as_view(), name='resource-list'),
     path('resources/<slug:slug>/', views.LearningResourceDetailView.as_view(), name='resource-detail'),
 
-    # Admin face-verification review
-    path('admin/verifications/', views.AdminVerificationListView.as_view(), name='admin-verification-list'),
-    path('admin/verifications/<uuid:attempt_id>/photo/', views.AdminVerificationPhotoView.as_view(), name='admin-verification-photo'),
 ]

@@ -5,11 +5,9 @@ Views for game API - quizzes, progress, hearts/XP management.
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.parsers import MultiPartParser, FormParser
 from django.contrib.auth import get_user_model
-from django.http import HttpResponse, Http404
-import base64
 from django.utils import timezone
 from django.db.models import F, Q, Count, Sum
 from django.db.models.functions import Coalesce
@@ -760,69 +758,3 @@ class LearningResourceDetailView(APIView):
         return Response(serializer.data)
 
 
-# ---------------------------------------------------------------------------
-# Admin face-verification review
-# ---------------------------------------------------------------------------
-
-class AdminVerificationListView(APIView):
-    """
-    Paginated list of quiz attempts that have a verification photo on file.
-    Used by the staff "Quiz Photos" review page to spot impostors.
-    """
-    permission_classes = [IsAdminUser]
-    PAGE_SIZE = 30
-
-    def get(self, request):
-        try:
-            page = max(1, int(request.query_params.get('page', 1)))
-        except (TypeError, ValueError):
-            page = 1
-
-        qs = (QuizAttempt.objects
-              .exclude(verification_photo__isnull=True)
-              .select_related('user', 'topic', 'topic__category')
-              .order_by('-verification_captured_at'))
-
-        total = qs.count()
-        start = (page - 1) * self.PAGE_SIZE
-        rows = qs[start:start + self.PAGE_SIZE]
-
-        items = [{
-            'attempt_id': str(a.id),
-            'user_id': a.user_id,
-            'user_email': a.user.email,
-            'user_username': a.user.username,
-            'topic': a.topic.name,
-            'category': a.topic.category.name,
-            'level': a.level,
-            'score': a.score,
-            'total_questions': a.total_questions,
-            'stars': a.stars,
-            'completed': a.completed,
-            'captured_at': a.verification_captured_at.isoformat() if a.verification_captured_at else None,
-            'photo_url': request.build_absolute_uri(f'/api/game/admin/verifications/{a.id}/photo/'),
-        } for a in rows]
-
-        return Response({
-            'page': page,
-            'page_size': self.PAGE_SIZE,
-            'total': total,
-            'has_next': start + self.PAGE_SIZE < total,
-            'items': items,
-        })
-
-
-class AdminVerificationPhotoView(APIView):
-    """Serve the raw JPEG bytes of a single attempt's verification photo."""
-    permission_classes = [IsAdminUser]
-
-    def get(self, request, attempt_id):
-        try:
-            attempt = QuizAttempt.objects.only('verification_photo').get(pk=attempt_id)
-        except QuizAttempt.DoesNotExist:
-            raise Http404
-        photo = attempt.verification_photo
-        if not photo:
-            raise Http404
-        # BinaryField returns memoryview on Postgres; coerce to bytes.
-        return HttpResponse(bytes(photo), content_type='image/jpeg')

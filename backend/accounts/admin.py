@@ -9,6 +9,7 @@ from django.utils.html import format_html
 from django.contrib import messages
 from django.db.models import Sum
 from .models import User
+from game.admin import QuizAttemptInline
 
 
 # ============================================================
@@ -58,7 +59,9 @@ class UserAdmin(BaseUserAdmin):
     )
     
     readonly_fields = ['date_joined', 'last_active']
-    
+
+    inlines = [QuizAttemptInline]
+
     def level_badge(self, obj):
         colors = {
             1: '#6b7280', 2: '#6b7280', 3: '#22c55e', 4: '#22c55e', 5: '#22c55e',

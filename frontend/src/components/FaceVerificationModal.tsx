@@ -3,30 +3,33 @@
 /**
  * Face-verification modal.
  *
- * Flow: opens camera → shows oval guide → tinyFaceDetector runs ~10fps →
+ * Flow: opens camera -> shows oval guide -> tinyFaceDetector runs ~10fps ->
  * once exactly one face is detected centered in the oval and stable for ~1s,
  * we auto-snap a JPEG and hand it to onCaptured. 30s timer; on expiry the
- * camera stays armed and the timer resets (no permission re-prompt). User
- * can cancel anytime.
+ * camera stays armed and the timer resets (no permission re-prompt).
  *
- * No matching, no enrollment — capture-only. The bytes go straight to the
- * quiz-start endpoint, which stores them on the QuizAttempt for later
- * admin review.
+ * Tab-visibility: if the user switches tabs / minimizes / locks the screen,
+ * we release the camera and call onCancel. Stops them parking the camera
+ * while they look up answers in another tab.
+ *
+ * No matching, no enrollment - capture-only. The bytes go to the quiz-start
+ * endpoint, which stores them on the QuizAttempt for admin review.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as faceapi from "@vladmandic/face-api";
+import { X } from "lucide-react";
 
 type Phase =
-  | "loading"        // models / camera not ready yet
-  | "permission"     // waiting on getUserMedia prompt
-  | "denied"         // user said no, or no webcam
-  | "searching"      // camera live, no face yet
-  | "multiple"       // >1 face in frame
-  | "not_centered"   // 1 face, but outside the oval
-  | "centered"       // 1 face inside oval, accumulating stability
-  | "captured"       // snapped — modal will close
-  | "error";         // misc fatal error
+  | "loading"
+  | "permission"
+  | "denied"
+  | "searching"
+  | "multiple"
+  | "not_centered"
+  | "centered"
+  | "captured"
+  | "error";
 
 type Props = {
   open: boolean;
@@ -35,18 +38,13 @@ type Props = {
 };
 
 const TIMER_SECONDS = 30;
-// Hold the centered state this long before snapping. Stops blurry mid-motion.
 const STABILITY_MS = 1000;
-// Detector cadence. 10fps is plenty smooth and cheap.
 const DETECT_INTERVAL_MS = 100;
-// JPEG quality on capture — 0.85 strikes a balance between size and clarity.
 const CAPTURE_QUALITY = 0.85;
-// Downscale long edge before encoding so the upload stays under ~100KB.
 const CAPTURE_MAX_EDGE = 640;
 
 export default function FaceVerificationModal({ open, onCaptured, onCancel }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const detectTimerRef = useRef<number | null>(null);
   const stableSinceRef = useRef<number | null>(null);
@@ -55,16 +53,29 @@ export default function FaceVerificationModal({ open, onCaptured, onCancel }: Pr
   const [phase, setPhase] = useState<Phase>("loading");
   const [secondsLeft, setSecondsLeft] = useState(TIMER_SECONDS);
 
-  // Keep phaseRef in sync so the detect loop can read current phase without re-binding.
   useEffect(() => {
     phaseRef.current = phase;
   }, [phase]);
 
-  // ---- model + camera bring-up ----
+  const stop = useCallback(() => {
+    if (detectTimerRef.current !== null) {
+      window.clearInterval(detectTimerRef.current);
+      detectTimerRef.current = null;
+    }
+    const stream = streamRef.current;
+    if (stream) {
+      stream.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    stableSinceRef.current = null;
+  }, []);
+
   const start = useCallback(async () => {
     setPhase("loading");
     try {
-      // Models load once, then cached by the browser.
       if (!faceapi.nets.tinyFaceDetector.params) {
         await faceapi.nets.tinyFaceDetector.loadFromUri("/models");
       }
@@ -95,23 +106,6 @@ export default function FaceVerificationModal({ open, onCaptured, onCancel }: Pr
     }
   }, []);
 
-  const stop = useCallback(() => {
-    if (detectTimerRef.current !== null) {
-      window.clearInterval(detectTimerRef.current);
-      detectTimerRef.current = null;
-    }
-    const stream = streamRef.current;
-    if (stream) {
-      stream.getTracks().forEach((t) => t.stop());
-      streamRef.current = null;
-    }
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
-    }
-    stableSinceRef.current = null;
-  }, []);
-
-  // ---- snap and hand off ----
   const capture = useCallback(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -151,8 +145,13 @@ export default function FaceVerificationModal({ open, onCaptured, onCancel }: Pr
       const video = videoRef.current;
       const current = phaseRef.current;
       if (!video || video.readyState < 2) return;
-      // Once captured we stop processing.
-      if (current === "captured" || current === "denied" || current === "error" || current === "loading" || current === "permission") {
+      if (
+        current === "captured" ||
+        current === "denied" ||
+        current === "error" ||
+        current === "loading" ||
+        current === "permission"
+      ) {
         return;
       }
 
@@ -177,18 +176,16 @@ export default function FaceVerificationModal({ open, onCaptured, onCancel }: Pr
       const vw = video.videoWidth;
       const vh = video.videoHeight;
 
-      // Oval target: centered, 60% of video width, 80% of video height.
       const cx = vw / 2;
       const cy = vh / 2;
-      const rx = vw * 0.3;  // half-width
-      const ry = vh * 0.4;  // half-height
+      const rx = vw * 0.3;
+      const ry = vh * 0.4;
 
       const faceCx = x + width / 2;
       const faceCy = y + height / 2;
       const dx = (faceCx - cx) / rx;
       const dy = (faceCy - cy) / ry;
       const insideOval = dx * dx + dy * dy <= 1;
-      // Face shouldn't be tiny (too far) or huge (too close).
       const sizeRatio = width / vw;
       const sizeOk = sizeRatio >= 0.18 && sizeRatio <= 0.6;
 
@@ -223,7 +220,13 @@ export default function FaceVerificationModal({ open, onCaptured, onCancel }: Pr
   // ---- 30s timer (resets when it hits zero, no permission re-prompt) ----
   useEffect(() => {
     if (!open) return;
-    if (phase === "loading" || phase === "permission" || phase === "denied" || phase === "error" || phase === "captured") {
+    if (
+      phase === "loading" ||
+      phase === "permission" ||
+      phase === "denied" ||
+      phase === "error" ||
+      phase === "captured"
+    ) {
       return;
     }
 
@@ -248,35 +251,75 @@ export default function FaceVerificationModal({ open, onCaptured, onCancel }: Pr
     return () => stop();
   }, [open, start, stop]);
 
+  // ---- auto-cancel when tab is hidden / window loses focus ----
+  // Stops the user from parking the camera open and switching tabs to look
+  // up answers. Coming back means they have to re-verify from scratch.
+  useEffect(() => {
+    if (!open) return;
+    const handle = () => {
+      if (document.hidden) {
+        stop();
+        onCancel();
+      }
+    };
+    document.addEventListener("visibilitychange", handle);
+    window.addEventListener("blur", handle);
+    return () => {
+      document.removeEventListener("visibilitychange", handle);
+      window.removeEventListener("blur", handle);
+    };
+  }, [open, stop, onCancel]);
+
   if (!open) return null;
 
   const status = (() => {
     switch (phase) {
-      case "loading":      return "Loading face detector…";
+      case "loading":      return "Loading face detector...";
       case "permission":   return "Allow camera access to continue.";
-      case "denied":       return "Camera blocked. You can't take the quiz without enabling the camera.";
+      case "denied":       return "Camera blocked. You need to enable the camera to take the quiz.";
       case "error":        return "Something went wrong starting the camera.";
       case "searching":    return "Position your face in the oval.";
       case "multiple":     return "Only one person should be visible.";
       case "not_centered": return "Center your face inside the oval.";
-      case "centered":     return "Hold still…";
-      case "captured":     return "Captured — starting quiz.";
+      case "centered":     return "Hold still...";
+      case "captured":     return "Captured - starting quiz.";
     }
   })();
 
+  const ringColor =
+    phase === "centered" ? "#10b981" :
+    phase === "multiple" || phase === "not_centered" ? "#f59e0b" :
+    phase === "denied" || phase === "error" ? "#ef4444" :
+    "#6366f1";
+
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 px-4">
-      <div className="w-full max-w-md rounded-2xl bg-zinc-900 p-5 text-white shadow-2xl">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Face verification</h2>
-          {phase !== "denied" && phase !== "error" && phase !== "loading" && phase !== "permission" && (
-            <span className="rounded bg-zinc-800 px-2 py-1 text-sm tabular-nums">
-              {secondsLeft}s
-            </span>
-          )}
+    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div className="w-full max-w-lg rounded-t-3xl sm:rounded-3xl bg-white shadow-2xl">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 pt-5 pb-3">
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">Face verification</h2>
+            <p className="text-xs text-gray-500">Required before each quiz</p>
+          </div>
+          <div className="flex items-center gap-2">
+            {phase !== "denied" && phase !== "error" && phase !== "loading" && phase !== "permission" && (
+              <span className="rounded-full bg-gray-100 px-3 py-1 text-sm font-semibold tabular-nums text-gray-700">
+                {secondsLeft}s
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={onCancel}
+              aria-label="Cancel"
+              className="rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+            >
+              <X size={18} />
+            </button>
+          </div>
         </div>
 
-        <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl bg-black">
+        {/* Camera area - taller on mobile, ratio 3:4 */}
+        <div className="relative mx-5 overflow-hidden rounded-2xl bg-black aspect-[3/4] sm:aspect-[4/3]">
           <video
             ref={videoRef}
             playsInline
@@ -284,51 +327,65 @@ export default function FaceVerificationModal({ open, onCaptured, onCancel }: Pr
             className="h-full w-full object-cover"
             style={{ transform: "scaleX(-1)" }}
           />
-          <canvas ref={canvasRef} className="hidden" />
 
-          {/* Oval overlay — pure SVG, drawn over the video. */}
-          <svg viewBox="0 0 100 75" className="pointer-events-none absolute inset-0 h-full w-full">
+          {/* Oval overlay - bigger on mobile (portrait), regular on desktop */}
+          <svg
+            viewBox="0 0 100 100"
+            preserveAspectRatio="none"
+            className="pointer-events-none absolute inset-0 h-full w-full"
+          >
             <defs>
-              <mask id="ovalMask">
-                <rect width="100" height="75" fill="white" />
-                <ellipse cx="50" cy="37.5" rx="22" ry="28" fill="black" />
+              <mask id="ovalMaskV2">
+                <rect width="100" height="100" fill="white" />
+                <ellipse cx="50" cy="50" rx="34" ry="42" fill="black" />
               </mask>
             </defs>
-            <rect width="100" height="75" fill="rgba(0,0,0,0.55)" mask="url(#ovalMask)" />
+            <rect width="100" height="100" fill="rgba(0,0,0,0.45)" mask="url(#ovalMaskV2)" />
             <ellipse
               cx="50"
-              cy="37.5"
-              rx="22"
-              ry="28"
+              cy="50"
+              rx="34"
+              ry="42"
               fill="none"
-              stroke={
-                phase === "centered" ? "#22c55e" :
-                phase === "multiple" || phase === "not_centered" ? "#f59e0b" :
-                "#ffffff"
-              }
+              stroke={ringColor}
               strokeWidth="0.6"
+              vectorEffect="non-scaling-stroke"
+              style={{ strokeDasharray: phase === "centered" ? undefined : "2 1.5" }}
             />
           </svg>
         </div>
 
-        <p className="mt-3 min-h-[2.5em] text-center text-sm text-zinc-200">
-          {status}
-        </p>
+        {/* Status */}
+        <div className="px-5 py-4">
+          <div className="flex items-center gap-2">
+            <span
+              className="inline-block h-2.5 w-2.5 rounded-full"
+              style={{ backgroundColor: ringColor }}
+            />
+            <p className="text-sm font-medium text-gray-800">{status}</p>
+          </div>
+          {(phase === "denied" || phase === "error") && (
+            <p className="mt-2 text-xs text-gray-500">
+              You can&apos;t take the quiz without enabling the camera. Update your browser settings and retry.
+            </p>
+          )}
+        </div>
 
-        <div className="mt-4 flex justify-end gap-2">
+        {/* Actions */}
+        <div className="flex items-center justify-end gap-2 px-5 pb-5">
           {phase === "denied" || phase === "error" ? (
             <>
               <button
                 type="button"
                 onClick={onCancel}
-                className="rounded-lg bg-zinc-700 px-4 py-2 text-sm font-medium hover:bg-zinc-600"
+                className="rounded-xl bg-gray-100 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-200"
               >
                 Close
               </button>
               <button
                 type="button"
                 onClick={() => void start()}
-                className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium hover:bg-emerald-500"
+                className="rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500"
               >
                 Retry
               </button>
@@ -337,7 +394,7 @@ export default function FaceVerificationModal({ open, onCaptured, onCancel }: Pr
             <button
               type="button"
               onClick={onCancel}
-              className="rounded-lg bg-zinc-700 px-4 py-2 text-sm font-medium hover:bg-zinc-600"
+              className="rounded-xl bg-gray-100 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-200"
             >
               Cancel
             </button>
