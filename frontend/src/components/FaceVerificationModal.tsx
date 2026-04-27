@@ -27,6 +27,8 @@ type Phase =
   | "searching"
   | "multiple"
   | "not_centered"
+  | "low_quality"   // face detected but confidence too low (blurry / occluded / off-angle)
+  | "low_light"     // not enough light on the face area
   | "centered"
   | "captured"
   | "error";
@@ -42,6 +44,12 @@ const STABILITY_MS = 1000;
 const DETECT_INTERVAL_MS = 100;
 const CAPTURE_QUALITY = 0.85;
 const CAPTURE_MAX_EDGE = 640;
+// Face-detector confidence required for capture. Below this, the frame is
+// likely blurry, off-angle, or partially occluded - reject it.
+const MIN_CONFIDENCE = 0.85;
+// Average luminance (0-255) inside the face box. Anything dimmer = too dark
+// to recognise the person from the photo later.
+const MIN_BRIGHTNESS = 60;
 
 export default function FaceVerificationModal({ open, onCaptured, onCancel }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -49,6 +57,9 @@ export default function FaceVerificationModal({ open, onCaptured, onCancel }: Pr
   const detectTimerRef = useRef<number | null>(null);
   const stableSinceRef = useRef<number | null>(null);
   const phaseRef = useRef<Phase>("loading");
+  // Reused offscreen canvas for the brightness sample - avoids reallocating
+  // on every detection tick.
+  const sampleCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const [phase, setPhase] = useState<Phase>("loading");
   const [secondsLeft, setSecondsLeft] = useState(TIMER_SECONDS);
@@ -195,6 +206,44 @@ export default function FaceVerificationModal({ open, onCaptured, onCancel }: Pr
         return;
       }
 
+      // Quality gate 1: detector confidence. tinyFaceDetector returns lower
+      // scores on blurry / off-angle / partially-covered faces.
+      if (det.score < MIN_CONFIDENCE) {
+        stableSinceRef.current = null;
+        setPhase("low_quality");
+        return;
+      }
+
+      // Quality gate 2: brightness inside the face box. Sample a small slice
+      // of pixels via an offscreen canvas and average their luminance.
+      let canvas = sampleCanvasRef.current;
+      if (!canvas) {
+        canvas = document.createElement("canvas");
+        sampleCanvasRef.current = canvas;
+      }
+      const SAMPLE_W = 32;
+      const SAMPLE_H = 32;
+      canvas.width = SAMPLE_W;
+      canvas.height = SAMPLE_H;
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
+      let bright = 0;
+      if (ctx) {
+        ctx.drawImage(video, x, y, width, height, 0, 0, SAMPLE_W, SAMPLE_H);
+        const data = ctx.getImageData(0, 0, SAMPLE_W, SAMPLE_H).data;
+        let sum = 0;
+        for (let i = 0; i < data.length; i += 4) {
+          // Rec.709 luma approximation.
+          sum += 0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2];
+        }
+        bright = sum / (data.length / 4);
+      }
+
+      if (bright < MIN_BRIGHTNESS) {
+        stableSinceRef.current = null;
+        setPhase("low_light");
+        return;
+      }
+
       const now = performance.now();
       if (stableSinceRef.current === null) {
         stableSinceRef.current = now;
@@ -281,6 +330,8 @@ export default function FaceVerificationModal({ open, onCaptured, onCancel }: Pr
       case "searching":    return "Position your face in the oval.";
       case "multiple":     return "Only one person should be visible.";
       case "not_centered": return "Center your face inside the oval.";
+      case "low_quality":  return "Hold steady - keep your face clear and uncovered.";
+      case "low_light":    return "Too dark - move to a brighter spot.";
       case "centered":     return "Hold still...";
       case "captured":     return "Captured - starting quiz.";
     }
@@ -288,7 +339,7 @@ export default function FaceVerificationModal({ open, onCaptured, onCancel }: Pr
 
   const ringColor =
     phase === "centered" ? "#10b981" :
-    phase === "multiple" || phase === "not_centered" ? "#f59e0b" :
+    phase === "multiple" || phase === "not_centered" || phase === "low_quality" || phase === "low_light" ? "#f59e0b" :
     phase === "denied" || phase === "error" ? "#ef4444" :
     "#6366f1";
 

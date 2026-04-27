@@ -21,19 +21,30 @@ from .models_settings import SiteSettings
 # Helpers
 # ============================================================
 
-def _photo_thumbnail(photo_bytes, size_px=64):
+def _photo_thumbnail(photo_bytes, size_px=64, clickable=True):
     """
     Render an inline thumbnail of a verification photo for the admin.
+
     Bytes are JPEG; we embed them as a data URI so no extra request is needed.
+    When `clickable`, the thumbnail wraps in an <a> that opens the same data
+    URI in a new tab, letting staff inspect the photo at full resolution.
     """
     if not photo_bytes:
         return format_html('<span style="color:#9ca3af">no photo</span>')
     b64 = base64.b64encode(bytes(photo_bytes)).decode('ascii')
-    return format_html(
+    img_html = format_html(
         '<img src="data:image/jpeg;base64,{}" '
         'style="width:{}px;height:{}px;object-fit:cover;border-radius:6px;'
-        'transform:scaleX(-1);box-shadow:0 1px 3px rgba(0,0,0,0.2)" />',
-        b64, size_px, size_px,
+        'transform:scaleX(-1);box-shadow:0 1px 3px rgba(0,0,0,0.2);'
+        'cursor:{}" />',
+        b64, size_px, size_px, 'zoom-in' if clickable else 'default',
+    )
+    if not clickable:
+        return img_html
+    return format_html(
+        '<a href="data:image/jpeg;base64,{}" target="_blank" rel="noopener" '
+        'title="Open full-size in new tab">{}</a>',
+        b64, img_html,
     )
 
 
