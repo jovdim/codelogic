@@ -205,13 +205,13 @@ export default function AboutPage() {
                     <div className="flex flex-col items-center text-center h-full">
                       {/* Profile Image */}
                       <div className="relative mb-4">
-                        <div className="w-60 h-60 shadow-2xl  -rotate-3 overflow-hidden border-2 border-[#2d2d44] group-hover:border-purple-500/50 transition-all duration-300 bg-[#1a1a2e] rounded-lg">
+                        <div className="w-60 h-60 shadow-2xl overflow-hidden border-2 border-[#2d2d44] group-hover:border-purple-500/50 transition-all duration-300 bg-[#1a1a2e] rounded-lg">
                           <Image
                             src={member.image}
                             alt={member.name}
                             width={500}
                             height={500}
-                            className="w-full h-full "
+                            className="w-full h-full object-cover"
                             onError={(e) => {
                               const target = e.target as HTMLImageElement;
                               target.style.display = "none";
@@ -280,7 +280,7 @@ export default function AboutPage() {
                     <div className="flex flex-col items-center text-center h-full">
                       {/* Profile Image */}
                       <div className="relative mb-4">
-                        <div className="w-60 h-60 rounded-lg -rotate-3 shadow-2xl overflow-hidden border-2 border-[#2d2d44] group-hover:border-purple-500/50 transition-all duration-300 bg-[#1a1a2e]">
+                        <div className="w-60 h-60 rounded-lg shadow-2xl overflow-hidden border-2 border-[#2d2d44] group-hover:border-purple-500/50 transition-all duration-300 bg-[#1a1a2e]">
                           <Image
                             src={member.image}
                             alt={member.name}
@@ -435,9 +435,14 @@ export default function AboutPage() {
               <p className="text-gray-400 mb-6 max-w-md mx-auto">
                 We'd love to hear from you. Reach out anytime!
               </p>
+              <p className="text-sm text-gray-500 mb-5 select-all">
+                codelogicstudent@gmail.com
+              </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                 <a
-                  href="mailto:codelogicstudent@gmail.com"
+                  href="https://mail.google.com/mail/?view=cm&fs=1&to=codelogicstudent@gmail.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 px-6 py-3 text-white font-bold rounded-xl transition-all hover:scale-105"
                   style={{
                     background: "var(--gradient-purple)",
