@@ -187,20 +187,29 @@ export default function FaceVerificationModal({ open, onCaptured, onCancel }: Pr
       const vw = video.videoWidth;
       const vh = video.videoHeight;
 
+      // Visible oval (must match the SVG below): 24% half-width, 30% half-height.
+      // Smaller than before so the user doesn't have to lean into the camera.
+      const ovalRx = vw * 0.24;
+      const ovalRy = vh * 0.30;
       const cx = vw / 2;
       const cy = vh / 2;
-      const rx = vw * 0.3;
-      const ry = vh * 0.4;
 
       const faceCx = x + width / 2;
       const faceCy = y + height / 2;
-      const dx = (faceCx - cx) / rx;
-      const dy = (faceCy - cy) / ry;
-      const insideOval = dx * dx + dy * dy <= 1;
-      const sizeRatio = width / vw;
-      const sizeOk = sizeRatio >= 0.18 && sizeRatio <= 0.6;
 
-      if (!insideOval || !sizeOk) {
+      // Centering: face midpoint must sit deep inside the oval (within ~50% of
+      // the radius from center). Stops "face barely inside the oval" passes.
+      const dx = (faceCx - cx) / (ovalRx * 0.5);
+      const dy = (faceCy - cy) / (ovalRy * 0.5);
+      const centeredTight = dx * dx + dy * dy <= 1;
+
+      // Fill: face bounding box width must roughly match the oval's diameter.
+      // 0.80 - 1.20 of oval diameter means the face actually fills the frame
+      // instead of being a small blob in the middle.
+      const widthRatio = width / (ovalRx * 2);
+      const fillsOval = widthRatio >= 0.80 && widthRatio <= 1.20;
+
+      if (!centeredTight || !fillsOval) {
         stableSinceRef.current = null;
         setPhase("not_centered");
         return;
@@ -386,17 +395,18 @@ export default function FaceVerificationModal({ open, onCaptured, onCancel }: Pr
             className="pointer-events-none absolute inset-0 h-full w-full"
           >
             <defs>
-              <mask id="ovalMaskV2">
+              {/* rx/ry must mirror ovalRx/ovalRy in the detection loop above. */}
+              <mask id="ovalMaskV3">
                 <rect width="100" height="100" fill="white" />
-                <ellipse cx="50" cy="50" rx="34" ry="42" fill="black" />
+                <ellipse cx="50" cy="50" rx="24" ry="30" fill="black" />
               </mask>
             </defs>
-            <rect width="100" height="100" fill="rgba(0,0,0,0.45)" mask="url(#ovalMaskV2)" />
+            <rect width="100" height="100" fill="rgba(0,0,0,0.55)" mask="url(#ovalMaskV3)" />
             <ellipse
               cx="50"
               cy="50"
-              rx="34"
-              ry="42"
+              rx="24"
+              ry="30"
               fill="none"
               stroke={ringColor}
               strokeWidth="0.6"
