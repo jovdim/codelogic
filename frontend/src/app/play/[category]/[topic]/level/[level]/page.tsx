@@ -482,16 +482,16 @@ export default function LevelQuizPage() {
       const submitQuizResult = async () => {
         try {
           const response = await gameAPI.completeQuiz({
-            category_slug: categoryId,
-            topic_slug: topicId,
-            level: levelId,
-            score: score,
-            total_questions: totalQuestions,
+            attempt_id: attemptId,
             hearts_lost: heartsLost,
           });
-          // Update XP earned with actual value from backend (includes bonuses)
+          // Backend is authoritative for score/xp/stars — sync local state so the
+          // result modal can never disagree with what gets stored.
           if (response.data.xp_earned !== undefined) {
             setXpEarned(response.data.xp_earned);
+          }
+          if (response.data.score !== undefined) {
+            setScore(response.data.score);
           }
           // Refresh user data to update XP/hearts in context and sidebar
           await refreshUser();

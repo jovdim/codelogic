@@ -164,19 +164,51 @@ class QuizAttempt(models.Model):
     level = models.PositiveIntegerField()
     score = models.PositiveIntegerField(default=0)
     total_questions = models.PositiveIntegerField(default=0)
+    stars = models.PositiveSmallIntegerField(default=0)
     xp_earned = models.PositiveIntegerField(default=0)
     hearts_lost = models.PositiveIntegerField(default=0)
     completed = models.BooleanField(default=False)
     passed = models.BooleanField(default=False)
     started_at = models.DateTimeField(auto_now_add=True)
     completed_at = models.DateTimeField(null=True, blank=True)
-    
+
     class Meta:
         db_table = 'quiz_attempts'
         ordering = ['-started_at']
-    
+
     def __str__(self):
         return f"{self.user.username} - {self.topic.name} L{self.level}: {self.score}/{self.total_questions}"
+
+    @staticmethod
+    def calculate_stars(score, total_questions):
+        """Single source of truth for score → stars. Mirrors the result-modal rule."""
+        if not total_questions:
+            return 0
+        pct = score / total_questions
+        if pct >= 0.9:
+            return 3
+        if pct >= 0.7:
+            return 2
+        if pct >= 0.5:
+            return 1
+        return 0
+
+
+class UserAnswer(models.Model):
+    """One row per answered question in a quiz attempt. Authoritative record of correctness."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    attempt = models.ForeignKey(QuizAttempt, on_delete=models.CASCADE, related_name='answers')
+    question = models.ForeignKey('Question', on_delete=models.CASCADE)
+    selected_answer = models.IntegerField()
+    is_correct = models.BooleanField()
+    answered_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'user_answers'
+        unique_together = [('attempt', 'question')]
+
+    def __str__(self):
+        return f"{self.attempt_id} Q{self.question_id}: {'OK' if self.is_correct else 'WRONG'}"
 
 
 class LearningResource(models.Model):

@@ -6,6 +6,7 @@ from pathlib import Path
 from datetime import timedelta
 from dotenv import load_dotenv
 import os
+import sys
 
 load_dotenv()
 
@@ -14,6 +15,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-change-me-in-production')
 
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
+
+# Detect Django's test runner so we can opt out of dev-only middleware.
+TESTING = 'test' in sys.argv
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
@@ -24,9 +28,12 @@ if DEBUG:
         'localhost',
         '0.0.0.0',
     ]
-    # Show toolbar on all requests (including AJAX/API)
+    # Show toolbar on all requests (including AJAX/API).
+    # During tests, suppress the toolbar entirely — its rendering needs the
+    # collected static manifest, which isn't built in test runs.
     DEBUG_TOOLBAR_CONFIG = {
-        'SHOW_TOOLBAR_CALLBACK': lambda request: True,
+        'SHOW_TOOLBAR_CALLBACK': lambda request: not TESTING,
+        'IS_RUNNING_TESTS': False,
     }
 else:
     INTERNAL_IPS = []

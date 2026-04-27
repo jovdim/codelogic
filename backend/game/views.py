@@ -12,7 +12,7 @@ from django.db.models import F, Q, Count, Sum
 from django.db.models.functions import Coalesce
 import random
 
-from .models import Category, Topic, Question, QuizAttempt, UserProgress, LearningResource, Lesson
+from .models import Category, Topic, Question, QuizAttempt, UserAnswer, UserProgress, LearningResource, Lesson
 from .serializers import (
     CategorySerializer, TopicSerializer, TopicWithProgressSerializer,
     QuestionSerializer, LeaderboardUserSerializer,
@@ -222,35 +222,57 @@ class QuizQuestionsView(APIView):
 
 
 class SubmitAnswerView(APIView):
-    """Submit an answer and get result."""
+    """Submit an answer and get result. Persists the answer against the attempt."""
     permission_classes = [IsAuthenticated]
-    
+
     def post(self, request):
         question_id = request.data.get('question_id')
         answer = request.data.get('answer')
-        
-        if question_id is None or answer is None:
-            return Response({'error': 'Missing question_id or answer'}, status=status.HTTP_400_BAD_REQUEST)
-        
+        attempt_id = request.data.get('attempt_id')
+
+        if question_id is None or answer is None or attempt_id is None:
+            return Response(
+                {'error': 'Missing question_id, answer, or attempt_id'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         try:
             question = Question.objects.get(id=question_id)
         except Question.DoesNotExist:
             return Response({'error': 'Question not found'}, status=status.HTTP_404_NOT_FOUND)
-        
+
+        try:
+            attempt = QuizAttempt.objects.get(id=attempt_id, user=request.user)
+        except (QuizAttempt.DoesNotExist, ValueError, TypeError):
+            return Response({'error': 'Invalid attempt'}, status=status.HTTP_404_NOT_FOUND)
+
+        if attempt.completed:
+            return Response(
+                {'error': 'Attempt already completed'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         user = request.user
         is_correct = (answer == question.correct_answer)
-        xp_earned = 0
+
+        # Record the answer (idempotent on retry — first answer wins).
+        UserAnswer.objects.get_or_create(
+            attempt=attempt,
+            question=question,
+            defaults={
+                'selected_answer': answer,
+                'is_correct': is_correct,
+            },
+        )
+
+        xp_earned = question.xp_reward if is_correct else 0
         heart_lost = False
-        
-        if is_correct:
-            xp_earned = question.xp_reward
-        else:
-            if user.current_hearts > 0:
-                user.current_hearts -= 1
-                user.last_heart_update = timezone.now()
-                user.save()
-                heart_lost = True
-        
+        if not is_correct and user.current_hearts > 0:
+            user.current_hearts -= 1
+            user.last_heart_update = timezone.now()
+            user.save()
+            heart_lost = True
+
         return Response({
             'correct': is_correct,
             'correct_answer': question.correct_answer,
@@ -262,82 +284,111 @@ class SubmitAnswerView(APIView):
 
 
 class CompleteQuizView(APIView):
-    """Complete a quiz and record results."""
+    """Complete a quiz and record results.
+
+    Score and stars are recomputed from the persisted UserAnswer rows — the
+    client-supplied ``score`` field is ignored, so a tampered request cannot
+    inflate stars or XP.
+    """
     permission_classes = [IsAuthenticated]
-    
+
     def post(self, request):
-        category_slug = request.data.get('category_slug')
-        topic_slug = request.data.get('topic_slug')
-        level = request.data.get('level')
-        score = request.data.get('score', 0)
-        total_questions = request.data.get('total_questions', 0)
+        attempt_id = request.data.get('attempt_id')
         hearts_lost = request.data.get('hearts_lost', 0)
-        
-        try:
-            topic = Topic.objects.get(category__slug=category_slug, slug=topic_slug)
-        except Topic.DoesNotExist:
-            return Response({'error': 'Topic not found'}, status=status.HTTP_404_NOT_FOUND)
-        
+
+        if attempt_id is None:
+            return Response({'error': 'Missing attempt_id'}, status=status.HTTP_400_BAD_REQUEST)
+
         user = request.user
-        passed = score >= (total_questions * 0.5)  # 50% to pass
-        
-        # Calculate XP (base 10 per correct + bonuses)
+        try:
+            attempt = QuizAttempt.objects.select_related('topic').get(
+                id=attempt_id, user=user
+            )
+        except (QuizAttempt.DoesNotExist, ValueError, TypeError):
+            return Response({'error': 'Invalid attempt'}, status=status.HTTP_404_NOT_FOUND)
+
+        if attempt.completed:
+            # Idempotent: return what was previously recorded so retries don't
+            # double-award XP or break the UI.
+            return Response({
+                'passed': attempt.passed,
+                'score': attempt.score,
+                'total_questions': attempt.total_questions,
+                'stars': attempt.stars,
+                'xp_earned': attempt.xp_earned,
+                'new_level': UserProgress.objects.filter(user=user, topic=attempt.topic).values_list('current_level', flat=True).first() or 1,
+                'total_xp': user.xp,
+                'current_streak': user.current_streak,
+            })
+
+        topic = attempt.topic
+        level = attempt.level
+        total_questions = attempt.total_questions
+
+        # Authoritative score: count correct answers persisted by SubmitAnswerView.
+        score = UserAnswer.objects.filter(attempt=attempt, is_correct=True).count()
+        passed = total_questions > 0 and score >= (total_questions * 0.5)
+        stars = QuizAttempt.calculate_stars(score, total_questions)
+
+        # XP rules: 10 per correct, +50 perfect, +25 no hearts lost (only if any correct).
         xp_earned = score * XP_PER_CORRECT
         if score == total_questions and total_questions > 0:
-            xp_earned += XP_BONUS_PERFECT  # +50 for perfect score
+            xp_earned += XP_BONUS_PERFECT
         if hearts_lost == 0 and score > 0:
-            xp_earned += XP_BONUS_NO_HEARTS_LOST  # +25 for no hearts lost
-        
-        # Update streak (by calendar day at midnight)
+            xp_earned += XP_BONUS_NO_HEARTS_LOST
+
+        # Streak (by calendar day).
         today = timezone.now().date()
         from datetime import timedelta
         yesterday = today - timedelta(days=1)
-        
         if user.last_activity_date is None:
-            # First activity ever (shouldn't happen, but handle it)
             user.current_streak = 1
             user.longest_streak = max(user.longest_streak, 1)
         elif user.last_activity_date == today:
-            # Already played today, no streak change
             pass
         elif user.last_activity_date == yesterday:
-            # Played yesterday, increment streak
             user.current_streak += 1
             user.longest_streak = max(user.longest_streak, user.current_streak)
         else:
-            # Missed a day or more, reset streak to 1
             user.current_streak = 1
-        
         user.last_activity_date = today
-        
-        # Update user XP (hearts already deducted during quiz via SubmitAnswerView)
+
         user.xp += xp_earned
         user.save()
-        
-        # Update progress
-        progress, created = UserProgress.objects.get_or_create(
+
+        # Update progress. Only increment lifetime answer counters on first pass
+        # of a level so retries don't dilute the user's accuracy stat.
+        progress, _ = UserProgress.objects.get_or_create(
             user=user, topic=topic,
-            defaults={'current_level': 1}
+            defaults={'current_level': 1},
         )
-        
+
+        is_first_pass_of_level = passed and level > progress.highest_level_completed
+
         if passed and level >= progress.current_level:
             progress.highest_level_completed = max(progress.highest_level_completed, level)
             progress.current_level = level + 1
         progress.total_xp_earned += xp_earned
-        progress.total_questions_answered += total_questions
-        progress.correct_answers += score
+        if is_first_pass_of_level:
+            progress.total_questions_answered += total_questions
+            progress.correct_answers += score
         progress.save()
-        
-        # Record attempt
-        QuizAttempt.objects.create(
-            user=user, topic=topic, level=level,
-            score=score, total_questions=total_questions,
-            xp_earned=xp_earned, hearts_lost=hearts_lost,
-            completed=True, passed=passed, completed_at=timezone.now()
-        )
-        
+
+        # Update the existing attempt row instead of creating a new one (no orphans).
+        attempt.score = score
+        attempt.stars = stars
+        attempt.xp_earned = xp_earned
+        attempt.hearts_lost = hearts_lost
+        attempt.completed = True
+        attempt.passed = passed
+        attempt.completed_at = timezone.now()
+        attempt.save()
+
         return Response({
             'passed': passed,
+            'score': score,
+            'total_questions': total_questions,
+            'stars': stars,
             'xp_earned': xp_earned,
             'new_level': progress.current_level,
             'total_xp': user.xp,
@@ -557,23 +608,17 @@ class UserCertificatesView(APIView):
                 
                 completion_date = final_attempt.completed_at.isoformat() if final_attempt and final_attempt.completed_at else None
                 
-                # Calculate stars
+                # Best persisted stars per level
                 level_stars = {}
                 attempts = QuizAttempt.objects.filter(
                     user=user,
                     topic=topic,
-                    passed=True
-                ).values('level', 'score', 'total_questions')
-                
+                    passed=True,
+                ).values('level', 'stars')
+
                 for attempt in attempts:
                     level = attempt['level']
-                    score_pct = attempt['score'] / attempt['total_questions'] if attempt['total_questions'] > 0 else 0
-                    if score_pct >= 1.0:
-                        stars = 3
-                    elif score_pct >= 0.8:
-                        stars = 2
-                    else:
-                        stars = 1
+                    stars = attempt['stars']
                     if level not in level_stars or stars > level_stars[level]:
                         level_stars[level] = stars
                 

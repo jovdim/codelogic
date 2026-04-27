@@ -203,6 +203,7 @@ const generateLevels = (
   topicId: string,
   totalLevels: number,
   userProgress: number = 1,
+  levelStars: Record<number, number> = {},
 ) => {
   const titles =
     topicLevelTitles[topicId] ||
@@ -221,7 +222,9 @@ const generateLevels = (
     const baseXP = 50;
     const xpReward = type === "boss" ? baseXP * 3 : baseXP;
 
-    const stars = isCompleted ? ((level * 7) % 3) + 1 : 0;
+    const stars = isCompleted
+      ? (levelStars[level] ?? levelStars[String(level) as unknown as number] ?? 0)
+      : 0;
 
     return {
       level,
@@ -317,7 +320,12 @@ export default function TopicLevelPage() {
     fetchTopicData();
   }, [categoryId, topicId]);
 
-  const levels = generateLevels(topicId, topic.totalLevels, userProgress);
+  const levels = generateLevels(
+    topicId,
+    topic.totalLevels,
+    userProgress,
+    certificateData.levelStars,
+  );
   const completedLevels = levels.filter((l) => l.isCompleted).length;
   const totalStars =
     certificateData.totalStars || levels.reduce((acc, l) => acc + l.stars, 0);

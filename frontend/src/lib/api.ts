@@ -139,13 +139,9 @@ export const gameAPI = {
     attempt_id: string;
   }) => api.post("/game/answer/", data),
 
-  // Complete a quiz
+  // Complete a quiz. Backend recomputes score and stars from persisted answers.
   completeQuiz: (data: {
-    category_slug: string;
-    topic_slug: string;
-    level: number;
-    score: number;
-    total_questions: number;
+    attempt_id: string;
     hearts_lost: number;
   }) => api.post("/game/complete/", data),
 

@@ -99,25 +99,17 @@ class TopicWithProgressSerializer(serializers.ModelSerializer):
                     if final_attempt and final_attempt.completed_at:
                         completion_date = final_attempt.completed_at.isoformat()
                 
-                # Get level stars (best stars per level)
+                # Get level stars (best persisted stars per level)
                 level_stars = {}
                 attempts = QuizAttempt.objects.filter(
                     user=request.user,
                     topic=obj,
-                    passed=True
-                ).values('level', 'score', 'total_questions')
-                
+                    passed=True,
+                ).values('level', 'stars')
+
                 for attempt in attempts:
                     level = attempt['level']
-                    # Calculate stars: 3 stars = 100%, 2 stars = 80%+, 1 star = passed
-                    score_pct = attempt['score'] / attempt['total_questions'] if attempt['total_questions'] > 0 else 0
-                    if score_pct >= 1.0:
-                        stars = 3
-                    elif score_pct >= 0.8:
-                        stars = 2
-                    else:
-                        stars = 1
-                    # Keep the best stars for each level
+                    stars = attempt['stars']
                     if level not in level_stars or stars > level_stars[level]:
                         level_stars[level] = stars
                 
