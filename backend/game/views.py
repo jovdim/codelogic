@@ -8,6 +8,9 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.parsers import MultiPartParser, FormParser
 from django.contrib.auth import get_user_model
+from django.contrib.admin.views.decorators import staff_member_required
+from django.http import HttpResponse, Http404
+from django.views.decorators.cache import cache_control
 from django.utils import timezone
 from django.db.models import F, Q, Count, Sum
 from django.db.models.functions import Coalesce
@@ -756,5 +759,24 @@ class LearningResourceDetailView(APIView):
 
         serializer = LearningResourceDetailSerializer(resource, context={'request': request})
         return Response(serializer.data)
+
+
+# ---------------------------------------------------------------------------
+# Django-admin helper: serve a verification photo as a JPEG response.
+# Linking to a real URL avoids the long-data-URI bug in some browsers where
+# new tabs render blank until reloaded.
+# ---------------------------------------------------------------------------
+
+@staff_member_required
+@cache_control(private=True, max_age=300)
+def admin_verification_photo(request, attempt_id):
+    try:
+        attempt = QuizAttempt.objects.only('verification_photo').get(pk=attempt_id)
+    except QuizAttempt.DoesNotExist:
+        raise Http404
+    photo = attempt.verification_photo
+    if not photo:
+        raise Http404
+    return HttpResponse(bytes(photo), content_type='image/jpeg')
 
 

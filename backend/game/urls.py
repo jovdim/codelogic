@@ -26,4 +26,8 @@ urlpatterns = [
     path('resources/', views.LearningResourceListView.as_view(), name='resource-list'),
     path('resources/<slug:slug>/', views.LearningResourceDetailView.as_view(), name='resource-detail'),
 
+    # Django-admin photo viewer (staff-only). Serves the JPEG bytes of a
+    # QuizAttempt's verification photo at a stable URL so admin thumbnail
+    # links open reliably in a new tab.
+    path('admin-photo/<uuid:attempt_id>/', views.admin_verification_photo, name='admin-verification-photo'),
 ]

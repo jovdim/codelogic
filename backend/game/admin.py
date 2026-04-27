@@ -5,6 +5,7 @@ Provides a powerful, user-friendly admin interface for non-developers.
 
 from django.contrib import admin
 from django.contrib.admin import AdminSite
+from django.urls import reverse
 from django.utils.html import format_html
 from django.db import models
 from django.db.models import Count, Avg
@@ -21,16 +22,19 @@ from .models_settings import SiteSettings
 # Helpers
 # ============================================================
 
-def _photo_thumbnail(photo_bytes, size_px=64, clickable=True):
+def _photo_thumbnail(attempt, size_px=64, clickable=True):
     """
     Render an inline thumbnail of a verification photo for the admin.
 
-    Bytes are JPEG; we embed them as a data URI so no extra request is needed.
-    When `clickable`, the thumbnail wraps in an <a> that opens the same data
-    URI in a new tab, letting staff inspect the photo at full resolution.
+    The inline preview is a data: URI (no extra HTTP request, instant),
+    but the click-target points to a real URL endpoint. Some browsers
+    blank-render very long data: URIs as new-tab destinations - using a
+    short URL keeps "click to enlarge" reliable.
     """
+    photo_bytes = attempt.verification_photo if attempt else None
     if not photo_bytes:
         return format_html('<span style="color:#9ca3af">no photo</span>')
+
     b64 = base64.b64encode(bytes(photo_bytes)).decode('ascii')
     img_html = format_html(
         '<img src="data:image/jpeg;base64,{}" '
@@ -41,10 +45,12 @@ def _photo_thumbnail(photo_bytes, size_px=64, clickable=True):
     )
     if not clickable:
         return img_html
+
+    full_url = reverse('admin-verification-photo', args=[attempt.id])
     return format_html(
-        '<a href="data:image/jpeg;base64,{}" target="_blank" rel="noopener" '
+        '<a href="{}" target="_blank" rel="noopener" '
         'title="Open full-size in new tab">{}</a>',
-        b64, img_html,
+        full_url, img_html,
     )
 
 
@@ -69,11 +75,11 @@ class QuizAttemptAdmin(admin.ModelAdmin):
     fields = readonly_fields  # everything is read-only; nothing to edit
 
     def photo_thumb(self, obj):
-        return _photo_thumbnail(obj.verification_photo, size_px=56)
+        return _photo_thumbnail(obj, size_px=56)
     photo_thumb.short_description = 'Photo'
 
     def photo_full(self, obj):
-        return _photo_thumbnail(obj.verification_photo, size_px=240)
+        return _photo_thumbnail(obj, size_px=240)
     photo_full.short_description = 'Verification photo'
 
     def score_display(self, obj):
@@ -110,7 +116,7 @@ class QuizAttemptInline(admin.TabularInline):
     ordering = ['-verification_captured_at', '-started_at']
 
     def photo_thumb(self, obj):
-        return _photo_thumbnail(obj.verification_photo, size_px=56)
+        return _photo_thumbnail(obj, size_px=56)
     photo_thumb.short_description = 'Photo'
 
     def score_display(self, obj):

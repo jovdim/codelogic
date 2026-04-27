@@ -197,19 +197,19 @@ export default function FaceVerificationModal({ open, onCaptured, onCancel }: Pr
       const faceCx = x + width / 2;
       const faceCy = y + height / 2;
 
-      // Centering: face midpoint must sit deep inside the oval (within ~50% of
-      // the radius from center). Stops "face barely inside the oval" passes.
-      const dx = (faceCx - cx) / (ovalRx * 0.5);
-      const dy = (faceCy - cy) / (ovalRy * 0.5);
-      const centeredTight = dx * dx + dy * dy <= 1;
+      // Centering: face midpoint must be inside the visible oval. Loose
+      // enough that natural head wobble doesn't bounce the user out.
+      const dx = (faceCx - cx) / ovalRx;
+      const dy = (faceCy - cy) / ovalRy;
+      const centered = dx * dx + dy * dy <= 1;
 
-      // Fill: face bounding box width must roughly match the oval's diameter.
-      // 0.80 - 1.20 of oval diameter means the face actually fills the frame
-      // instead of being a small blob in the middle.
+      // Fill: face must roughly fit the oval's width. Wider band so a normal
+      // sit-back-in-your-chair distance still passes - we only reject very
+      // small faces (way too far) and very large ones (right at the lens).
       const widthRatio = width / (ovalRx * 2);
-      const fillsOval = widthRatio >= 0.80 && widthRatio <= 1.20;
+      const fillsOval = widthRatio >= 0.55 && widthRatio <= 1.35;
 
-      if (!centeredTight || !fillsOval) {
+      if (!centered || !fillsOval) {
         stableSinceRef.current = null;
         setPhase("not_centered");
         return;
