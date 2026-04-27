@@ -172,6 +172,11 @@ class QuizAttempt(models.Model):
     started_at = models.DateTimeField(auto_now_add=True)
     completed_at = models.DateTimeField(null=True, blank=True)
 
+    # Face-verification snapshot taken at quiz start. Bytes are JPEG-encoded.
+    # Cleared after 60 days by the cleanup_verification_photos command.
+    verification_photo = models.BinaryField(null=True, blank=True)
+    verification_captured_at = models.DateTimeField(null=True, blank=True)
+
     class Meta:
         db_table = 'quiz_attempts'
         ordering = ['-started_at']

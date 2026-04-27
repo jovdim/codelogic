@@ -5,8 +5,11 @@ Views for game API - quizzes, progress, hearts/XP management.
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
+from rest_framework.parsers import MultiPartParser, FormParser
 from django.contrib.auth import get_user_model
+from django.http import HttpResponse, Http404
+import base64
 from django.utils import timezone
 from django.db.models import F, Q, Count, Sum
 from django.db.models.functions import Coalesce
@@ -152,10 +155,42 @@ class TopicDetailView(APIView):
 
 
 class QuizQuestionsView(APIView):
-    """Get questions for a specific level."""
+    """
+    Start a quiz: accept the face-verification photo, create a QuizAttempt
+    bound to it, and return the questions to play. The photo is mandatory —
+    no attempt row is created without one. This is the single chokepoint
+    that gates the quiz on identity capture.
+    """
     permission_classes = [IsAuthenticated]
-    
-    def get(self, request, category_slug, topic_slug, level):
+    # Face photo arrives as multipart/form-data from the verification modal.
+    parser_classes = [MultiPartParser, FormParser]
+
+    # Hard cap on what we'll accept and store in Postgres. The frontend
+    # downscales aggressively so real captures land well under this.
+    MAX_PHOTO_BYTES = 500_000  # ~500 KB
+
+    def post(self, request, category_slug, topic_slug, level):
+        photo_file = request.FILES.get('verification_photo')
+        if photo_file is None:
+            return Response(
+                {'error': 'Face verification photo is required to start a quiz.',
+                 'code': 'VERIFICATION_REQUIRED'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if photo_file.size > self.MAX_PHOTO_BYTES:
+            return Response(
+                {'error': 'Verification photo is too large.',
+                 'code': 'PHOTO_TOO_LARGE'},
+                status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            )
+        photo_bytes = photo_file.read()
+        if not photo_bytes:
+            return Response(
+                {'error': 'Verification photo is empty.',
+                 'code': 'PHOTO_EMPTY'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         try:
             topic = Topic.objects.get(
                 category__slug=category_slug,
@@ -164,33 +199,35 @@ class QuizQuestionsView(APIView):
             )
         except Topic.DoesNotExist:
             return Response({'error': 'Topic not found'}, status=status.HTTP_404_NOT_FOUND)
-        
+
         # Check hearts
         user = request.user
         self._regenerate_hearts(user)
-        
+
         if user.current_hearts <= 0:
             return Response({
                 'error': 'No hearts remaining',
                 'hearts': user.current_hearts,
             }, status=status.HTTP_403_FORBIDDEN)
-        
+
         # Get questions for this level
         questions = list(Question.objects.filter(topic=topic, level=level, is_active=True))
-        
+
         if not questions:
             return Response({'error': 'No questions found for this level'}, status=status.HTTP_404_NOT_FOUND)
-        
+
         # Shuffle and limit
         random.shuffle(questions)
         questions = questions[:10]
-        
-        # Create a quiz attempt
+
+        # Create a quiz attempt with the verification photo attached.
         attempt = QuizAttempt.objects.create(
             user=user,
             topic=topic,
             level=level,
-            total_questions=len(questions)
+            total_questions=len(questions),
+            verification_photo=photo_bytes,
+            verification_captured_at=timezone.now(),
         )
         
         # Get lessons for this level
@@ -709,15 +746,83 @@ class LearningResourceListView(APIView):
 class LearningResourceDetailView(APIView):
     """Get a single learning resource by slug."""
     permission_classes = [IsAuthenticated]
-    
+
     def get(self, request, slug):
         try:
             resource = LearningResource.objects.get(slug=slug, is_active=True)
         except LearningResource.DoesNotExist:
             return Response({'error': 'Resource not found'}, status=status.HTTP_404_NOT_FOUND)
-        
+
         # Increment view count
         resource.increment_views()
-        
+
         serializer = LearningResourceDetailSerializer(resource, context={'request': request})
         return Response(serializer.data)
+
+
+# ---------------------------------------------------------------------------
+# Admin face-verification review
+# ---------------------------------------------------------------------------
+
+class AdminVerificationListView(APIView):
+    """
+    Paginated list of quiz attempts that have a verification photo on file.
+    Used by the staff "Quiz Photos" review page to spot impostors.
+    """
+    permission_classes = [IsAdminUser]
+    PAGE_SIZE = 30
+
+    def get(self, request):
+        try:
+            page = max(1, int(request.query_params.get('page', 1)))
+        except (TypeError, ValueError):
+            page = 1
+
+        qs = (QuizAttempt.objects
+              .exclude(verification_photo__isnull=True)
+              .select_related('user', 'topic', 'topic__category')
+              .order_by('-verification_captured_at'))
+
+        total = qs.count()
+        start = (page - 1) * self.PAGE_SIZE
+        rows = qs[start:start + self.PAGE_SIZE]
+
+        items = [{
+            'attempt_id': str(a.id),
+            'user_id': a.user_id,
+            'user_email': a.user.email,
+            'user_username': a.user.username,
+            'topic': a.topic.name,
+            'category': a.topic.category.name,
+            'level': a.level,
+            'score': a.score,
+            'total_questions': a.total_questions,
+            'stars': a.stars,
+            'completed': a.completed,
+            'captured_at': a.verification_captured_at.isoformat() if a.verification_captured_at else None,
+            'photo_url': request.build_absolute_uri(f'/api/game/admin/verifications/{a.id}/photo/'),
+        } for a in rows]
+
+        return Response({
+            'page': page,
+            'page_size': self.PAGE_SIZE,
+            'total': total,
+            'has_next': start + self.PAGE_SIZE < total,
+            'items': items,
+        })
+
+
+class AdminVerificationPhotoView(APIView):
+    """Serve the raw JPEG bytes of a single attempt's verification photo."""
+    permission_classes = [IsAdminUser]
+
+    def get(self, request, attempt_id):
+        try:
+            attempt = QuizAttempt.objects.only('verification_photo').get(pk=attempt_id)
+        except QuizAttempt.DoesNotExist:
+            raise Http404
+        photo = attempt.verification_photo
+        if not photo:
+            raise Http404
+        # BinaryField returns memoryview on Postgres; coerce to bytes.
+        return HttpResponse(bytes(photo), content_type='image/jpeg')

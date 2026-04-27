@@ -101,7 +101,12 @@ class QuizApiTestBase(APITestCase):
 
     def start_quiz(self, level=1):
         url = f'/api/game/quiz/{self.category.slug}/{self.topic.slug}/{level}/'
-        response = self.client.get(url)
+        # Endpoint requires a face-verification photo. The byte content isn't
+        # validated server-side (we just store it), so a 4-byte JPEG SOI/EOI
+        # placeholder is enough for tests.
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        photo = SimpleUploadedFile('face.jpg', b'\xff\xd8\xff\xd9', content_type='image/jpeg')
+        response = self.client.post(url, {'verification_photo': photo}, format='multipart')
         self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
         return response.data
 
@@ -118,6 +123,26 @@ class QuizApiTestBase(APITestCase):
             {'attempt_id': attempt_id, 'hearts_lost': hearts_lost},
             format='json',
         )
+
+
+# ---------------------------------------------------------------------------
+# Face-verification gating on quiz start
+# ---------------------------------------------------------------------------
+
+class StartQuizFaceVerificationTests(QuizApiTestBase):
+    def test_start_without_photo_rejected(self):
+        url = f'/api/game/quiz/{self.category.slug}/{self.topic.slug}/1/'
+        response = self.client.post(url, {}, format='multipart')
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data.get('code'), 'VERIFICATION_REQUIRED')
+        self.assertFalse(QuizAttempt.objects.filter(user=self.user).exists())
+
+    def test_start_with_photo_creates_attempt_with_bytes_attached(self):
+        data = self.start_quiz()
+        attempt = QuizAttempt.objects.get(pk=data['attempt_id'])
+        self.assertIsNotNone(attempt.verification_photo)
+        self.assertEqual(bytes(attempt.verification_photo), b'\xff\xd8\xff\xd9')
+        self.assertIsNotNone(attempt.verification_captured_at)
 
 
 # ---------------------------------------------------------------------------

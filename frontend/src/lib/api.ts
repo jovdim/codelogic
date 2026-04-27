@@ -128,9 +128,26 @@ export const gameAPI = {
   getTopic: (categorySlug: string, topicSlug: string) =>
     api.get(`/game/topics/${categorySlug}/${topicSlug}/`),
 
-  // Get quiz questions for a level
-  getQuizQuestions: (categorySlug: string, topicSlug: string, level: number) =>
-    api.get(`/game/quiz/${categorySlug}/${topicSlug}/${level}/`),
+  // Start a quiz: POST the face-verification photo, get questions + attempt_id back.
+  // The backend rejects the request if the photo is missing.
+  startQuiz: (
+    categorySlug: string,
+    topicSlug: string,
+    level: number,
+    photo: Blob,
+  ) => {
+    const form = new FormData();
+    form.append("verification_photo", photo, "face.jpg");
+    return api.post(
+      `/game/quiz/${categorySlug}/${topicSlug}/${level}/`,
+      form,
+      { headers: { "Content-Type": "multipart/form-data" } },
+    );
+  },
+
+  // Admin: list verification photos for review
+  adminListVerifications: (page = 1) =>
+    api.get(`/game/admin/verifications/?page=${page}`),
 
   // Submit an answer
   submitAnswer: (data: {

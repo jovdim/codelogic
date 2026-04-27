@@ -10,6 +10,7 @@ import { ProtectedRoute } from "@/components/auth/RouteGuards";
 import { gameAPI } from "@/lib/api";
 import { invalidateCache } from "@/lib/dataCache";
 import { Modal, ModalButton } from "@/components/ui/Modal";
+import FaceVerificationModal from "@/components/FaceVerificationModal";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
 import {
   Heart,
@@ -197,18 +198,20 @@ export default function LevelQuizPage() {
     sessionStorage.removeItem(timerStorageKey);
   }, [timerStorageKey]);
 
-  // Fetch questions from API
-  useEffect(() => {
-    const fetchQuestions = async () => {
+  // Face-verification gate: nothing loads until the modal hands us a photo.
+  const [showFaceModal, setShowFaceModal] = useState(true);
+
+  const loadQuiz = useCallback(
+    async (photo: Blob) => {
       try {
         setLoading(true);
-        // Refresh user data to ensure latest heart count
         await refreshUser();
-        
-        const response = await gameAPI.getQuizQuestions(
+
+        const response = await gameAPI.startQuiz(
           categoryId,
           topicId,
           levelId,
+          photo,
         );
         const lessonData = response.data.lessons || [];
         setLessons(lessonData);
@@ -219,7 +222,6 @@ export default function LevelQuizPage() {
         setHearts(response.data.hearts);
         setError(null);
 
-        // Only start timer after lessons are done
         clearTimerStorage();
         if (lessonData.length === 0) {
           setTimeLeft(30);
@@ -239,10 +241,22 @@ export default function LevelQuizPage() {
       } finally {
         setLoading(false);
       }
-    };
+    },
+    [categoryId, topicId, levelId, refreshUser, clearTimerStorage, saveTimerStart],
+  );
 
-    fetchQuestions();
-  }, [categoryId, topicId, levelId]);
+  const handleFaceCaptured = useCallback(
+    (photo: Blob) => {
+      setShowFaceModal(false);
+      void loadQuiz(photo);
+    },
+    [loadQuiz],
+  );
+
+  const handleFaceCancelled = useCallback(() => {
+    // Student backed out of the camera prompt — bounce them off the quiz page.
+    router.push(`/play/${categoryId}/${topicId}`);
+  }, [router, categoryId, topicId]);
 
   const question = questions[currentQuestion];
   const totalQuestions = questions.length;
@@ -386,51 +400,20 @@ export default function LevelQuizPage() {
 
   const [noHeartsError, setNoHeartsError] = useState(false);
 
+  // Restart re-verifies the player — every fresh attempt needs a fresh photo.
   const restartQuiz = async () => {
-    // First refresh user to get latest heart count
     await refreshUser();
-
-    // Refetch questions to start fresh
-    try {
-      setLoading(true);
-      setNoHeartsError(false);
-      const response = await gameAPI.getQuizQuestions(
-        categoryId,
-        topicId,
-        levelId,
-      );
-      setQuestions(response.data.questions);
-      setAttemptId(response.data.attempt_id);
-      setHearts(response.data.hearts);
-      setCurrentQuestion(0);
-      setSelectedAnswer(null);
-      setIsAnswered(false);
-      setScore(0);
-      setXpEarned(0);
-      setShowResult(false);
-      setTimeLeft(30);
-      setHeartsLost(0);
-      setQuizSubmitted(false); // Allow new submission for restarted quiz
-      // Save fresh timer start for restarted quiz
-      saveTimerStart(0);
-    } catch (err: unknown) {
-      console.error("Failed to restart quiz:", err);
-      // Check if it's a "no hearts" error
-      if (typeof err === "object" && err !== null && "response" in err) {
-        const axiosError = err as {
-          response?: { status?: number; data?: { error?: string } };
-        };
-        if (
-          axiosError.response?.status === 403 ||
-          axiosError.response?.data?.error?.includes("hearts")
-        ) {
-          setNoHeartsError(true);
-          setShowResult(false); // Hide result screen to show no hearts message
-        }
-      }
-    } finally {
-      setLoading(false);
-    }
+    setNoHeartsError(false);
+    setCurrentQuestion(0);
+    setSelectedAnswer(null);
+    setIsAnswered(false);
+    setScore(0);
+    setXpEarned(0);
+    setShowResult(false);
+    setTimeLeft(30);
+    setHeartsLost(0);
+    setQuizSubmitted(false);
+    setShowFaceModal(true);
   };
 
   // Calculate stars
@@ -508,6 +491,22 @@ export default function LevelQuizPage() {
       submitQuizResult();
     }
   }, [showResult, quizSubmitted]);
+
+  // Face verification gate — shown before any quiz data loads, and again on
+  // restart-after-out-of-hearts. Until the user passes, no questions are
+  // fetched and the rest of the page is hidden behind it.
+  if (showFaceModal) {
+    return (
+      <ProtectedRoute>
+        <div className="min-h-screen bg-gradient-to-b from-[#0f0f1a] to-[#1a1a2e]" />
+        <FaceVerificationModal
+          open
+          onCaptured={handleFaceCaptured}
+          onCancel={handleFaceCancelled}
+        />
+      </ProtectedRoute>
+    );
+  }
 
   // Loading state
   if (loading) {

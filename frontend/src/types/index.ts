@@ -9,6 +9,7 @@ export interface User {
   avatar: number; // 1-5 preset avatars
   bio: string;
   is_email_verified: boolean;
+  is_staff?: boolean;
   date_joined: string;
   member_since: string;
   days_since_joined: number;
