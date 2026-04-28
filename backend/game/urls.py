@@ -30,4 +30,8 @@ urlpatterns = [
     # QuizAttempt's verification photo at a stable URL so admin thumbnail
     # links open reliably in a new tab.
     path('admin-photo/<uuid:attempt_id>/', views.admin_verification_photo, name='admin-verification-photo'),
+
+    # Django-admin certificate preview (staff-only). Renders any user's
+    # earned certificate, matching the frontend design.
+    path('admin-cert/<uuid:user_certificate_id>/', views.admin_view_certificate, name='admin-view-certificate'),
 ]

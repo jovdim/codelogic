@@ -10,13 +10,14 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from django.contrib.auth import get_user_model
 from django.contrib.admin.views.decorators import staff_member_required
 from django.http import HttpResponse, Http404
+from django.shortcuts import get_object_or_404, render
 from django.views.decorators.cache import cache_control
 from django.utils import timezone
 from django.db.models import F, Q, Count, Sum
 from django.db.models.functions import Coalesce
 import random
 
-from .models import Category, Topic, Question, QuizAttempt, UserAnswer, UserProgress, LearningResource, Lesson
+from .models import Category, Topic, Question, QuizAttempt, UserAnswer, UserProgress, LearningResource, Lesson, UserCertificate
 from .serializers import (
     CategorySerializer, TopicSerializer, TopicWithProgressSerializer,
     QuestionSerializer, LeaderboardUserSerializer,
@@ -778,5 +779,68 @@ def admin_verification_photo(request, attempt_id):
     if not photo:
         raise Http404
     return HttpResponse(bytes(photo), content_type='image/jpeg')
+
+
+# ---------------------------------------------------------------------------
+# Django-admin: render a user's earned certificate as HTML.
+# Mirrors the frontend cert template (frontend/src/lib/certTemplate.ts) so
+# admins can preview / print any user's cert without leaving Django admin.
+# ---------------------------------------------------------------------------
+
+_SKILLS_BY_CATEGORY = {
+    'frontend': ['HTML', 'CSS', 'JavaScript', 'Responsive Design', 'Accessibility'],
+    'backend': ['APIs', 'Databases', 'Authentication', 'Server Logic', 'Security'],
+    'data': ['Data Structures', 'Algorithms', 'Analysis', 'Visualisation', 'Problem Solving'],
+    'mobile': ['UI Components', 'State Management', 'Navigation', 'Native APIs', 'App Lifecycle'],
+    'ai': ['Models', 'Training', 'Inference', 'Evaluation', 'Ethics'],
+    'ml': ['Models', 'Training', 'Inference', 'Evaluation', 'Ethics'],
+}
+
+
+def _skills_for_category(category_slug, topic_name):
+    key = (category_slug or '').lower()
+    for k, v in _SKILLS_BY_CATEGORY.items():
+        if k in key:
+            return v
+    return ['Concepts', 'Syntax', 'Practical Application', 'Best Practices', topic_name]
+
+
+@staff_member_required
+def admin_view_certificate(request, user_certificate_id):
+    """
+    Render the dark-purple cert for any UserCertificate row. Staff-only.
+    Linked from the UserCertificate admin's "View" column.
+    """
+    uc = get_object_or_404(
+        UserCertificate.objects.select_related(
+            'user', 'certificate', 'certificate__topic', 'certificate__topic__category',
+        ),
+        pk=user_certificate_id,
+    )
+    user = uc.user
+    topic = uc.certificate.topic
+    category = topic.category
+
+    icon_url = None
+    if topic.icon_file:
+        icon_url = request.build_absolute_uri(topic.icon_file.url)
+    elif uc.certificate.icon_file:
+        icon_url = request.build_absolute_uri(uc.certificate.icon_file.url)
+
+    user_name = user.display_name or user.username
+
+    context = {
+        'user_name': user_name,
+        'topic_name': topic.name,
+        'topic_display': uc.certificate.title or topic.name,
+        'topic_icon_url': icon_url,
+        'category': category.name if category else 'programming',
+        'completion_date_str': uc.completion_date.strftime('%B %d, %Y') if uc.completion_date else '',
+        'certificate_id': uc.certificate_code or str(uc.id),
+        'skills': _skills_for_category(
+            category.slug if category else '', topic.name,
+        ),
+    }
+    return render(request, 'game/admin_certificate.html', context)
 
 

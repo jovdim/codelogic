@@ -134,6 +134,80 @@ class QuizAttemptInline(admin.TabularInline):
 
 
 # ============================================================
+# USER CERTIFICATE ADMIN - browse earned certs + view / print them
+# ============================================================
+
+@admin.register(UserCertificate)
+class UserCertificateAdmin(admin.ModelAdmin):
+    list_display = ['user', 'topic_display', 'completion_date', 'total_stars', 'total_xp_earned', 'certificate_code', 'view_link']
+    list_select_related = ['user', 'certificate', 'certificate__topic']
+    list_filter = ['certificate__topic__category', 'completion_date']
+    search_fields = ['user__email', 'user__username', 'certificate__topic__name', 'certificate_code']
+    ordering = ['-completion_date']
+    readonly_fields = [
+        'id', 'user', 'certificate', 'topic_display',
+        'total_stars', 'total_xp_earned',
+        'completion_date', 'certificate_code', 'view_link',
+    ]
+    fields = readonly_fields
+
+    def topic_display(self, obj):
+        return obj.certificate.topic.name
+    topic_display.short_description = 'Topic'
+
+    def view_link(self, obj):
+        url = reverse('admin-view-certificate', args=[obj.id])
+        return format_html(
+            '<a href="{}" target="_blank" rel="noopener" '
+            'style="display:inline-block;padding:5px 12px;background:#7c3aed;color:white;'
+            'border-radius:6px;font-weight:600;text-decoration:none">View Certificate</a>',
+            url,
+        )
+    view_link.short_description = 'Certificate'
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
+class UserCertificateInline(admin.TabularInline):
+    """Read-only list of a user's earned certificates on the User admin page."""
+    model = UserCertificate
+    fk_name = 'user'
+    extra = 0
+    can_delete = False
+    show_change_link = False
+    verbose_name_plural = 'Earned certificates'
+    fields = ['topic_display', 'completion_date', 'total_stars', 'total_xp_earned', 'certificate_code', 'view_link']
+    readonly_fields = fields
+    ordering = ['-completion_date']
+
+    def topic_display(self, obj):
+        return obj.certificate.topic.name
+    topic_display.short_description = 'Topic'
+
+    def view_link(self, obj):
+        if not obj.pk:
+            return ''
+        url = reverse('admin-view-certificate', args=[obj.id])
+        return format_html(
+            '<a href="{}" target="_blank" rel="noopener" '
+            'style="display:inline-block;padding:4px 10px;background:#7c3aed;color:white;'
+            'border-radius:6px;font-weight:600;text-decoration:none;font-size:11px">View</a>',
+            url,
+        )
+    view_link.short_description = 'Cert'
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('certificate__topic')
+
+
+# ============================================================
 # SITE SETTINGS ADMIN (Singleton - ONE configuration for whole site)
 # ============================================================
 

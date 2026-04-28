@@ -22,11 +22,8 @@ interface LeaderboardEntry {
   avatar: number | null;
 }
 
-type TimeFilter = "all-time" | "monthly" | "weekly";
-
 export default function LeaderboardPage() {
   const { user } = useAuth();
-  const [timeFilter, setTimeFilter] = useState<TimeFilter>("all-time");
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [userRank, setUserRank] = useState<number | null>(null);
@@ -90,7 +87,7 @@ export default function LeaderboardPage() {
     };
 
     fetchLeaderboard();
-  }, [timeFilter, user]);
+  }, [user]);
 
   const getRankDisplay = (rank: number) => {
     const rankNumber = (
@@ -130,46 +127,16 @@ export default function LeaderboardPage() {
       <ScrollToTop />
       <div className="min-h-screen pb-8">
         <div className="max-w-4xl mx-auto px-4 py-8">
-          {/* Title & Filters */}
+          {/* Title */}
           <ScrollReveal animation="fade-up">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
-              <div>
-                <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-                  <Trophy className="w-8 h-8 text-yellow-500" />
-                  Top Coders
-                </h1>
-                <p className="text-gray-400 mt-1">
-                  Compete with others and climb the ranks!
-                </p>
-              </div>
-
-              {/* Time Filter */}
-              <div className="flex gap-2">
-                {(["all-time", "monthly", "weekly"] as TimeFilter[]).map(
-                  (filter) => (
-                    <button
-                      key={filter}
-                      onClick={() => setTimeFilter(filter)}
-                      className={`px-3 md:px-4 py-2 text-sm font-medium transition-colors ${
-                        timeFilter === filter
-                          ? "text-white"
-                          : "bg-[#1a1a2e] text-gray-400 hover:text-white border border-[#2d2d44]"
-                      }`}
-                      style={
-                        timeFilter === filter
-                          ? { background: "var(--primary)" }
-                          : undefined
-                      }
-                    >
-                      {filter === "all-time"
-                        ? "All Time"
-                        : filter === "monthly"
-                          ? "This Month"
-                          : "This Week"}
-                    </button>
-                  ),
-                )}
-              </div>
+            <div className="mb-8">
+              <h1 className="text-3xl font-bold text-white flex items-center gap-3">
+                <Trophy className="w-8 h-8 text-yellow-500" />
+                Top Coders
+              </h1>
+              <p className="text-gray-400 mt-1">
+                Compete with others and climb the ranks!
+              </p>
             </div>
           </ScrollReveal>
 
