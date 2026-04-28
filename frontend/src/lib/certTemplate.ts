@@ -99,8 +99,11 @@ export function generateCertificateHTML(data: CertData): string {
 
           @page { size: landscape; margin: 0; }
 
+          /* Strong fallback chains: if Google Fonts hasn't loaded by the
+             time print runs, the cert still renders with a near-equivalent
+             system font instead of an invisible/missing glyph. */
           html, body {
-            font-family: 'Inter', system-ui, sans-serif;
+            font-family: 'Inter', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
             width: 100%;
             height: 100%;
             overflow: hidden;
@@ -149,7 +152,7 @@ export function generateCertificateHTML(data: CertData): string {
           .corner {
             position: absolute;
             color: rgba(167, 139, 250, 0.45);
-            font-family: 'Space Grotesk', monospace;
+            font-family: 'Space Grotesk', 'Consolas', 'Courier New', monospace;
             font-weight: 700;
             font-size: 22px;
             letter-spacing: -1px;
@@ -165,7 +168,7 @@ export function generateCertificateHTML(data: CertData): string {
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            font-family: 'Space Grotesk', monospace;
+            font-family: 'Space Grotesk', 'Consolas', 'Courier New', monospace;
             font-size: 380px;
             color: rgba(124, 58, 237, 0.04);
             font-weight: 700;
@@ -196,7 +199,7 @@ export function generateCertificateHTML(data: CertData): string {
           }
 
           .academy-name {
-            font-family: 'Space Grotesk', sans-serif;
+            font-family: 'Space Grotesk', 'Trebuchet MS', 'Segoe UI', Arial, sans-serif;
             font-size: 22px;
             color: #ffffff;
             font-weight: 600;
@@ -253,6 +256,8 @@ export function generateCertificateHTML(data: CertData): string {
             padding: 14px 0;
           }
 
+          /* No backdrop-filter here - Chrome's print engine drops elements
+             (and their text content) that use it. Keep this rule simple. */
           .topic-pill {
             display: flex;
             align-items: center;
@@ -261,11 +266,10 @@ export function generateCertificateHTML(data: CertData): string {
             background: rgba(124, 58, 237, 0.16);
             border: 1px solid rgba(167, 139, 250, 0.55);
             border-radius: 999px;
-            backdrop-filter: blur(2px);
           }
 
           .topic-name {
-            font-family: 'Space Grotesk', sans-serif;
+            font-family: 'Space Grotesk', 'Trebuchet MS', 'Segoe UI', Arial, sans-serif;
             font-size: 22px;
             color: #ffffff;
             font-weight: 600;
@@ -289,7 +293,7 @@ export function generateCertificateHTML(data: CertData): string {
           }
 
           .recipient-name {
-            font-family: 'Space Grotesk', sans-serif;
+            font-family: 'Space Grotesk', 'Trebuchet MS', 'Segoe UI', Arial, sans-serif;
             font-size: 46px;
             color: #ffffff;
             font-weight: 700;
@@ -378,7 +382,7 @@ export function generateCertificateHTML(data: CertData): string {
             text-align: left;
           }
           .signature-name {
-            font-family: 'Space Grotesk', sans-serif;
+            font-family: 'Space Grotesk', 'Trebuchet MS', 'Segoe UI', Arial, sans-serif;
             font-size: 14px;
             color: #ffffff;
             font-weight: 600;
@@ -450,7 +454,7 @@ export function generateCertificateHTML(data: CertData): string {
             letter-spacing: 2px;
           }
           .cert-info-value {
-            font-family: 'Space Grotesk', monospace;
+            font-family: 'Space Grotesk', 'Consolas', 'Courier New', monospace;
             font-size: 11px;
             color: #e2e2f0;
             font-weight: 500;
@@ -461,8 +465,21 @@ export function generateCertificateHTML(data: CertData): string {
             html, body {
               width: 100%;
               height: 100%;
-              print-color-adjust: exact;
-              -webkit-print-color-adjust: exact;
+            }
+            /* Force every element to honour its colors when printing.
+               Without this, semi-transparent backgrounds and dark fills
+               can drop in the PDF. */
+            * {
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            /* If the page renders before the gradient background loads on
+               the academy name span, the transparent text-fill leaves the
+               text invisible. Force it back to a solid fallback color. */
+            .academy-name .gradient {
+              -webkit-text-fill-color: #a78bfa !important;
+              background: none !important;
+              color: #a78bfa !important;
             }
             .certificate-wrapper { width: 100%; height: 100%; }
           }
