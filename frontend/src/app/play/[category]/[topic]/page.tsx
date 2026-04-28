@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
@@ -831,179 +831,61 @@ export default function TopicLevelPage() {
             </div>
           )}
 
-          {/* Certificate Modal */}
-          {showCertificate && (
-            <div
-              className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-              onClick={() => setShowCertificate(false)}
-            >
-              <div
-                className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-lg p-3 max-w-lg w-full shadow-2xl"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="bg-gradient-to-b from-[#fffffe] to-[#fff9eb] border-[3px] border-[#c9a227] rounded p-6 relative">
-                  {/* Corner decorations */}
-                  <div className="absolute top-2 left-2 w-10 h-10 border-l-2 border-t-2 border-[#c9a227]"></div>
-                  <div className="absolute top-2 right-2 w-10 h-10 border-r-2 border-t-2 border-[#c9a227]"></div>
-                  <div className="absolute bottom-2 left-2 w-10 h-10 border-l-2 border-b-2 border-[#c9a227]"></div>
-                  <div className="absolute bottom-2 right-2 w-10 h-10 border-r-2 border-b-2 border-[#c9a227]"></div>
+          {/* Certificate Preview Modal — iframe so preview matches what they download */}
+          {showCertificate && (() => {
+            const completionDateStr = certificateData.completionDate
+              ? new Date(certificateData.completionDate).toLocaleDateString("en-US", {
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                })
+              : new Date().toLocaleDateString("en-US", {
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                });
 
-                  {/* Close button */}
-                  <button
-                    onClick={() => setShowCertificate(false)}
-                    className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
+            const baseString = `${user?.id || 0}-${topicId}-${certificateData.completionDate || "unknown"}`;
+            let hash = 0;
+            for (let i = 0; i < baseString.length; i++) {
+              const char = baseString.charCodeAt(i);
+              hash = (hash << 5) - hash + char;
+              hash = hash & hash;
+            }
+            const hashHex = Math.abs(hash).toString(16).toUpperCase().padStart(8, "0");
+            const certificateId = `CL-${topicId.slice(0, 4).toUpperCase()}-${hashHex}`;
 
-                  {/* Logo - Gold colored to match certificate */}
-                  <div className="flex justify-center mb-3">
-                    <div className="w-12 h-12 bg-gradient-to-br from-[#f4d03f] to-[#c9a227] rounded-full flex items-center justify-center text-[#5c4a1f] font-bold text-base border-2 border-[#c9a227] shadow-lg">
-                      CL
-                    </div>
-                  </div>
+            const certData: CertData = {
+              topicName: topic.name,
+              topicId: topicId,
+              topicIconHtml: getTopicIconForCertificate(topic.icon, topic.accentColor),
+              accentColor: topic.accentColor,
+              userName: user?.display_name || user?.username || "Student",
+              completionDateStr,
+              certificateId,
+              category: categoryId,
+              certificateTitle: topic.certificateTitle,
+              certificateDescription: topic.certificateDescription,
+            };
 
-                  <div className="text-center">
-                    <p className="text-[9px] text-[#8b7355] uppercase tracking-[4px] mb-1">
-                      Certificate of Completion
-                    </p>
-                    <h2 className="text-xl font-serif font-bold text-[#2d2418] mb-3">
-                      CodeLogic Academy
-                    </h2>
+            const certHtml = generateCertificateHTML(certData);
 
-                    {/* Topic Badge - Dark background to match play section */}
-                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl mb-3 bg-[#0f0f1a] border-2 border-[#2d2d44]">
-                      {topic.icon ? (
-                        <img
-                          src={topic.icon}
-                          alt={topic.name}
-                          className="w-6 h-6 object-contain"
-                        />
-                      ) : (
-                        <Code2
-                          className="w-6 h-6"
-                          style={{ color: topic.accentColor }}
-                        />
-                      )}
-                      <span className="text-base font-serif font-semibold text-[#e2e2f0]">
-                        {topic.certificateTitle || topic.name}
-                      </span>
-                    </div>
+            const handleDownload = () => {
+              const printWindow = window.open("", "_blank");
+              if (printWindow) {
+                printWindow.document.write(certHtml);
+                printWindow.document.close();
+              }
+            };
 
-                    <p className="text-[10px] text-[#8b7355] tracking-wider mb-1 uppercase">
-                      This certificate is proudly presented to
-                    </p>
-                    <p className="text-lg font-serif font-semibold text-[#2d2418] mb-3 pb-2 border-b-2 border-[#c9a227]/40 inline-block px-6">
-                      {user?.display_name || user?.username || "Student"}
-                    </p>
-
-                    {/* Description */}
-                    <p className="text-sm text-[#5c4a1f] my-4">
-                      {topic.certificateDescription ||
-                        `For successfully completing the ${topic.name} course at CodeLogic Academy`}
-                    </p>
-
-                    {certificateData.completionDate && (
-                      <p className="text-xs text-[#8b7355] mt-2">
-                        Issued:{" "}
-                        {new Date(
-                          certificateData.completionDate,
-                        ).toLocaleDateString("en-US", {
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                        })}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Seal */}
-                  <div className="absolute bottom-6 right-6 w-14 h-14 bg-gradient-to-br from-[#f4d03f] to-[#c9a227] rounded-full flex flex-col items-center justify-center text-[#5c4a1f] border-2 border-[#c9a227] shadow-lg">
-                    <span className="text-[6px] uppercase tracking-wider font-semibold">
-                      Verified
-                    </span>
-                    <span className="text-sm font-bold">✓</span>
-                  </div>
-                </div>
-
-                <div className="flex gap-2 mt-3">
-                  <button
-                    onClick={() => setShowCertificate(false)}
-                    className="flex-1 py-2.5 bg-gray-200 text-gray-700 font-medium hover:bg-gray-300 transition-colors"
-                    style={{ boxShadow: "3px 3px 0 0 rgba(0,0,0,0.2)" }}
-                  >
-                    Close
-                  </button>
-                  <button
-                    onClick={() => {
-                      const completionDateStr = certificateData.completionDate
-                        ? new Date(
-                            certificateData.completionDate,
-                          ).toLocaleDateString("en-US", {
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric",
-                          })
-                        : new Date().toLocaleDateString("en-US", {
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric",
-                          });
-
-                      // Generate deterministic certificate ID
-                      const generateCertId = () => {
-                        const baseString = `${user?.id || 0}-${topicId}-${certificateData.completionDate || "unknown"}`;
-                        let hash = 0;
-                        for (let i = 0; i < baseString.length; i++) {
-                          const char = baseString.charCodeAt(i);
-                          hash = (hash << 5) - hash + char;
-                          hash = hash & hash;
-                        }
-                        const hashHex = Math.abs(hash)
-                          .toString(16)
-                          .toUpperCase()
-                          .padStart(8, "0");
-                        const topicCode = topicId.slice(0, 4).toUpperCase();
-                        return `CL-${topicCode}-${hashHex}`;
-                      };
-                      const certificateId = generateCertId();
-                      const userName =
-                        user?.display_name || user?.username || "Student";
-
-                      const certData: CertData = {
-                        topicName: topic.name,
-                        topicId: topicId,
-                        topicIconHtml: getTopicIconForCertificate(
-                          topic.icon,
-                          topic.accentColor,
-                        ),
-                        accentColor: topic.accentColor,
-                        userName,
-                        completionDateStr,
-                        certificateId,
-                        category: categoryId,
-                        certificateTitle: topic.certificateTitle,
-                        certificateDescription: topic.certificateDescription,
-                      };
-
-                      const certContent = generateCertificateHTML(certData);
-
-                      const printWindow = window.open("", "_blank");
-                      if (printWindow) {
-                        printWindow.document.write(certContent);
-                        printWindow.document.close();
-                      }
-                    }}
-                    className="flex-1 py-2.5 bg-[#c9a227] hover:bg-[#d4b854] text-white pixel-box font-medium flex items-center justify-center gap-2 transition-colors cursor-pointer"
-                    style={{ boxShadow: "3px 3px 0 0 rgba(0,0,0,0.3)" }}
-                  >
-                    <Download className="w-4 h-4" />
-                    Download PDF
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+            return (
+              <CertPreviewModal
+                certHtml={certHtml}
+                onClose={() => setShowCertificate(false)}
+                onDownload={handleDownload}
+              />
+            );
+          })()}
 
           {/* Out of Hearts Modal */}
           <Modal
@@ -1048,5 +930,81 @@ export default function TopicLevelPage() {
         </div>
       </Sidebar>
     </ProtectedRoute>
+  );
+}
+
+
+/**
+ * Modal that renders the full cert HTML inside an iframe via a blob URL.
+ * Preview matches the downloaded file byte-for-byte.
+ */
+function CertPreviewModal({
+  certHtml,
+  onClose,
+  onDownload,
+}: {
+  certHtml: string;
+  onClose: () => void;
+  onDownload: () => void;
+}) {
+  const iframeSrc = useMemo(() => {
+    const blob = new Blob([certHtml], { type: "text/html" });
+    return URL.createObjectURL(blob);
+  }, [certHtml]);
+
+  useEffect(() => {
+    return () => URL.revokeObjectURL(iframeSrc);
+  }, [iframeSrc]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-5xl rounded-xl bg-[#0f0f1a] border border-[#2d2d44] overflow-hidden shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-4 py-3 border-b border-[#2d2d44]">
+          <h2 className="text-white font-semibold">Certificate Preview</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="text-gray-400 hover:text-white"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="bg-black">
+          <iframe
+            src={iframeSrc}
+            title="Certificate preview"
+            className="w-full block"
+            style={{ aspectRatio: "1.414 / 1", border: 0 }}
+          />
+        </div>
+
+        <div className="flex justify-end gap-2 px-4 py-3 border-t border-[#2d2d44]">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 rounded-lg bg-[#1a1a2e] text-gray-300 text-sm font-medium hover:bg-[#252540] border border-[#2d2d44]"
+          >
+            Close
+          </button>
+          <button
+            type="button"
+            onClick={onDownload}
+            className="px-4 py-2 rounded-lg text-white text-sm font-semibold flex items-center gap-2 hover:opacity-90"
+            style={{ background: "var(--gradient-purple)" }}
+          >
+            <Download className="w-4 h-4" />
+            Download PDF
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }

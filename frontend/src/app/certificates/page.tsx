@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { getCached, setCache } from "@/lib/dataCache";
 import { useAuth } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/auth/RouteGuards";
@@ -127,7 +127,9 @@ export default function CertificatesPage() {
     return getTopicIconForCertificate(iconUrl, color);
   };
 
-  const downloadCertificate = (cert: Certificate) => {
+  // Builds the same CertData payload used by both the download and the
+  // in-page preview iframe — single source of truth for both surfaces.
+  const buildCertData = (cert: Certificate): CertData => {
     const completionDateStr = cert.completedAt
       ? new Date(cert.completedAt).toLocaleDateString("en-US", {
           year: "numeric",
@@ -136,29 +138,26 @@ export default function CertificatesPage() {
         })
       : "Date not available";
 
-    const certificateId = generateCertificateId(
-      user?.id,
-      cert.topicId,
-      cert.completedAt,
-    );
-    const userName = user?.display_name || user?.username || "Student";
-    const topicIcon = getTopicIconForPDF(cert.topicIcon, cert.accentColor);
-
-    const certData: CertData = {
+    return {
       topicName: cert.topicName,
       topicId: cert.topicId,
-      topicIconHtml: topicIcon,
+      topicIconHtml: getTopicIconForPDF(cert.topicIcon, cert.accentColor),
       accentColor: cert.accentColor,
-      userName,
+      userName: user?.display_name || user?.username || "Student",
       completionDateStr,
-      certificateId,
+      certificateId: generateCertificateId(
+        user?.id,
+        cert.topicId,
+        cert.completedAt,
+      ),
       category: cert.category,
       certificateTitle: cert.certificateTitle,
       certificateDescription: cert.certificateDescription,
     };
+  };
 
-    const certContent = generateCertificateHTML(certData);
-
+  const downloadCertificate = (cert: Certificate) => {
+    const certContent = generateCertificateHTML(buildCertData(cert));
     const printWindow = window.open("", "_blank");
     if (printWindow) {
       printWindow.document.write(certContent);
@@ -315,108 +314,94 @@ export default function CertificatesPage() {
           <ScrollToTop />
         </div>
 
-        {/* Certificate Preview Modal */}
+        {/* Certificate Preview Modal — iframe so preview matches what they download */}
         {selectedCert && (
-          <div
-            className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-            onClick={() => setSelectedCert(null)}
-          >
-            <div
-              className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-lg p-3 max-w-lg w-full shadow-2xl"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="bg-gradient-to-b from-[#fffffe] to-[#fff9eb] border-[3px] border-[#c9a227] rounded p-6 relative">
-                {/* Corner decorations */}
-                <div className="absolute top-2 left-2 w-10 h-10 border-l-2 border-t-2 border-[#c9a227]"></div>
-                <div className="absolute top-2 right-2 w-10 h-10 border-r-2 border-t-2 border-[#c9a227]"></div>
-                <div className="absolute bottom-2 left-2 w-10 h-10 border-l-2 border-b-2 border-[#c9a227]"></div>
-                <div className="absolute bottom-2 right-2 w-10 h-10 border-r-2 border-b-2 border-[#c9a227]"></div>
-
-                {/* Close button */}
-                <button
-                  onClick={() => setSelectedCert(null)}
-                  className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-
-                {/* Logo - Gold colored to match certificate */}
-                <div className="flex justify-center mb-3">
-                  <div className="w-12 h-12 bg-gradient-to-br from-[#f4d03f] to-[#c9a227] rounded-full flex items-center justify-center text-[#5c4a1f] font-bold text-base border-2 border-[#c9a227] shadow-lg">
-                    CL
-                  </div>
-                </div>
-
-                <div className="text-center">
-                  <p className="text-[9px] text-[#8b7355] uppercase tracking-[4px] mb-1">
-                    Certificate of Completion
-                  </p>
-                  <h2 className="text-xl font-serif font-bold text-[#2d2418] mb-3">
-                    CodeLogic Academy
-                  </h2>
-
-                  {/* Topic Badge - Dark background to match play section */}
-                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl mb-3 bg-[#0f0f1a] border-2 border-[#2d2d44]">
-                    <TopicIcon iconUrl={selectedCert.topicIcon} size={24} />
-                    <span className="text-base font-serif font-semibold text-[#e2e2f0]">
-                      {selectedCert.certificateTitle || selectedCert.topicName}
-                    </span>
-                  </div>
-
-                  <p className="text-[10px] text-[#8b7355] tracking-wider mb-1 uppercase">
-                    This certificate is proudly presented to
-                  </p>
-                  <p className="text-lg font-serif font-semibold text-[#2d2418] mb-3 pb-2 border-b-2 border-[#c9a227]/40 inline-block px-6">
-                    {user?.display_name || user?.username || "Student"}
-                  </p>
-
-                  {/* Description */}
-                  <p className="text-sm text-[#5c4a1f] my-4">
-                    {selectedCert.certificateDescription ||
-                      `For successfully completing the ${selectedCert.topicName} course at CodeLogic Academy`}
-                  </p>
-
-                  {selectedCert.completedAt && (
-                    <p className="text-xs text-[#8b7355] mt-2">
-                      Issued:{" "}
-                      {new Date(selectedCert.completedAt).toLocaleDateString(
-                        "en-US",
-                        { year: "numeric", month: "long", day: "numeric" },
-                      )}
-                    </p>
-                  )}
-                </div>
-
-                {/* Seal */}
-                <div className="absolute bottom-6 right-6 w-14 h-14 bg-gradient-to-br from-[#f4d03f] to-[#c9a227] rounded-full flex flex-col items-center justify-center text-[#5c4a1f] border-2 border-[#c9a227] shadow-lg">
-                  <span className="text-[6px] uppercase tracking-wider font-semibold">
-                    Verified
-                  </span>
-                  <span className="text-sm font-bold">✓</span>
-                </div>
-              </div>
-
-              <div className="flex gap-2 mt-3">
-                <button
-                  onClick={() => setSelectedCert(null)}
-                  className="flex-1 py-2.5 bg-gray-200 text-gray-700 font-medium hover:bg-gray-300 transition-colors"
-                  style={{ boxShadow: "3px 3px 0 0 rgba(0,0,0,0.2)" }}
-                >
-                  Close
-                </button>
-                <button
-                  onClick={() => downloadCertificate(selectedCert)}
-                  className="flex-1 py-2.5 bg-[#c9a227] hover:bg-[#d4b854] text-white font-medium flex items-center justify-center gap-2 transition-colors"
-                  style={{ boxShadow: "3px 3px 0 0 rgba(0,0,0,0.3)" }}
-                >
-                  <Download className="w-4 h-4" />
-                  Download PDF
-                </button>
-              </div>
-            </div>
-          </div>
+          <CertPreviewModal
+            certHtml={generateCertificateHTML(buildCertData(selectedCert))}
+            onClose={() => setSelectedCert(null)}
+            onDownload={() => downloadCertificate(selectedCert)}
+          />
         )}
       </Sidebar>
     </ProtectedRoute>
+  );
+}
+
+
+/**
+ * Modal that renders the full cert HTML inside an iframe via a blob URL.
+ * The iframe gets the exact HTML the download produces, so the preview is
+ * byte-for-byte the same as the downloaded file.
+ */
+function CertPreviewModal({
+  certHtml,
+  onClose,
+  onDownload,
+}: {
+  certHtml: string;
+  onClose: () => void;
+  onDownload: () => void;
+}) {
+  const iframeSrc = useMemo(() => {
+    const blob = new Blob([certHtml], { type: "text/html" });
+    return URL.createObjectURL(blob);
+  }, [certHtml]);
+
+  // Free the blob URL when the modal unmounts.
+  useEffect(() => {
+    return () => URL.revokeObjectURL(iframeSrc);
+  }, [iframeSrc]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-5xl rounded-xl bg-[#0f0f1a] border border-[#2d2d44] overflow-hidden shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-4 py-3 border-b border-[#2d2d44]">
+          <h2 className="text-white font-semibold">Certificate Preview</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="text-gray-400 hover:text-white"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Cert content — landscape ratio so the iframe shows the full cert */}
+        <div className="bg-black">
+          <iframe
+            src={iframeSrc}
+            title="Certificate preview"
+            className="w-full block"
+            style={{ aspectRatio: "1.414 / 1", border: 0 }}
+          />
+        </div>
+
+        <div className="flex justify-end gap-2 px-4 py-3 border-t border-[#2d2d44]">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 rounded-lg bg-[#1a1a2e] text-gray-300 text-sm font-medium hover:bg-[#252540] border border-[#2d2d44]"
+          >
+            Close
+          </button>
+          <button
+            type="button"
+            onClick={onDownload}
+            className="px-4 py-2 rounded-lg text-white text-sm font-semibold flex items-center gap-2 hover:opacity-90"
+            style={{ background: "var(--gradient-purple)" }}
+          >
+            <Download className="w-4 h-4" />
+            Download PDF
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
