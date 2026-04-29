@@ -276,6 +276,18 @@ export function generateCertificateHTML(data: CertData): string {
             border: 1px solid rgba(167, 139, 250, 0.55);
             border-radius: 999px;
           }
+          /* WeasyPrint ignores HTML width/height attrs on <img>; force the
+             topic icon to a fixed pixel box via CSS so it can't grow to its
+             natural size and overflow the page. */
+          .topic-pill img,
+          .topic-pill svg {
+            width: 44px !important;
+            height: 44px !important;
+            max-width: 44px !important;
+            max-height: 44px !important;
+            object-fit: contain;
+            flex-shrink: 0;
+          }
 
           .topic-name {
             font-family: 'Space Grotesk', 'Trebuchet MS', 'Segoe UI', Arial, sans-serif;
