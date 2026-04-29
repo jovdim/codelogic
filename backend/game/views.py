@@ -851,6 +851,30 @@ class RenderPdfView(APIView):
                 return c
         return None
 
+    @staticmethod
+    def _render_with_chrome(chrome_path, html_bytes):
+        """Run headless Chrome to render HTML -> PDF. Raises on failure."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = pathlib.Path(tmpdir)
+            html_file = tmp / 'cert.html'
+            pdf_file = tmp / 'cert.pdf'
+            html_file.write_bytes(html_bytes)
+            cmd = [
+                chrome_path,
+                '--headless=new',
+                '--disable-gpu',
+                '--no-sandbox',
+                '--disable-dev-shm-usage',
+                '--no-pdf-header-footer',
+                f'--print-to-pdf={pdf_file}',
+                html_file.as_uri(),
+            ]
+            result = subprocess.run(cmd, capture_output=True, timeout=30)
+            if result.returncode != 0 or not pdf_file.exists() or pdf_file.stat().st_size == 0:
+                err = result.stderr.decode('utf-8', errors='replace')[:300]
+                raise RuntimeError(f'chrome failed: {err}')
+            return pdf_file.read_bytes()
+
     def post(self, request):
         html_bytes = request.body
         if not html_bytes:
@@ -859,48 +883,49 @@ class RenderPdfView(APIView):
             return Response({'error': 'HTML too large'}, status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE)
 
         chrome = self._find_chrome()
-        if chrome is None:
+        pdf_bytes = None
+        engine_used = None
+
+        # Engine 1: local Chrome via subprocess. Best quality, used on dev
+        # machines with Chrome installed and on any prod host where chromium
+        # is reachable from PATH.
+        if chrome is not None:
+            try:
+                pdf_bytes = self._render_with_chrome(chrome, html_bytes)
+                engine_used = 'chrome'
+            except Exception as exc:  # noqa: BLE001 - try the fallback
+                chrome_error = str(exc)[:300]
+            else:
+                chrome_error = None
+        else:
+            chrome_error = 'chrome-not-found'
+
+        # Engine 2: WeasyPrint server-side. Used on hosts where Chrome isn't
+        # available (notably DigitalOcean App Platform's Ubuntu containers
+        # where `chromium-browser` apt is unreliable). Renders direct from
+        # HTML using libpango/libcairo from the Aptfile.
+        if pdf_bytes is None:
+            try:
+                from weasyprint import HTML  # type: ignore[import-not-found]
+                pdf_bytes = HTML(string=html_bytes.decode('utf-8')).write_pdf()
+                engine_used = 'weasyprint'
+            except ImportError:
+                return Response(
+                    {'error': 'No PDF engine available on this host.',
+                     'code': 'NO_PDF_ENGINE',
+                     'chrome_error': chrome_error},
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                )
+            except Exception as exc:  # noqa: BLE001
+                return Response(
+                    {'error': f'WeasyPrint render error: {exc}',
+                     'chrome_error': chrome_error},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+
+        if not pdf_bytes:
             return Response(
-                {'error': 'Chrome / Chromium not found on this host.',
-                 'code': 'CHROME_NOT_FOUND'},
-                status=status.HTTP_503_SERVICE_UNAVAILABLE,
-            )
-
-        try:
-            with tempfile.TemporaryDirectory() as tmpdir:
-                tmp = pathlib.Path(tmpdir)
-                html_file = tmp / 'cert.html'
-                pdf_file = tmp / 'cert.pdf'
-                html_file.write_bytes(html_bytes)
-
-                cmd = [
-                    chrome,
-                    '--headless=new',
-                    '--disable-gpu',
-                    '--no-sandbox',
-                    '--disable-dev-shm-usage',
-                    '--no-pdf-header-footer',
-                    f'--print-to-pdf={pdf_file}',
-                    html_file.as_uri(),
-                ]
-                result = subprocess.run(cmd, capture_output=True, timeout=30)
-
-                if result.returncode != 0 or not pdf_file.exists() or pdf_file.stat().st_size == 0:
-                    err = result.stderr.decode('utf-8', errors='replace')[:500]
-                    return Response(
-                        {'error': 'PDF render failed.', 'detail': err},
-                        status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    )
-
-                pdf_bytes = pdf_file.read_bytes()
-        except subprocess.TimeoutExpired:
-            return Response(
-                {'error': 'PDF render timed out.'},
-                status=status.HTTP_504_GATEWAY_TIMEOUT,
-            )
-        except Exception as exc:
-            return Response(
-                {'error': f'PDF render error: {exc}'},
+                {'error': 'PDF render produced no output.'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 

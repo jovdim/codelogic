@@ -1,1 +1,9 @@
-chromium-browser
+# System libs WeasyPrint needs to render PDFs on Linux (used as the prod
+# fallback when Chrome subprocess isn't available).
+libpango-1.0-0
+libpangoft2-1.0-0
+libcairo2
+libgdk-pixbuf-2.0-0
+libffi-dev
+shared-mime-info
+fonts-liberation

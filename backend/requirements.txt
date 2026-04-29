@@ -27,6 +27,9 @@ boto3>=1.34.0
 # Pillow for image handling (if needed)
 Pillow>=10.0.0
 
-# Note: PDF generation uses a locally-installed Chrome/Chromium via
-# subprocess --print-to-pdf. No Python PDF lib required. On DigitalOcean
-# the Aptfile pulls in chromium-browser; locally we use the user's Chrome.
+# Cert PDF rendering. Two-engine strategy in the view:
+#   1) Local Chrome subprocess (fast, perfect on machines that have Chrome)
+#   2) WeasyPrint server-side fallback (works on Linux via Aptfile-installed
+#      libpango / libcairo - reliable on DigitalOcean App Platform where
+#      chromium-browser via apt is unreliable in 22.04+ containers).
+weasyprint>=62.0
