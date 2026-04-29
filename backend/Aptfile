@@ -1,9 +1,40 @@
-# System libs WeasyPrint needs to render PDFs on Linux (used as the prod
-# fallback when Chrome subprocess isn't available).
+# System libs needed by:
+#   1) Google Chrome headless (downloaded by bin/post_compile) - the
+#      primary cert PDF rendering engine on production.
+#   2) WeasyPrint - the secondary Python-side fallback if Chrome can't run.
+#
+# Most of the libnss/libxkb/libatk packages below are Chrome's runtime deps;
+# libpango/libcairo are WeasyPrint's.
+
+# Chrome runtime deps
+libnss3
+libnspr4
+libxss1
+libasound2
+libatk1.0-0
+libatk-bridge2.0-0
+libcups2
+libdrm2
+libgbm1
+libxcomposite1
+libxdamage1
+libxfixes3
+libxrandr2
+libxkbcommon0
+libxshmfence1
+libxext6
+libxi6
+libxtst6
+libgtk-3-0
+libnotify4
+
+# WeasyPrint deps (kept as PDF fallback)
 libpango-1.0-0
 libpangoft2-1.0-0
 libcairo2
 libgdk-pixbuf-2.0-0
 libffi-dev
 shared-mime-info
+
+# Fonts (used by both engines)
 fonts-liberation

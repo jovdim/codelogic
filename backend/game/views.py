@@ -829,11 +829,13 @@ class RenderPdfView(APIView):
 
     # Common locations for Chrome / Chromium on each OS we care about.
     _CHROME_CANDIDATES = [
+        # DigitalOcean App Platform - bin/post_compile installs Chrome here.
+        os.path.expanduser('~/.local/chrome/chrome'),
         # Windows
         r'C:\Program Files\Google\Chrome\Application\chrome.exe',
         r'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe',
         os.path.expanduser(r'~\AppData\Local\Google\Chrome\Application\chrome.exe'),
-        # Linux
+        # Linux (system installs)
         '/usr/bin/google-chrome',
         '/usr/bin/google-chrome-stable',
         '/usr/bin/chromium',

@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# Runs after `pip install` during DigitalOcean App Platform build.
+#
+# Downloads Google Chrome stable so the cert PDF render path
+# (RenderPdfView in game/views.py) can shell out to a real Chrome binary
+# on production. This gives prod pixel-identical PDF output to dev,
+# instead of relying on WeasyPrint as a fallback.
+#
+# We extract the .deb (no root needed) instead of `apt install`, since
+# DO buildpacks run as a non-privileged user.
+
+set -euo pipefail
+
+CHROME_DIR="$HOME/.local/chrome"
+CHROME_BIN="$CHROME_DIR/chrome"
+
+if [ -x "$CHROME_BIN" ]; then
+  echo "post_compile: Chrome already installed at $CHROME_BIN, skipping."
+  exit 0
+fi
+
+mkdir -p "$CHROME_DIR"
+
+DEB="/tmp/google-chrome-stable.deb"
+echo "post_compile: downloading Google Chrome stable..."
+curl -fsSL -o "$DEB" "https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb"
+
+echo "post_compile: extracting Chrome..."
+dpkg -x "$DEB" "$CHROME_DIR/extracted"
+ln -sf "$CHROME_DIR/extracted/opt/google/chrome/google-chrome" "$CHROME_BIN"
+rm -f "$DEB"
+
+echo "post_compile: Chrome ready at $CHROME_BIN"
+"$CHROME_BIN" --version || true

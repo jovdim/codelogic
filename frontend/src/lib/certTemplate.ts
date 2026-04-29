@@ -136,7 +136,6 @@ export function generateCertificateHTML(data: CertData): string {
             position: relative;
             background:
               radial-gradient(ellipse at top, rgba(124, 58, 237, 0.14), transparent 60%),
-              radial-gradient(ellipse at bottom right, rgba(245, 158, 11, 0.06), transparent 60%),
               linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 60%, #14142a 100%);
             border-radius: 14px;
             box-shadow:
@@ -371,14 +370,16 @@ export function generateCertificateHTML(data: CertData): string {
             max-width: 820px;
           }
 
-          /* Flat outlined pills - no fill, single thin border. */
+          /* Solid dark fill, no border. Reads as a clean chip without the
+             inner/outer ring effect a transparent pill creates against the
+             textured cert background. */
           .skill-pill {
             padding: 4px 12px;
             font-size: 11px;
             font-weight: 500;
             color: #c4b5fd;
-            background: transparent;
-            border: 1px solid rgba(167, 139, 250, 0.45);
+            background: rgba(15, 15, 26, 0.7);
+            border: 0;
             border-radius: 999px;
             letter-spacing: 0.3px;
           }
