@@ -26,6 +26,9 @@ urlpatterns = [
     path('resources/', views.LearningResourceListView.as_view(), name='resource-list'),
     path('resources/<slug:slug>/', views.LearningResourceDetailView.as_view(), name='resource-detail'),
 
+    # Server-side cert PDF rendering (logged-in users post HTML, get PDF back).
+    path('cert/render-pdf/', views.RenderPdfView.as_view(), name='cert-render-pdf'),
+
     # Django-admin photo viewer (staff-only). Serves the JPEG bytes of a
     # QuizAttempt's verification photo at a stable URL so admin thumbnail
     # links open reliably in a new tab.

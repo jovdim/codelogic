@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { getCached, setCache } from "@/lib/dataCache";
 import { useAuth } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/auth/RouteGuards";
@@ -14,13 +14,13 @@ import {
   Search,
   Loader2,
   Code2,
-  X,
 } from "lucide-react";
 import {
   generateCertificateHTML,
   CertData,
   getTopicIconForCertificate,
 } from "@/lib/certTemplate";
+import { downloadCertAsPdf } from "@/lib/certPdf";
 
 interface Certificate {
   id: string;
@@ -89,7 +89,6 @@ export default function CertificatesPage() {
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCert, setSelectedCert] = useState<Certificate | null>(null);
   const [searchFocused, setSearchFocused] = useState(false);
 
   useEffect(() => {
@@ -156,12 +155,34 @@ export default function CertificatesPage() {
     };
   };
 
-  const downloadCertificate = (cert: Certificate) => {
-    const certContent = generateCertificateHTML(buildCertData(cert));
-    const printWindow = window.open("", "_blank");
-    if (printWindow) {
-      printWindow.document.write(certContent);
-      printWindow.document.close();
+  // Opens the cert HTML in a new tab. The user can read it like a normal
+  // page and use the browser's own print/save-as-PDF if they want.
+  const viewCertificate = (cert: Certificate) => {
+    const html = generateCertificateHTML(buildCertData(cert));
+    const win = window.open("", "_blank");
+    if (win) {
+      win.document.write(html);
+      win.document.close();
+    }
+  };
+
+  // Generate a real .pdf file and trigger a browser download. Renders the
+  // cert HTML in a hidden iframe, waits for fonts, then html2pdf captures
+  // and saves it.
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
+  const downloadCertificate = async (cert: Certificate) => {
+    if (downloadingId) return;
+    setDownloadingId(cert.id);
+    try {
+      const html = generateCertificateHTML(buildCertData(cert));
+      const safeTopic = cert.topicName.replace(/[^a-z0-9]+/gi, "-");
+      await downloadCertAsPdf(html, `Certificate-${safeTopic}.pdf`);
+    } catch (err) {
+      console.error("Failed to download certificate:", err);
+      alert("Couldn't generate the PDF. Try again or use the View button.");
+    } finally {
+      setDownloadingId(null);
     }
   };
 
@@ -285,22 +306,32 @@ export default function CertificatesPage() {
                           </div>
 
                           <div className="flex items-center gap-2">
-                            {/* Actions */}
                             <button
-                              onClick={() => setSelectedCert(cert)}
+                              onClick={() => viewCertificate(cert)}
                               className="px-4 py-2 pixel-box text-white text-sm font-medium hover:bg-[#2d2d44] transition-colors"
                             >
                               View
                             </button>
                             <button
                               onClick={() => downloadCertificate(cert)}
-                              className="px-4 py-2 bg-[#c9a227] hover:bg-[#d4b854] text-white text-sm font-medium flex items-center gap-2 transition-colors"
+                              disabled={downloadingId === cert.id}
+                              className="px-4 py-2 text-white text-sm font-medium flex items-center gap-2 transition-colors hover:opacity-90 rounded disabled:opacity-60 disabled:cursor-wait"
                               style={{
+                                background: "var(--gradient-purple)",
                                 boxShadow: "3px 3px 0 0 rgba(0,0,0,0.3)",
                               }}
                             >
-                              <Download className="w-4 h-4" />
-                              PDF
+                              {downloadingId === cert.id ? (
+                                <>
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                  Generating…
+                                </>
+                              ) : (
+                                <>
+                                  <Download className="w-4 h-4" />
+                                  PDF
+                                </>
+                              )}
                             </button>
                           </div>
                         </div>
@@ -314,94 +345,9 @@ export default function CertificatesPage() {
           <ScrollToTop />
         </div>
 
-        {/* Certificate Preview Modal — iframe so preview matches what they download */}
-        {selectedCert && (
-          <CertPreviewModal
-            certHtml={generateCertificateHTML(buildCertData(selectedCert))}
-            onClose={() => setSelectedCert(null)}
-            onDownload={() => downloadCertificate(selectedCert)}
-          />
-        )}
       </Sidebar>
     </ProtectedRoute>
   );
 }
 
 
-/**
- * Modal that renders the full cert HTML inside an iframe via a blob URL.
- * The iframe gets the exact HTML the download produces, so the preview is
- * byte-for-byte the same as the downloaded file.
- */
-function CertPreviewModal({
-  certHtml,
-  onClose,
-  onDownload,
-}: {
-  certHtml: string;
-  onClose: () => void;
-  onDownload: () => void;
-}) {
-  const iframeSrc = useMemo(() => {
-    const blob = new Blob([certHtml], { type: "text/html" });
-    return URL.createObjectURL(blob);
-  }, [certHtml]);
-
-  // Free the blob URL when the modal unmounts.
-  useEffect(() => {
-    return () => URL.revokeObjectURL(iframeSrc);
-  }, [iframeSrc]);
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-5xl rounded-xl bg-[#0f0f1a] border border-[#2d2d44] overflow-hidden shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between px-4 py-3 border-b border-[#2d2d44]">
-          <h2 className="text-white font-semibold">Certificate Preview</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            className="text-gray-400 hover:text-white"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Cert content — landscape ratio so the iframe shows the full cert */}
-        <div className="bg-black">
-          <iframe
-            src={iframeSrc}
-            title="Certificate preview"
-            className="w-full block"
-            style={{ aspectRatio: "1.414 / 1", border: 0 }}
-          />
-        </div>
-
-        <div className="flex justify-end gap-2 px-4 py-3 border-t border-[#2d2d44]">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 rounded-lg bg-[#1a1a2e] text-gray-300 text-sm font-medium hover:bg-[#252540] border border-[#2d2d44]"
-          >
-            Close
-          </button>
-          <button
-            type="button"
-            onClick={onDownload}
-            className="px-4 py-2 rounded-lg text-white text-sm font-semibold flex items-center gap-2 hover:opacity-90"
-            style={{ background: "var(--gradient-purple)" }}
-          >
-            <Download className="w-4 h-4" />
-            Download PDF
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}

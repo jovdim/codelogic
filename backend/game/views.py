@@ -2,6 +2,11 @@
 Views for game API - quizzes, progress, hearts/XP management.
 """
 
+import os
+import pathlib
+import subprocess
+import tempfile
+
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -803,6 +808,110 @@ def _skills_for_category(category_slug, topic_name):
         if k in key:
             return v
     return ['Concepts', 'Syntax', 'Practical Application', 'Best Practices', topic_name]
+
+
+class RenderPdfView(APIView):
+    """
+    Accepts a posted HTML document, returns the rendered PDF as an
+    `application/pdf` download response.
+
+    Strategy: shell out to a locally-installed Chrome/Chromium via
+    `--headless --print-to-pdf`. Uses the user's existing browser - no
+    GTK/WeasyPrint install needed on Windows, no extra Python package.
+    Chrome's PDF output respects the cert's `@page` rules so the saved
+    PDF is automatically A4 landscape with zero margins.
+
+    Authenticated users only - keeps this from being abused as a public
+    HTML-to-PDF service.
+    """
+    permission_classes = [IsAuthenticated]
+    MAX_BYTES = 2_000_000
+
+    # Common locations for Chrome / Chromium on each OS we care about.
+    _CHROME_CANDIDATES = [
+        # Windows
+        r'C:\Program Files\Google\Chrome\Application\chrome.exe',
+        r'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe',
+        os.path.expanduser(r'~\AppData\Local\Google\Chrome\Application\chrome.exe'),
+        # Linux
+        '/usr/bin/google-chrome',
+        '/usr/bin/google-chrome-stable',
+        '/usr/bin/chromium',
+        '/usr/bin/chromium-browser',
+        '/snap/bin/chromium',
+        # macOS
+        '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+        '/Applications/Chromium.app/Contents/MacOS/Chromium',
+    ]
+
+    @classmethod
+    def _find_chrome(cls):
+        for c in cls._CHROME_CANDIDATES:
+            if c and os.path.exists(c):
+                return c
+        return None
+
+    def post(self, request):
+        html_bytes = request.body
+        if not html_bytes:
+            return Response({'error': 'Empty body'}, status=status.HTTP_400_BAD_REQUEST)
+        if len(html_bytes) > self.MAX_BYTES:
+            return Response({'error': 'HTML too large'}, status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE)
+
+        chrome = self._find_chrome()
+        if chrome is None:
+            return Response(
+                {'error': 'Chrome / Chromium not found on this host.',
+                 'code': 'CHROME_NOT_FOUND'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        try:
+            with tempfile.TemporaryDirectory() as tmpdir:
+                tmp = pathlib.Path(tmpdir)
+                html_file = tmp / 'cert.html'
+                pdf_file = tmp / 'cert.pdf'
+                html_file.write_bytes(html_bytes)
+
+                cmd = [
+                    chrome,
+                    '--headless=new',
+                    '--disable-gpu',
+                    '--no-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--no-pdf-header-footer',
+                    f'--print-to-pdf={pdf_file}',
+                    html_file.as_uri(),
+                ]
+                result = subprocess.run(cmd, capture_output=True, timeout=30)
+
+                if result.returncode != 0 or not pdf_file.exists() or pdf_file.stat().st_size == 0:
+                    err = result.stderr.decode('utf-8', errors='replace')[:500]
+                    return Response(
+                        {'error': 'PDF render failed.', 'detail': err},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    )
+
+                pdf_bytes = pdf_file.read_bytes()
+        except subprocess.TimeoutExpired:
+            return Response(
+                {'error': 'PDF render timed out.'},
+                status=status.HTTP_504_GATEWAY_TIMEOUT,
+            )
+        except Exception as exc:
+            return Response(
+                {'error': f'PDF render error: {exc}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        filename = request.GET.get('filename') or 'certificate.pdf'
+        filename = ''.join(c for c in filename if c.isalnum() or c in '-_.')
+        if not filename.lower().endswith('.pdf'):
+            filename += '.pdf'
+
+        response = HttpResponse(pdf_bytes, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
 
 
 @staff_member_required

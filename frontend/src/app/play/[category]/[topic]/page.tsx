@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
@@ -16,20 +16,20 @@ import {
   Zap,
   ChevronLeft,
   CheckCircle2,
-  CheckCircle,
   Play,
   Award,
   Download,
   Code2,
-  X,
   Heart,
   Clock,
+  Loader2,
 } from "lucide-react";
 import {
   generateCertificateHTML,
   CertData,
   getTopicIconForCertificate,
 } from "@/lib/certTemplate";
+import { downloadCertAsPdf } from "@/lib/certPdf";
 
 // Topic data structure for API response
 interface TopicData {
@@ -332,7 +332,74 @@ export default function TopicLevelPage() {
   const isAllCompleted = completedLevels === topic.totalLevels;
 
   const [selectedLevel, setSelectedLevel] = useState<number | null>(null);
-  const [showCertificate, setShowCertificate] = useState(false);
+  // Build the cert HTML + payload from current page data.
+  const buildCertHtml = (): { html: string; topicName: string } | null => {
+    if (!topic) return null;
+    const completionDateStr = certificateData.completionDate
+      ? new Date(certificateData.completionDate).toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        })
+      : new Date().toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        });
+
+    const baseString = `${user?.id || 0}-${topicId}-${certificateData.completionDate || "unknown"}`;
+    let hash = 0;
+    for (let i = 0; i < baseString.length; i++) {
+      const char = baseString.charCodeAt(i);
+      hash = (hash << 5) - hash + char;
+      hash = hash & hash;
+    }
+    const hashHex = Math.abs(hash).toString(16).toUpperCase().padStart(8, "0");
+    const certificateId = `CL-${topicId.slice(0, 4).toUpperCase()}-${hashHex}`;
+
+    const certData: CertData = {
+      topicName: topic.name,
+      topicId: topicId,
+      topicIconHtml: getTopicIconForCertificate(topic.icon, topic.accentColor),
+      accentColor: topic.accentColor,
+      userName: user?.display_name || user?.username || "Student",
+      completionDateStr,
+      certificateId,
+      category: categoryId,
+      certificateTitle: topic.certificateTitle,
+      certificateDescription: topic.certificateDescription,
+    };
+
+    return { html: generateCertificateHTML(certData), topicName: topic.name };
+  };
+
+  const viewCertificate = () => {
+    const built = buildCertHtml();
+    if (!built) return;
+    const win = window.open("", "_blank");
+    if (win) {
+      win.document.write(built.html);
+      win.document.close();
+    }
+  };
+
+  const [downloadingCert, setDownloadingCert] = useState(false);
+
+  const downloadCertificate = async () => {
+    if (downloadingCert) return;
+    const built = buildCertHtml();
+    if (!built) return;
+    setDownloadingCert(true);
+    try {
+      const safe = built.topicName.replace(/[^a-z0-9]+/gi, "-");
+      await downloadCertAsPdf(built.html, `Certificate-${safe}.pdf`);
+    } catch (err) {
+      console.error("Failed to download certificate:", err);
+      alert("Couldn't generate the PDF. Try again or use the View button.");
+    } finally {
+      setDownloadingCert(false);
+    }
+  };
   const [showOutOfHearts, setShowOutOfHearts] = useState(false);
 
   useEffect(() => {
@@ -696,41 +763,60 @@ export default function TopicLevelPage() {
                   className="absolute top-1/2 -translate-y-1/2 right-0"
                   style={{ width: "calc(50% - 20px)" }}
                 >
-                  <button
-                    onClick={() => isAllCompleted && setShowCertificate(true)}
-                    disabled={!isAllCompleted}
-                    className={`relative w-full transition-all duration-200 ${!isAllCompleted ? "cursor-not-allowed" : "hover:scale-[1.02] cursor-pointer"}`}
+                  <div
+                    className="p-3 border-2 bg-[#1a1a2e] flex flex-col items-center justify-center gap-2"
+                    style={{
+                      borderColor: isAllCompleted ? "#fbbf24" : "#2d2d44",
+                    }}
                   >
-                    <div
-                      className="p-3 border-2 bg-[#1a1a2e] flex flex-col items-center justify-center gap-1"
+                    {isAllCompleted ? (
+                      <Award className="w-7 h-7" style={{ color: "#fbbf24" }} />
+                    ) : (
+                      <Lock className="w-6 h-6 text-gray-500" />
+                    )}
+                    <p
+                      className="text-xs font-bold"
                       style={{
-                        borderColor: isAllCompleted ? "#fbbf24" : "#2d2d44",
+                        color: isAllCompleted ? "#fbbf24" : "#6b7280",
                       }}
                     >
-                      {isAllCompleted ? (
-                        <Award
-                          className="w-8 h-8"
-                          style={{ color: "#fbbf24" }}
-                        />
-                      ) : (
-                        <Lock className="w-6 h-6 text-gray-500" />
-                      )}
-                      <p
-                        className="text-xs font-bold"
-                        style={{
-                          color: isAllCompleted ? "#fbbf24" : "#6b7280",
-                        }}
-                      >
-                        Certificate
+                      Certificate
+                    </p>
+                    {isAllCompleted ? (
+                      <div className="flex w-full gap-1.5">
+                        <button
+                          type="button"
+                          onClick={viewCertificate}
+                          className="flex-1 text-[11px] font-semibold text-white bg-[#0f0f1a] border border-[#2d2d44] rounded py-1.5 hover:bg-[#252540]"
+                        >
+                          View
+                        </button>
+                        <button
+                          type="button"
+                          onClick={downloadCertificate}
+                          disabled={downloadingCert}
+                          className="flex-1 text-[11px] font-semibold text-white rounded py-1.5 hover:opacity-90 disabled:opacity-60 disabled:cursor-wait flex items-center justify-center gap-1"
+                          style={{ background: "var(--gradient-purple)" }}
+                        >
+                          {downloadingCert ? (
+                            <>
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                              …
+                            </>
+                          ) : (
+                            <>
+                              <Download className="w-3 h-3" />
+                              PDF
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    ) : (
+                      <p className="text-[9px] text-gray-500 font-medium">
+                        Complete all levels
                       </p>
-                      {isAllCompleted && (
-                        <p className="text-[9px] text-green-400 font-medium flex items-center gap-1">
-                          <CheckCircle className="w-2.5 h-2.5" /> Ready to
-                          claim!
-                        </p>
-                      )}
-                    </div>
-                  </button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -831,61 +917,6 @@ export default function TopicLevelPage() {
             </div>
           )}
 
-          {/* Certificate Preview Modal — iframe so preview matches what they download */}
-          {showCertificate && (() => {
-            const completionDateStr = certificateData.completionDate
-              ? new Date(certificateData.completionDate).toLocaleDateString("en-US", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })
-              : new Date().toLocaleDateString("en-US", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                });
-
-            const baseString = `${user?.id || 0}-${topicId}-${certificateData.completionDate || "unknown"}`;
-            let hash = 0;
-            for (let i = 0; i < baseString.length; i++) {
-              const char = baseString.charCodeAt(i);
-              hash = (hash << 5) - hash + char;
-              hash = hash & hash;
-            }
-            const hashHex = Math.abs(hash).toString(16).toUpperCase().padStart(8, "0");
-            const certificateId = `CL-${topicId.slice(0, 4).toUpperCase()}-${hashHex}`;
-
-            const certData: CertData = {
-              topicName: topic.name,
-              topicId: topicId,
-              topicIconHtml: getTopicIconForCertificate(topic.icon, topic.accentColor),
-              accentColor: topic.accentColor,
-              userName: user?.display_name || user?.username || "Student",
-              completionDateStr,
-              certificateId,
-              category: categoryId,
-              certificateTitle: topic.certificateTitle,
-              certificateDescription: topic.certificateDescription,
-            };
-
-            const certHtml = generateCertificateHTML(certData);
-
-            const handleDownload = () => {
-              const printWindow = window.open("", "_blank");
-              if (printWindow) {
-                printWindow.document.write(certHtml);
-                printWindow.document.close();
-              }
-            };
-
-            return (
-              <CertPreviewModal
-                certHtml={certHtml}
-                onClose={() => setShowCertificate(false)}
-                onDownload={handleDownload}
-              />
-            );
-          })()}
 
           {/* Out of Hearts Modal */}
           <Modal
@@ -934,77 +965,3 @@ export default function TopicLevelPage() {
 }
 
 
-/**
- * Modal that renders the full cert HTML inside an iframe via a blob URL.
- * Preview matches the downloaded file byte-for-byte.
- */
-function CertPreviewModal({
-  certHtml,
-  onClose,
-  onDownload,
-}: {
-  certHtml: string;
-  onClose: () => void;
-  onDownload: () => void;
-}) {
-  const iframeSrc = useMemo(() => {
-    const blob = new Blob([certHtml], { type: "text/html" });
-    return URL.createObjectURL(blob);
-  }, [certHtml]);
-
-  useEffect(() => {
-    return () => URL.revokeObjectURL(iframeSrc);
-  }, [iframeSrc]);
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-5xl rounded-xl bg-[#0f0f1a] border border-[#2d2d44] overflow-hidden shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between px-4 py-3 border-b border-[#2d2d44]">
-          <h2 className="text-white font-semibold">Certificate Preview</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            className="text-gray-400 hover:text-white"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <div className="bg-black">
-          <iframe
-            src={iframeSrc}
-            title="Certificate preview"
-            className="w-full block"
-            style={{ aspectRatio: "1.414 / 1", border: 0 }}
-          />
-        </div>
-
-        <div className="flex justify-end gap-2 px-4 py-3 border-t border-[#2d2d44]">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 rounded-lg bg-[#1a1a2e] text-gray-300 text-sm font-medium hover:bg-[#252540] border border-[#2d2d44]"
-          >
-            Close
-          </button>
-          <button
-            type="button"
-            onClick={onDownload}
-            className="px-4 py-2 rounded-lg text-white text-sm font-semibold flex items-center gap-2 hover:opacity-90"
-            style={{ background: "var(--gradient-purple)" }}
-          >
-            <Download className="w-4 h-4" />
-            Download PDF
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}

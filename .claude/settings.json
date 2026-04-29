@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(python -m pytest --version)"
+      "Bash(python -m pytest --version)",
+      "Bash(python manage.py check)"
     ]
   }
 }

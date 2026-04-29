@@ -77,8 +77,11 @@ export function generateCertificateHTML(data: CertData): string {
 
   const displayTopic = certificateTitle || topicName;
 
-  // Multi-sentence formal statement. No score/stars/XP - intentionally broad.
-  const statement = certificateDescription || `
+  // Always use the broad statement so all certs read the same way regardless
+  // of any per-topic description set in the DB. (`certificateDescription`
+  // intentionally ignored to keep content consistent.)
+  void certificateDescription;
+  const statement = `
     is hereby recognised for the successful completion of the
     <strong>${topicName}</strong> course, having progressed through every
     stage of the curriculum and demonstrated a working understanding of
@@ -97,7 +100,13 @@ export function generateCertificateHTML(data: CertData): string {
 
           * { margin: 0; padding: 0; box-sizing: border-box; }
 
-          @page { size: landscape; margin: 0; }
+          /* @page rules drive the saved PDF's paper size + orientation.
+             Repeated and !important'd so Chrome's print dialog defaults
+             the Layout dropdown to Landscape automatically. */
+          @page { size: A4 landscape; margin: 0; }
+          @page :first { size: A4 landscape; margin: 0; }
+          @page :left { size: A4 landscape; margin: 0; }
+          @page :right { size: A4 landscape; margin: 0; }
 
           /* Strong fallback chains: if Google Fonts hasn't loaded by the
              time print runs, the cert still renders with a near-equivalent
@@ -462,9 +471,14 @@ export function generateCertificateHTML(data: CertData): string {
           }
 
           @media print {
+            @page { size: A4 landscape !important; margin: 0 !important; }
+            /* Lock the printable area to A4 landscape (297mm x 210mm) so
+               the cert can't overflow into a cropped portrait sheet. */
             html, body {
-              width: 100%;
-              height: 100%;
+              width: 297mm !important;
+              height: 210mm !important;
+              margin: 0 !important;
+              padding: 0 !important;
             }
             /* Force every element to honour its colors when printing.
                Without this, semi-transparent backgrounds and dark fills
@@ -545,8 +559,6 @@ export function generateCertificateHTML(data: CertData): string {
                 <div class="cert-info">
                   <div class="cert-info-label">Issued On</div>
                   <div class="cert-info-value">${completionDateStr}</div>
-                  <div class="cert-info-label">Certificate ID</div>
-                  <div class="cert-info-value">${certificateId}</div>
                 </div>
               </div>
 

@@ -7,7 +7,11 @@
       @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
 
       * { margin: 0; padding: 0; box-sizing: border-box; }
-      @page { size: landscape; margin: 0; }
+      /* Force landscape orientation in the saved PDF. */
+      @page { size: A4 landscape; margin: 0; }
+      @page :first { size: A4 landscape; margin: 0; }
+      @page :left { size: A4 landscape; margin: 0; }
+      @page :right { size: A4 landscape; margin: 0; }
 
       html, body {
         font-family: 'Inter', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
@@ -324,7 +328,13 @@
       }
 
       @media print {
-        html, body { width: 100%; height: 100%; }
+        @page { size: A4 landscape !important; margin: 0 !important; }
+        html, body {
+          width: 297mm !important;
+          height: 210mm !important;
+          margin: 0 !important;
+          padding: 0 !important;
+        }
         * {
           -webkit-print-color-adjust: exact !important;
           print-color-adjust: exact !important;
@@ -427,8 +437,6 @@
             <div class="cert-info">
               <div class="cert-info-label">Issued On</div>
               <div class="cert-info-value">{{ completion_date_str }}</div>
-              <div class="cert-info-label">Certificate ID</div>
-              <div class="cert-info-value">{{ certificate_id }}</div>
             </div>
           </div>
         </div>
