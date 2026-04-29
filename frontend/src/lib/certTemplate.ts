@@ -170,19 +170,22 @@ export function generateCertificateHTML(data: CertData): string {
           .corner-bl { bottom: 22px; left: 30px; }
           .corner-br { bottom: 22px; right: 30px; }
 
-          /* Watermark - giant </> behind everything */
+          /* Watermark - giant code-bracket symbol behind everything.
+             Sized so the full string (including the closing bracket) fits
+             inside the cert's overflow:hidden bounds at A4 landscape. */
           .watermark {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
             font-family: 'Space Grotesk', 'Consolas', 'Courier New', monospace;
-            font-size: 380px;
+            font-size: 300px;
             color: rgba(124, 58, 237, 0.04);
             font-weight: 700;
             pointer-events: none;
             line-height: 1;
-            letter-spacing: -20px;
+            letter-spacing: -10px;
+            white-space: nowrap;
           }
 
           /* ---- Content layout ---- */
@@ -370,18 +373,20 @@ export function generateCertificateHTML(data: CertData): string {
             max-width: 820px;
           }
 
-          /* Solid dark fill, no border. Reads as a clean chip without the
-             inner/outer ring effect a transparent pill creates against the
-             textured cert background. */
+          /* No chip shape. Plain underlined text - no border, no fill,
+             nothing that creates a visible edge against the cert bg. */
           .skill-pill {
-            padding: 4px 12px;
-            font-size: 11px;
+            padding: 4px 8px;
+            font-size: 12px;
             font-weight: 500;
             color: #c4b5fd;
-            background: rgba(15, 15, 26, 0.7);
+            background: transparent;
             border: 0;
-            border-radius: 999px;
+            border-radius: 0;
             letter-spacing: 0.3px;
+            text-decoration: underline;
+            text-decoration-color: rgba(167, 139, 250, 0.45);
+            text-underline-offset: 4px;
           }
 
           /* ---- Footer ---- */
