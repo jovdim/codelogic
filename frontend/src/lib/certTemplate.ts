@@ -368,16 +368,17 @@ export function generateCertificateHTML(data: CertData): string {
             gap: 8px;
             flex-wrap: wrap;
             justify-content: center;
-            max-width: 680px;
+            max-width: 820px;
           }
 
+          /* Flat outlined pills - no fill, single thin border. */
           .skill-pill {
-            padding: 5px 14px;
+            padding: 4px 12px;
             font-size: 11px;
             font-weight: 500;
             color: #c4b5fd;
-            background: rgba(124, 58, 237, 0.12);
-            border: 1px solid rgba(167, 139, 250, 0.3);
+            background: transparent;
+            border: 1px solid rgba(167, 139, 250, 0.45);
             border-radius: 999px;
             letter-spacing: 0.3px;
           }

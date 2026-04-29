@@ -155,20 +155,7 @@ export default function CertificatesPage() {
     };
   };
 
-  // Opens the cert HTML in a new tab. The user can read it like a normal
-  // page and use the browser's own print/save-as-PDF if they want.
-  const viewCertificate = (cert: Certificate) => {
-    const html = generateCertificateHTML(buildCertData(cert));
-    const win = window.open("", "_blank");
-    if (win) {
-      win.document.write(html);
-      win.document.close();
-    }
-  };
-
-  // Generate a real .pdf file and trigger a browser download. Renders the
-  // cert HTML in a hidden iframe, waits for fonts, then html2pdf captures
-  // and saves it.
+  // Generate a real .pdf file and trigger a browser download.
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   const downloadCertificate = async (cert: Certificate) => {
@@ -307,25 +294,26 @@ export default function CertificatesPage() {
 
                           <div className="flex items-center gap-2">
                             <button
-                              onClick={() => viewCertificate(cert)}
-                              className="px-4 py-2 pixel-box text-white text-sm font-medium hover:bg-[#2d2d44] transition-colors"
-                            >
-                              View
-                            </button>
-                            <button
                               onClick={() => downloadCertificate(cert)}
                               disabled={downloadingId === cert.id}
-                              className="px-4 py-2 text-white text-sm font-medium flex items-center gap-2 transition-colors hover:opacity-90 rounded disabled:opacity-60 disabled:cursor-wait"
+                              aria-label={
+                                downloadingId === cert.id
+                                  ? "Generating certificate"
+                                  : "Download certificate as PDF"
+                              }
+                              /* Fixed min-width so the spinner state doesn't
+                                 reflow the row on mobile. */
+                              className="text-white text-sm font-medium flex items-center justify-center gap-2 transition-colors hover:opacity-90 rounded disabled:opacity-60 disabled:cursor-wait"
                               style={{
                                 background: "var(--gradient-purple)",
                                 boxShadow: "3px 3px 0 0 rgba(0,0,0,0.3)",
+                                minWidth: "112px",
+                                height: "40px",
+                                padding: "0 16px",
                               }}
                             >
                               {downloadingId === cert.id ? (
-                                <>
-                                  <Loader2 className="w-4 h-4 animate-spin" />
-                                  Generating…
-                                </>
+                                <Loader2 className="w-4 h-4 animate-spin" />
                               ) : (
                                 <>
                                   <Download className="w-4 h-4" />

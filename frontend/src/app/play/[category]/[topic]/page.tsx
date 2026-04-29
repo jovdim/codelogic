@@ -373,16 +373,6 @@ export default function TopicLevelPage() {
     return { html: generateCertificateHTML(certData), topicName: topic.name };
   };
 
-  const viewCertificate = () => {
-    const built = buildCertHtml();
-    if (!built) return;
-    const win = window.open("", "_blank");
-    if (win) {
-      win.document.write(built.html);
-      win.document.close();
-    }
-  };
-
   const [downloadingCert, setDownloadingCert] = useState(false);
 
   const downloadCertificate = async () => {
@@ -783,34 +773,32 @@ export default function TopicLevelPage() {
                       Certificate
                     </p>
                     {isAllCompleted ? (
-                      <div className="flex w-full gap-1.5">
-                        <button
-                          type="button"
-                          onClick={viewCertificate}
-                          className="flex-1 text-[11px] font-semibold text-white bg-[#0f0f1a] border border-[#2d2d44] rounded py-1.5 hover:bg-[#252540]"
-                        >
-                          View
-                        </button>
-                        <button
-                          type="button"
-                          onClick={downloadCertificate}
-                          disabled={downloadingCert}
-                          className="flex-1 text-[11px] font-semibold text-white rounded py-1.5 hover:opacity-90 disabled:opacity-60 disabled:cursor-wait flex items-center justify-center gap-1"
-                          style={{ background: "var(--gradient-purple)" }}
-                        >
-                          {downloadingCert ? (
-                            <>
-                              <Loader2 className="w-3 h-3 animate-spin" />
-                              …
-                            </>
-                          ) : (
-                            <>
-                              <Download className="w-3 h-3" />
-                              PDF
-                            </>
-                          )}
-                        </button>
-                      </div>
+                      <button
+                        type="button"
+                        onClick={downloadCertificate}
+                        disabled={downloadingCert}
+                        aria-label={
+                          downloadingCert
+                            ? "Generating certificate"
+                            : "Download certificate as PDF"
+                        }
+                        /* Fixed height + min-width so the spinner state can't
+                           reflow the card on mobile. */
+                        className="w-full text-[11px] font-semibold text-white rounded hover:opacity-90 disabled:opacity-60 disabled:cursor-wait flex items-center justify-center gap-1"
+                        style={{
+                          background: "var(--gradient-purple)",
+                          height: "32px",
+                        }}
+                      >
+                        {downloadingCert ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <>
+                            <Download className="w-3 h-3" />
+                            Download PDF
+                          </>
+                        )}
+                      </button>
                     ) : (
                       <p className="text-[9px] text-gray-500 font-medium">
                         Complete all levels
