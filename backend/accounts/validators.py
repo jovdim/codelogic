@@ -37,7 +37,7 @@ class StrongPasswordValidator:
             errors.append(_("at least one number"))
         if not self.SPECIAL_RE.search(password):
             errors.append(
-                _("at least one special character (e.g. @ $ ! %% * # ? & _ ^ ( ) -)")
+                _("at least one special character (e.g. @ $ ! % * # ? & _ ^ ( ) -)")
             )
 
         if errors:
@@ -48,7 +48,7 @@ class StrongPasswordValidator:
 
     def get_help_text(self):
         return _(
-            "Your password must be at least %d characters long and contain "
+            "Your password must be at least %(n)d characters long and contain "
             "at least one lowercase letter, one uppercase letter, one number, "
             "and one special character (e.g. @ $ ! %% * # ? & _ ^ ( ) -)."
-        ) % self.MIN_LENGTH
+        ) % {"n": self.MIN_LENGTH}

@@ -78,10 +78,18 @@ export default function LearnPage() {
       setIsLoading(true);
       try {
         const cacheKey = `resources_${selectedCategory}_${selectedLanguage}_${selectedDifficulty}_${searchQuery}`;
-        const cached = getCached<LearningResource[]>(cacheKey);
+        // Cache stores BOTH resources and the available filter lists. Caching
+        // only the resources caused the dropdowns to go stale on cache hits
+        // (filters never got re-set), which made "All Categories" appear to
+        // have lost most of its options after a filtered fetch.
+        const cached = getCached<{
+          resources: LearningResource[];
+          filters: FiltersData;
+        }>(cacheKey);
 
         if (cached) {
-          setResources(cached);
+          setResources(cached.resources);
+          setFilters(cached.filters);
           setIsLoading(false);
           return;
         }
@@ -90,16 +98,17 @@ export default function LearnPage() {
           search: searchQuery || undefined,
           category: selectedCategory !== "all" ? selectedCategory : undefined,
           language: selectedLanguage !== "all" ? selectedLanguage : undefined,
-          difficulty: selectedDifficulty !== "all" ? selectedDifficulty : undefined, // Added difficulty to API call
+          difficulty: selectedDifficulty !== "all" ? selectedDifficulty : undefined,
         });
 
-        const resourcesData = response.data.resources || [];
-        setResources(resourcesData);
-        setFilters({
+        const resourcesData: LearningResource[] = response.data.resources || [];
+        const filtersData: FiltersData = {
           categories: response.data.filters.categories || [],
           languages: response.data.filters.languages || [],
-        });
-        setCache(cacheKey, resourcesData); // Cache the resources
+        };
+        setResources(resourcesData);
+        setFilters(filtersData);
+        setCache(cacheKey, { resources: resourcesData, filters: filtersData });
       } catch (error) {
         console.error("Failed to fetch resources:", error);
       } finally {
@@ -136,10 +145,14 @@ export default function LearnPage() {
     setSearchQuery("");
     setSelectedCategory("all");
     setSelectedLanguage("all");
+    setSelectedDifficulty("all");
   };
 
   const hasActiveFilters =
-    searchQuery || selectedCategory !== "all" || selectedLanguage !== "all";
+    searchQuery !== "" ||
+    selectedCategory !== "all" ||
+    selectedLanguage !== "all" ||
+    selectedDifficulty !== "all";
 
   return (
     <Navbar>
@@ -277,8 +290,12 @@ export default function LearnPage() {
               />
             </div>
           ) : resources.length > 0 ? (
-            /* Resource Grid */
+            /* Resource Grid - the `key` forces a fresh mount whenever the
+               filter set changes, so ScrollReveal's stagger effect re-runs
+               on the new children. Without this, new cards inherit the
+               initial opacity:0 / translateY(60px) and stay invisible. */
             <ScrollReveal
+              key={`grid-${selectedCategory}-${selectedLanguage}-${selectedDifficulty}-${searchQuery}`}
               animation="fade-up"
               stagger
               staggerDelay={50}

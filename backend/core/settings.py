@@ -201,12 +201,24 @@ SIMPLE_JWT = {
 }
 
 # CORS settings
-CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:3000,http://127.0.0.1:3000').split(',')
+# Local Next.js dev sometimes bumps to a different port if 3000 is taken
+# (3001, 3002, etc.) - include a few so devs don't hit CORS blocks. Prod
+# overrides via the CORS_ALLOWED_ORIGINS env var.
+_DEFAULT_CORS_ORIGINS = ','.join([
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'http://localhost:3001',
+    'http://127.0.0.1:3001',
+    'http://localhost:3002',
+    'http://127.0.0.1:3002',
+])
+CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', _DEFAULT_CORS_ORIGINS).split(',')
 
 CORS_ALLOW_CREDENTIALS = True
 
-# CSRF settings
-CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_TRUSTED_ORIGINS', 'http://localhost:3000,http://127.0.0.1:3000').split(',')
+# CSRF settings - mirror the CORS list so POST requests from the same dev
+# ports also pass Django's CSRF trusted-origin check.
+CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_TRUSTED_ORIGINS', _DEFAULT_CORS_ORIGINS).split(',')
 
 
 
