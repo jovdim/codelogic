@@ -77,7 +77,9 @@ export default function LearnPage() {
     const fetchResources = async () => {
       setIsLoading(true);
       try {
-        const cacheKey = `resources_${selectedCategory}_${selectedLanguage}_${selectedDifficulty}_${searchQuery}`;
+        // `v2` prefix invalidates any cached entries written before the
+        // shape changed from `LearningResource[]` to `{resources, filters}`.
+        const cacheKey = `resources_v2_${selectedCategory}_${selectedLanguage}_${selectedDifficulty}_${searchQuery}`;
         // Cache stores BOTH resources and the available filter lists. Caching
         // only the resources caused the dropdowns to go stale on cache hits
         // (filters never got re-set), which made "All Categories" appear to
@@ -87,7 +89,7 @@ export default function LearnPage() {
           filters: FiltersData;
         }>(cacheKey);
 
-        if (cached) {
+        if (cached && Array.isArray(cached.resources)) {
           setResources(cached.resources);
           setFilters(cached.filters);
           setIsLoading(false);
