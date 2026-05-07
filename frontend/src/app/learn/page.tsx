@@ -74,28 +74,27 @@ export default function LearnPage() {
   const { isAuthenticated } = useAuth();
 
   useEffect(() => {
-    const fetchResources = async () => {
+    // `v2` prefix invalidates any entries written under the old cache shape.
+    const cacheKey = `resources_v2_${selectedCategory}_${selectedLanguage}_${selectedDifficulty}_${searchQuery}`;
+
+    // Cache hit: apply synchronously, no debounce, no loading spinner.
+    // Going back to a previously-viewed filter feels instant.
+    const cached = getCached<{
+      resources: LearningResource[];
+      filters: FiltersData;
+    }>(cacheKey);
+    if (cached && Array.isArray(cached.resources)) {
+      setResources(cached.resources);
+      setFilters(cached.filters);
+      setIsLoading(false);
+      return;
+    }
+
+    // Cache miss: debounce the fetch so we don't hammer the API on every
+    // keystroke in the search box.
+    const debounce = setTimeout(async () => {
       setIsLoading(true);
       try {
-        // `v2` prefix invalidates any cached entries written before the
-        // shape changed from `LearningResource[]` to `{resources, filters}`.
-        const cacheKey = `resources_v2_${selectedCategory}_${selectedLanguage}_${selectedDifficulty}_${searchQuery}`;
-        // Cache stores BOTH resources and the available filter lists. Caching
-        // only the resources caused the dropdowns to go stale on cache hits
-        // (filters never got re-set), which made "All Categories" appear to
-        // have lost most of its options after a filtered fetch.
-        const cached = getCached<{
-          resources: LearningResource[];
-          filters: FiltersData;
-        }>(cacheKey);
-
-        if (cached && Array.isArray(cached.resources)) {
-          setResources(cached.resources);
-          setFilters(cached.filters);
-          setIsLoading(false);
-          return;
-        }
-
         const response = await gameAPI.getResources({
           search: searchQuery || undefined,
           category: selectedCategory !== "all" ? selectedCategory : undefined,
@@ -116,10 +115,6 @@ export default function LearnPage() {
       } finally {
         setIsLoading(false);
       }
-    };
-
-    const debounce = setTimeout(() => {
-      fetchResources();
     }, 300);
 
     return () => clearTimeout(debounce);
@@ -292,15 +287,13 @@ export default function LearnPage() {
               />
             </div>
           ) : resources.length > 0 ? (
-            /* Resource Grid - the `key` forces a fresh mount whenever the
-               filter set changes, so ScrollReveal's stagger effect re-runs
-               on the new children. Without this, new cards inherit the
-               initial opacity:0 / translateY(60px) and stay invisible. */
+            /* Resource Grid - no stagger here. Stagger imperatively sets
+               opacity:1 via DOM mutation, but cloneElement re-applies
+               opacity:0 from React on every re-render, leaving newly-fetched
+               cards stuck invisible after a filter change. The wrapper still
+               fades in once on mount; the cards themselves render normally. */
             <ScrollReveal
-              key={`grid-${selectedCategory}-${selectedLanguage}-${selectedDifficulty}-${searchQuery}`}
               animation="fade-up"
-              stagger
-              staggerDelay={50}
               className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
             >
               {resources.map((resource) => (
