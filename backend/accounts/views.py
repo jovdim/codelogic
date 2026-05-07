@@ -6,6 +6,7 @@ from rest_framework import status, generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 from django.contrib.auth import get_user_model
@@ -69,6 +70,56 @@ This link expires in 24 hours.
     </html>
     """
     
+    msg = EmailMultiAlternatives(subject, text_content, settings.DEFAULT_FROM_EMAIL, [user.email])
+    msg.attach_alternative(html_content, "text/html")
+    msg.send(fail_silently=False)
+
+
+def send_account_lockout_email(user, token):
+    """Sent when a user is auto-locked after too many failed login attempts.
+    Reuses the existing email-verification token; clicking the link flips
+    is_email_verified back to True and reactivates the account."""
+    activate_url = f"{settings.FRONTEND_URL}/verify-email?token={token.token}"
+
+    subject = 'Your CodeLogic account has been locked'
+
+    text_content = f"""Account Locked
+
+Your CodeLogic account ({user.email}) was locked because of too many
+failed sign-in attempts.
+
+Reactivate your account: {activate_url}
+
+This link expires in 24 hours.
+
+If this wasn't you, someone may be trying to access your account. Consider
+resetting your password after you reactivate.
+
+- The CodeLogic Team"""
+
+    html_content = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <h2>Account Locked</h2>
+        <p>Your CodeLogic account (<strong>{user.email}</strong>) was locked
+           because of too many failed sign-in attempts.</p>
+        <p style="margin: 20px 0;">
+            <a href="{activate_url}"
+               style="background-color: #7c3aed; color: white; padding: 12px 24px;
+                      text-decoration: none; border-radius: 4px; display: inline-block;">
+                Reactivate Account
+            </a>
+        </p>
+        <p>Or copy and paste this link into your browser:</p>
+        <p style="word-break: break-all; color: #7c3aed;">{activate_url}</p>
+        <p>This link will expire in 24 hours.</p>
+        <p>If this wasn't you, someone may be trying to access your account.
+           Consider resetting your password after you reactivate.</p>
+        <p>- The CodeLogic Team</p>
+    </body>
+    </html>
+    """
+
     msg = EmailMultiAlternatives(subject, text_content, settings.DEFAULT_FROM_EMAIL, [user.email])
     msg.attach_alternative(html_content, "text/html")
     msg.send(fail_silently=False)
@@ -201,12 +252,15 @@ class VerifyEmailView(APIView):
 class ResendVerificationView(APIView):
     """Resend email verification link."""
     permission_classes = [AllowAny]
-    
+    # Rate-limited so a bad actor can't flood arbitrary inboxes.
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'verify_resend'
+
     def post(self, request):
         serializer = ResendVerificationSerializer(data=request.data)
         if serializer.is_valid():
             email = serializer.validated_data['email']
-            
+
             try:
                 user = User.objects.get(email=email)
             except User.DoesNotExist:
@@ -214,22 +268,68 @@ class ResendVerificationView(APIView):
                 return Response({
                     'message': 'If an account with this email exists, a verification link has been sent.'
                 }, status=status.HTTP_200_OK)
-            
+
             if user.is_email_verified:
                 return Response({
                     'message': 'This email is already verified.'
                 }, status=status.HTTP_200_OK)
-            
+
             # Create new token and send email
             token = EmailVerificationToken.create_token(user)
             try:
                 send_verification_email(user, token)
             except Exception as e:
                 print(f"Failed to send verification email: {e}")
-            
+
             return Response({
                 'message': 'If an account with this email exists, a verification link has been sent.'
             }, status=status.HTTP_200_OK)
+
+
+class RequestUnlockView(APIView):
+    """
+    Send the account-reactivation email after a user's account was locked
+    by too many failed login attempts. Triggered manually by the user
+    clicking "Send reactivation email" on the login page.
+
+    Rate-limited per IP via ScopedRateThrottle('unlock_request') - see
+    DEFAULT_THROTTLE_RATES in settings - so a bad actor can't repeatedly
+    trigger emails to someone else's address.
+
+    For privacy we don't reveal whether the email is registered or whether
+    the account is actually locked - the response is the same in all cases.
+    """
+    permission_classes = [AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'unlock_request'
+
+    GENERIC_RESPONSE = {
+        'message': 'If a locked account with this email exists, a reactivation link has been sent.'
+    }
+
+    def post(self, request):
+        serializer = ResendVerificationSerializer(data=request.data)  # same shape: {email}
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        email = serializer.validated_data['email']
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return Response(self.GENERIC_RESPONSE, status=status.HTTP_200_OK)
+
+        # Only locked accounts get the unlock email; verified accounts get
+        # the same generic response so we don't reveal account state.
+        if user.is_email_verified:
+            return Response(self.GENERIC_RESPONSE, status=status.HTTP_200_OK)
+
+        token = EmailVerificationToken.create_token(user)
+        try:
+            send_account_lockout_email(user, token)
+        except Exception as e:  # noqa: BLE001 - log + keep going
+            print(f'Failed to send account-lockout email to {user.email}: {e}')
+
+        return Response(self.GENERIC_RESPONSE, status=status.HTTP_200_OK)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -237,49 +337,90 @@ class ResendVerificationView(APIView):
 class LoginView(APIView):
     """Handle user login and return JWT tokens."""
     permission_classes = [AllowAny]
-    
+
+    # Wrong-password attempts allowed before the account auto-locks. Mirror
+    # this constant in the frontend message so the UX matches the rule.
+    FAILED_LOGIN_THRESHOLD = 3
+
     def post(self, request):
         serializer = UserLoginSerializer(data=request.data)
-        if serializer.is_valid():
-            email = serializer.validated_data['email']
-            password = serializer.validated_data['password']
-            
-            try:
-                user = User.objects.get(email=email)
-            except User.DoesNotExist:
-                return Response({
-                    'error': 'Invalid email or password.'
-                }, status=status.HTTP_401_UNAUTHORIZED)
-            
-            if not user.check_password(password):
-                return Response({
-                    'error': 'Invalid email or password.'
-                }, status=status.HTTP_401_UNAUTHORIZED)
-            
-            if not user.is_active:
-                return Response({
-                    'error': 'This account has been deactivated.'
-                }, status=status.HTTP_401_UNAUTHORIZED)
-            
-            if not user.is_email_verified:
-                return Response({
-                    'error': 'Please verify your email before logging in.',
-                    'code': 'EMAIL_NOT_VERIFIED'
-                }, status=status.HTTP_401_UNAUTHORIZED)
-            
-            # Generate tokens
-            refresh = RefreshToken.for_user(user)
-            
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        email = serializer.validated_data['email']
+        password = serializer.validated_data['password']
+
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
             return Response({
-                'message': 'Login successful.',
-                'tokens': {
-                    'access': str(refresh.access_token),
-                    'refresh': str(refresh),
-                },
-                'user': UserProfileSerializer(user).data
-            }, status=status.HTTP_200_OK)
-        
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                'error': 'Invalid email or password.'
+            }, status=status.HTTP_401_UNAUTHORIZED)
+
+        # Wrong password: increment counter, lock at threshold.
+        if not user.check_password(password):
+            user.failed_login_attempts = (user.failed_login_attempts or 0) + 1
+
+            # Hit the threshold? Lock the account by clearing email-verified.
+            # The reactivation email is NOT sent automatically here - the
+            # user has to click "Send reactivation email" on the login page,
+            # which calls RequestUnlockView (rate-limited). This stops a
+            # bad actor from spamming someone else's inbox by repeatedly
+            # entering wrong passwords for their address.
+            if (
+                user.is_email_verified
+                and user.failed_login_attempts >= self.FAILED_LOGIN_THRESHOLD
+            ):
+                user.is_email_verified = False
+                user.failed_login_attempts = 0  # reset, re-arms after unlock
+                user.save(update_fields=['is_email_verified', 'failed_login_attempts'])
+
+                return Response({
+                    'error': (
+                        f'Account locked after {self.FAILED_LOGIN_THRESHOLD} failed '
+                        'sign-in attempts. Use "Send reactivation email" below to '
+                        'unlock it.'
+                    ),
+                    'code': 'ACCOUNT_LOCKED',
+                }, status=status.HTTP_403_FORBIDDEN)
+
+            user.save(update_fields=['failed_login_attempts'])
+            attempts_left = max(
+                0, self.FAILED_LOGIN_THRESHOLD - user.failed_login_attempts,
+            )
+            return Response({
+                'error': 'Invalid email or password.',
+                'attempts_left': attempts_left,
+            }, status=status.HTTP_401_UNAUTHORIZED)
+
+        # Password correct from here on.
+        if not user.is_active:
+            return Response({
+                'error': 'This account has been deactivated.'
+            }, status=status.HTTP_401_UNAUTHORIZED)
+
+        if not user.is_email_verified:
+            return Response({
+                'error': 'Please verify your email before logging in.',
+                'code': 'EMAIL_NOT_VERIFIED'
+            }, status=status.HTTP_401_UNAUTHORIZED)
+
+        # Successful login - clear the failure counter.
+        if user.failed_login_attempts:
+            user.failed_login_attempts = 0
+            user.save(update_fields=['failed_login_attempts'])
+
+        # Generate tokens
+        refresh = RefreshToken.for_user(user)
+
+        return Response({
+            'message': 'Login successful.',
+            'tokens': {
+                'access': str(refresh.access_token),
+                'refresh': str(refresh),
+            },
+            'user': UserProfileSerializer(user).data
+        }, status=status.HTTP_200_OK)
 
 
 class LogoutView(APIView):

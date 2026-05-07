@@ -11,6 +11,7 @@ from .views import (
     LogoutView,
     VerifyEmailView,
     ResendVerificationView,
+    RequestUnlockView,
     ProfileView,
     ChangePasswordView,
     PasswordResetRequestView,
@@ -32,6 +33,7 @@ urlpatterns = [
     # Email verification
     path('verify-email/', VerifyEmailView.as_view(), name='verify_email'),
     path('resend-verification/', ResendVerificationView.as_view(), name='resend_verification'),
+    path('request-unlock/', RequestUnlockView.as_view(), name='request_unlock'),
     
     # Password management
     path('password/change/', ChangePasswordView.as_view(), name='change_password'),

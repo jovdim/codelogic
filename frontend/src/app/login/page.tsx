@@ -20,6 +20,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [showResendVerification, setShowResendVerification] = useState(false);
+  const [showRequestUnlock, setShowRequestUnlock] = useState(false);
   const [resendMessage, setResendMessage] = useState("");
   const [resendCooldown, setResendCooldown] = useState(0);
 
@@ -33,22 +34,45 @@ export default function LoginPage() {
     e.preventDefault();
     setError("");
     setShowResendVerification(false);
+    setShowRequestUnlock(false);
     setIsLoading(true);
 
     try {
       await login(email, password);
       router.push("/dashboard");
     } catch (err) {
-      const error = err as AxiosError<{ error?: string; code?: string }>;
+      const error = err as AxiosError<{
+        error?: string;
+        code?: string;
+        attempts_left?: number;
+      }>;
       const errorData = error.response?.data;
 
-      if (errorData?.code === "EMAIL_NOT_VERIFIED") {
+      if (errorData?.code === "ACCOUNT_LOCKED") {
+        // 3 failed attempts hit. The account is locked but the email is
+        // NOT auto-sent - user must click the button to request one.
+        setError(
+          errorData.error ||
+            "Your account has been locked due to too many failed sign-in attempts.",
+        );
+        setShowRequestUnlock(true);
+        setShowResendVerification(false);
+      } else if (errorData?.code === "EMAIL_NOT_VERIFIED") {
         setError(
           errorData.error || "Please verify your email before logging in.",
         );
         setShowResendVerification(true);
       } else {
-        setError(errorData?.error || "Invalid email or password.");
+        // Wrong password but not yet locked. Show how many tries are left
+        // when the backend tells us, so users aren't blindsided by the lock.
+        const base = errorData?.error || "Invalid email or password.";
+        const left = errorData?.attempts_left;
+        setError(
+          left !== undefined && left > 0
+            ? `${base} ${left} attempt${left === 1 ? "" : "s"} left before your account is locked.`
+            : base,
+        );
+        setShowResendVerification(false);
       }
     } finally {
       setIsLoading(false);
@@ -64,6 +88,34 @@ export default function LoginPage() {
       setResendCooldown(60);
     } catch {
       setResendMessage("Failed to send verification email. Please try again.");
+    }
+  };
+
+  // Triggered when the user clicks "Send reactivation email" after their
+  // account was locked by too many failed login attempts. The backend
+  // rate-limits this endpoint (5/hour per IP) so we don't add per-user
+  // cooldown beyond the standard 60s feedback gate.
+  const handleRequestUnlock = async () => {
+    if (resendCooldown > 0) return;
+    try {
+      await authAPI.requestUnlock(email);
+      setResendMessage(
+        "Reactivation email sent! Check your inbox and click the link to unlock your account.",
+      );
+      setShowRequestUnlock(false);
+      setResendCooldown(60);
+    } catch (err) {
+      const error = err as AxiosError<{ detail?: string }>;
+      // 429 = backend's rate-limit kicked in.
+      if (error.response?.status === 429) {
+        setResendMessage(
+          "Too many requests. Please wait a few minutes before trying again.",
+        );
+      } else {
+        setResendMessage(
+          "Failed to send reactivation email. Please try again later.",
+        );
+      }
     }
   };
 
@@ -88,6 +140,19 @@ export default function LoginPage() {
                     style={{ color: "var(--primary-light)" }}
                   >
                     {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend verification email"}
+                  </button>
+                )}
+                {showRequestUnlock && (
+                  <button
+                    type="button"
+                    onClick={handleRequestUnlock}
+                    disabled={resendCooldown > 0}
+                    className={`underline mt-1 text-sm ${resendCooldown > 0 ? "opacity-50 cursor-not-allowed" : "hover:opacity-80"}`}
+                    style={{ color: "var(--primary-light)" }}
+                  >
+                    {resendCooldown > 0
+                      ? `Try again in ${resendCooldown}s`
+                      : "Send reactivation email"}
                   </button>
                 )}
               </div>

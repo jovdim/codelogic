@@ -50,11 +50,16 @@ export default function RegisterPage() {
     return () => clearTimeout(timer);
   }, [resendCooldown]);
 
-  // Password requirements
+  // Password requirements (must match the backend StrongPasswordValidator).
   const passwordRequirements = [
-    { label: "At least 8 characters", test: (p: string) => p.length >= 8 },
-    { label: "Contains a number", test: (p: string) => /\d/.test(p) },
-    { label: "Contains a letter", test: (p: string) => /[a-zA-Z]/.test(p) },
+    { label: "At least one lowercase letter", test: (p: string) => /[a-z]/.test(p) },
+    { label: "At least one uppercase letter", test: (p: string) => /[A-Z]/.test(p) },
+    { label: "At least one number", test: (p: string) => /\d/.test(p) },
+    {
+      label: "At least one special character (e.g. @ $ ! % * # ? & _ ^ ( ) -)",
+      test: (p: string) => /[@$!%*#?&_^()\-]/.test(p),
+    },
+    { label: "At least 12 characters", test: (p: string) => p.length >= 12 },
   ];
 
   // Check username availability with debounce

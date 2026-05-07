@@ -85,6 +85,9 @@ export const authAPI = {
   resendVerification: (email: string) =>
     api.post("/auth/resend-verification/", { email }),
 
+  requestUnlock: (email: string) =>
+    api.post("/auth/request-unlock/", { email }),
+
   getProfile: () => api.get("/auth/profile/"),
 
   updateProfile: (data: { display_name?: string; bio?: string }) =>

@@ -119,7 +119,7 @@ AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
         'OPTIONS': {
-            'min_length': 8,
+            'min_length': 12,
         }
     },
     {
@@ -127,6 +127,11 @@ AUTH_PASSWORD_VALIDATORS = [
     },
     {
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
+    # Project-specific: lowercase + uppercase + digit + special-char rules
+    # that mirror the realtime checklist on the signup page.
+    {
+        'NAME': 'accounts.validators.StrongPasswordValidator',
     },
 ]
 
@@ -172,6 +177,13 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     ),
+    # Throttle rates for views that opt into ScopedRateThrottle. We keep
+    # global throttling off (no DEFAULT_THROTTLE_CLASSES) so only the views
+    # that explicitly need it get rate-limited.
+    'DEFAULT_THROTTLE_RATES': {
+        'unlock_request': '5/hour',     # account-unlock email re-sends
+        'verify_resend': '5/hour',      # signup-verification email re-sends
+    },
 }
 
 # Simple JWT settings

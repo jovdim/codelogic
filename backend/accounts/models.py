@@ -70,6 +70,11 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     is_email_verified = models.BooleanField(default=False)
+
+    # Lockout: counts wrong-password attempts since the last successful login.
+    # On reaching FAILED_LOGIN_THRESHOLD the LoginView flips is_email_verified
+    # off and emails an unlock link, reusing the existing email-verify flow.
+    failed_login_attempts = models.PositiveIntegerField(default=0)
     
     # Timestamps
     date_joined = models.DateTimeField(default=timezone.now)
