@@ -233,11 +233,15 @@ class VerifyEmailView(APIView):
                     'error': 'Verification token has expired or already been used.'
                 }, status=status.HTTP_400_BAD_REQUEST)
             
-            # Verify the user's email
+            # Verify the user's email + reset the failed-login counter so
+            # an account that was locked via 3 wrong attempts is fully
+            # reactivated. (For a fresh signup verification this is a no-op
+            # since the counter is already 0.)
             user = token.user
             user.is_email_verified = True
-            user.save()
-            
+            user.failed_login_attempts = 0
+            user.save(update_fields=['is_email_verified', 'failed_login_attempts'])
+
             # Mark token as used
             token.is_used = True
             token.save()
@@ -357,15 +361,13 @@ class LoginView(APIView):
                 'error': 'Invalid email or password.'
             }, status=status.HTTP_401_UNAUTHORIZED)
 
-        # Already locked from a previous run of failed attempts? Short-
-        # circuit before doing any password work so the UI immediately
-        # offers the "Send reactivation email" button instead of pretending
-        # this is just another wrong-password attempt.
-        # Heuristic: a locked account is one that has logged in at least
-        # once (`last_login` is set) but currently has email-verified off.
-        # New unverified signups have `last_login is None` so they take
-        # the EMAIL_NOT_VERIFIED branch further below instead.
-        if not user.is_email_verified and user.last_login is not None:
+        # Already locked from previous attempts? Short-circuit before any
+        # password work so the UI offers the "Send reactivation email"
+        # button instead of pretending this is another wrong-password
+        # attempt. We KEEP failed_login_attempts at the threshold while
+        # locked - VerifyEmailView resets it back to 0 when the user
+        # clicks the reactivation link.
+        if (user.failed_login_attempts or 0) >= self.FAILED_LOGIN_THRESHOLD:
             return Response({
                 'error': (
                     'Your account is locked due to too many failed sign-in attempts. '
@@ -378,19 +380,14 @@ class LoginView(APIView):
         if not user.check_password(password):
             user.failed_login_attempts = (user.failed_login_attempts or 0) + 1
 
-            # Hit the threshold? Lock the account by clearing email-verified.
-            # The reactivation email is NOT sent automatically here - the
-            # user has to click "Send reactivation email" on the login page,
-            # which calls RequestUnlockView (rate-limited). This stops a
-            # bad actor from spamming someone else's inbox by repeatedly
-            # entering wrong passwords for their address.
-            if (
-                user.is_email_verified
-                and user.failed_login_attempts >= self.FAILED_LOGIN_THRESHOLD
-            ):
+            # Hit the threshold this attempt? Lock by clearing email-verified
+            # (the same flag the verify-email link flips back). The reactivation
+            # email is NOT sent automatically - the user has to click "Send
+            # reactivation email" on the login page (rate-limited 5/hour) so
+            # a bad actor can't spam someone else's inbox.
+            if user.failed_login_attempts >= self.FAILED_LOGIN_THRESHOLD:
                 user.is_email_verified = False
-                user.failed_login_attempts = 0  # reset, re-arms after unlock
-                user.save(update_fields=['is_email_verified', 'failed_login_attempts'])
+                user.save(update_fields=['failed_login_attempts', 'is_email_verified'])
 
                 return Response({
                     'error': (
@@ -417,6 +414,8 @@ class LoginView(APIView):
             }, status=status.HTTP_401_UNAUTHORIZED)
 
         if not user.is_email_verified:
+            # Lockout case is already handled above, so this branch only
+            # fires for never-verified signup accounts.
             return Response({
                 'error': 'Please verify your email before logging in.',
                 'code': 'EMAIL_NOT_VERIFIED'
