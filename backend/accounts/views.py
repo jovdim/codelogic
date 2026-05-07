@@ -357,6 +357,23 @@ class LoginView(APIView):
                 'error': 'Invalid email or password.'
             }, status=status.HTTP_401_UNAUTHORIZED)
 
+        # Already locked from a previous run of failed attempts? Short-
+        # circuit before doing any password work so the UI immediately
+        # offers the "Send reactivation email" button instead of pretending
+        # this is just another wrong-password attempt.
+        # Heuristic: a locked account is one that has logged in at least
+        # once (`last_login` is set) but currently has email-verified off.
+        # New unverified signups have `last_login is None` so they take
+        # the EMAIL_NOT_VERIFIED branch further below instead.
+        if not user.is_email_verified and user.last_login is not None:
+            return Response({
+                'error': (
+                    'Your account is locked due to too many failed sign-in attempts. '
+                    'Use "Send reactivation email" below to unlock it.'
+                ),
+                'code': 'ACCOUNT_LOCKED',
+            }, status=status.HTTP_403_FORBIDDEN)
+
         # Wrong password: increment counter, lock at threshold.
         if not user.check_password(password):
             user.failed_login_attempts = (user.failed_login_attempts or 0) + 1
