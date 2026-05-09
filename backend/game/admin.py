@@ -124,6 +124,22 @@ def _user_quiz_history_html(user):
         when = a.verification_captured_at or a.started_at
         when_str = when.strftime('%b %d, %Y %I:%M %p') if when else '—'
 
+        # Quiz duration: start-click to result-screen. Only meaningful for
+        # completed (or auto-failed) attempts where completed_at is set.
+        if a.completed and a.started_at and a.completed_at:
+            secs = int((a.completed_at - a.started_at).total_seconds())
+            if secs >= 3600:
+                duration_str = f'{secs // 3600}h {(secs % 3600) // 60}m {secs % 60}s'
+            elif secs >= 60:
+                duration_str = f'{secs // 60}m {secs % 60}s'
+            else:
+                duration_str = f'{secs}s'
+            duration_html = format_html(
+                ' · <span style="color:#a78bfa">⏱ {}</span>', duration_str,
+            )
+        else:
+            duration_html = format_html('')
+
         verify = _photo_thumbnail(a, size_px=140)
         gallery = _snapshots_gallery_inner(a)
 
@@ -134,7 +150,7 @@ def _user_quiz_history_html(user):
             '<div style="padding:12px 16px;border-bottom:1px solid #2d2d44;'
             'background:rgba(124,58,237,0.10)">'
             '<div style="font-size:14px;font-weight:700;color:#fff">{} — Level {}</div>'
-            '<div style="font-size:12px;color:#cbd5e1;margin-top:4px">{} · {}</div>'
+            '<div style="font-size:12px;color:#cbd5e1;margin-top:4px">{} · {}{}</div>'
             '</div>'
             # ---- body ----
             '<div style="padding:16px;display:flex;gap:20px;'
@@ -151,7 +167,7 @@ def _user_quiz_history_html(user):
             '</div>'
             '</div>'
             '</div>',
-            a.topic.name, a.level, status, when_str,
+            a.topic.name, a.level, status, when_str, duration_html,
             verify, gallery,
         ))
 
