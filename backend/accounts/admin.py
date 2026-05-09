@@ -9,7 +9,7 @@ from django.utils.html import format_html
 from django.contrib import messages
 from django.db.models import Sum
 from .models import User
-from game.admin import QuizAttemptInline, UserCertificateInline
+from game.admin import UserCertificateInline, _user_quiz_history_html
 
 
 # ============================================================
@@ -49,18 +49,29 @@ class UserAdmin(BaseUserAdmin):
             'fields': ('date_joined', 'last_active', 'last_activity_date'),
             'classes': ('collapse',),
         }),
+        # Per-user stacked quiz history: each attempt is a section with the
+        # start-of-quiz verification photo + all in-quiz monitor snapshots
+        # + score / completion / timestamp. Easier to scan one user's full
+        # activity than clicking into each attempt separately.
+        ('Quiz activity', {
+            'fields': ('quiz_history',),
+        }),
     )
-    
+
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
             'fields': ('email', 'username', 'password1', 'password2'),
         }),
     )
-    
-    readonly_fields = ['date_joined', 'last_active']
 
-    inlines = [UserCertificateInline, QuizAttemptInline]
+    readonly_fields = ['date_joined', 'last_active', 'quiz_history']
+
+    inlines = [UserCertificateInline]
+
+    def quiz_history(self, obj):
+        return _user_quiz_history_html(obj)
+    quiz_history.short_description = 'Quiz attempts (verification photo + monitor snapshots)'
 
     def level_badge(self, obj):
         colors = {

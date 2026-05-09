@@ -59,8 +59,8 @@ interface Props {
 }
 
 const DETECT_INTERVAL_MS = 200; // ~5fps
-const ROUTINE_MIN_MS = 25_000;
-const ROUTINE_MAX_MS = 50_000;
+const ROUTINE_MIN_MS = 15_000;
+const ROUTINE_MAX_MS = 30_000;
 const SNAPSHOT_MAX_EDGE = 480;
 const SNAPSHOT_QUALITY = 0.78;
 
@@ -92,10 +92,16 @@ const QuizFaceMonitor = forwardRef<QuizFaceMonitorHandle, Props>(function QuizFa
   const capture = useCallback(
     async (kind: SnapshotKind) => {
       const video = videoRef.current;
-      if (!video || video.readyState < 2) return;
+      if (!video || video.readyState < 2) {
+        console.log("[QuizMonitor] capture skipped: video not ready", { kind, readyState: video?.readyState });
+        return;
+      }
       const w = video.videoWidth;
       const h = video.videoHeight;
-      if (!w || !h) return;
+      if (!w || !h) {
+        console.log("[QuizMonitor] capture skipped: zero dimensions", { kind, w, h });
+        return;
+      }
 
       const scale = Math.min(1, SNAPSHOT_MAX_EDGE / Math.max(w, h));
       const tw = Math.round(w * scale);
@@ -110,32 +116,40 @@ const QuizFaceMonitor = forwardRef<QuizFaceMonitorHandle, Props>(function QuizFa
       const blob = await new Promise<Blob | null>((resolve) =>
         canvas.toBlob(resolve, "image/jpeg", SNAPSHOT_QUALITY),
       );
-      if (!blob) return;
+      if (!blob) {
+        console.warn("[QuizMonitor] capture skipped: blob conversion failed", { kind });
+        return;
+      }
 
+      console.log("[QuizMonitor] uploading snapshot", { kind, size: blob.size, attemptId });
       try {
-        await gameAPI.postQuizSnapshot({ attempt_id: attemptId, kind, photo: blob });
+        const r = await gameAPI.postQuizSnapshot({ attempt_id: attemptId, kind, photo: blob });
+        console.log("[QuizMonitor] upload OK", { kind, status: r.status });
         onSnapshotPosted?.(kind, true);
       } catch (err) {
         // Swallow upload errors - the quiz must keep running. Fire-and-
         // forget; admins simply lose this single snapshot.
-        console.warn("snapshot upload failed:", err);
+        console.warn("[QuizMonitor] upload FAILED", kind, err);
         onSnapshotPosted?.(kind, false);
       }
     },
     [attemptId, onSnapshotPosted],
   );
 
-  // ---- routine schedule (25-50s) ----
+  // ---- routine schedule (15-30s) ----
   const scheduleNextRoutine = useCallback(() => {
     if (routineTimerRef.current !== null) {
       window.clearTimeout(routineTimerRef.current);
     }
     const wait = ROUTINE_MIN_MS + Math.random() * (ROUTINE_MAX_MS - ROUTINE_MIN_MS);
+    console.log("[QuizMonitor] next routine in", Math.round(wait / 1000), "s");
     routineTimerRef.current = window.setTimeout(() => {
       // Only snap if we're in a healthy state - otherwise it's a violation
       // capture's job.
       if (stateRef.current === "ok") {
         void capture("routine");
+      } else {
+        console.log("[QuizMonitor] routine skipped: state=", stateRef.current);
       }
       scheduleNextRoutine();
     }, wait);
@@ -176,6 +190,7 @@ const QuizFaceMonitor = forwardRef<QuizFaceMonitorHandle, Props>(function QuizFa
 
   // ---- lifecycle: start/stop camera + loops ----
   const start = useCallback(async () => {
+    console.log("[QuizMonitor] start()");
     setState("loading");
     try {
       if (!faceapi.nets.tinyFaceDetector.params) {
@@ -192,6 +207,12 @@ const QuizFaceMonitor = forwardRef<QuizFaceMonitorHandle, Props>(function QuizFa
       await video.play();
       setState("ok"); // optimistic; first tick will correct
       detectTimerRef.current = window.setInterval(() => void tick(), DETECT_INTERVAL_MS);
+      // Take an early snapshot so even very short quizzes have at least
+      // one piece of routine evidence. Wait ~2s so the camera has fully
+      // exposed (otherwise the first frame is often a black frame).
+      window.setTimeout(() => {
+        if (stateRef.current === "ok") void capture("routine");
+      }, 2_000);
       scheduleNextRoutine();
     } catch (err) {
       const name = (err as { name?: string })?.name;
@@ -204,6 +225,7 @@ const QuizFaceMonitor = forwardRef<QuizFaceMonitorHandle, Props>(function QuizFa
   }, [setState, tick, scheduleNextRoutine]);
 
   const stop = useCallback(() => {
+    console.log("[QuizMonitor] stop()");
     if (detectTimerRef.current !== null) {
       window.clearInterval(detectTimerRef.current);
       detectTimerRef.current = null;

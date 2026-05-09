@@ -30,19 +30,19 @@ interface Props {
 
 const COPY: Record<Reason, { title: string; body: string; Icon: typeof AlertTriangle }> = {
   no_face: {
-    title: "Quiz paused — face not detected",
+    title: "Quiz paused - face not detected",
     body:
       "We can't see you in the camera right now. The quiz will resume as soon as your face is visible again.",
     Icon: Eye,
   },
   multiple_faces: {
-    title: "Quiz paused — multiple people detected",
+    title: "Quiz paused - multiple people detected",
     body:
       "Only you should be visible in the camera. The quiz will resume when no one else is in frame.",
     Icon: Users,
   },
   tab_hidden: {
-    title: "Quiz paused — return to this tab",
+    title: "Quiz paused - return to this tab",
     body:
       "You switched away from the quiz. Come back to this tab to continue.",
     Icon: EyeOff,
@@ -127,7 +127,7 @@ export default function MonitorPauseOverlay({
               more
             </>
           ) : (
-            <span className="text-red-400 font-semibold">Quiz cancelled — too much time off-camera.</span>
+            <span className="text-red-400 font-semibold">Quiz cancelled - too much time off-camera.</span>
           )}
         </div>
         <div className="mt-2 h-1 w-full rounded-full bg-[#2d2d44] overflow-hidden">

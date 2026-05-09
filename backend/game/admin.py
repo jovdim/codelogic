@@ -84,32 +84,156 @@ def _kind_badge(kind, is_violation):
 # ============================================================
 
 
-class QuizSnapshotInline(admin.TabularInline):
-    """In-quiz monitor snapshots for a single QuizAttempt detail page."""
-    model = QuizSnapshot
-    extra = 0
-    can_delete = False
-    show_change_link = False
-    verbose_name_plural = 'Monitor snapshots (in-quiz camera evidence)'
-    fields = ['snap_thumb', 'kind_badge', 'captured_at']
-    readonly_fields = fields
-    ordering = ['captured_at']
+def _user_quiz_history_html(user):
+    """
+    Per-user "Quiz activity" report shown on the User admin detail page.
+    Each quiz attempt becomes a stacked card containing:
+      - Header: topic, level, score / completion / timestamp
+      - Left:   start-of-quiz verification photo
+      - Right:  full grid of in-quiz monitor snapshots (with kind badges)
+    """
+    attempts = (
+        user.quiz_attempts
+        .select_related('topic')
+        .prefetch_related('snapshots')
+        .order_by('-started_at')[:20]
+    )
+    if not attempts:
+        return format_html(
+            '<em style="color:#9ca3af">No quiz attempts yet.</em>'
+        )
 
-    def snap_thumb(self, obj):
-        return _snapshot_thumbnail(obj, size_px=72)
-    snap_thumb.short_description = 'Snapshot'
+    cards = []
+    for a in attempts:
+        # Score / status pill.
+        if a.auto_failed:
+            status = format_html(
+                '<span style="color:#ef4444;font-weight:600">'
+                'CANCELLED ({})</span>',
+                a.auto_failed_reason or 'flagged',
+            )
+        elif a.completed:
+            status = format_html(
+                '<span style="color:#22c55e;font-weight:600">{}/{}</span> · '
+                '<span style="color:#fbbf24">{}★</span>',
+                a.score, a.total_questions, a.stars,
+            )
+        else:
+            status = format_html('<span style="color:#9ca3af">in progress</span>')
 
-    def kind_badge(self, obj):
-        return _kind_badge(obj.kind, obj.is_violation)
-    kind_badge.short_description = 'Kind'
+        when = a.verification_captured_at or a.started_at
+        when_str = when.strftime('%b %d, %Y %I:%M %p') if when else '—'
 
-    def has_add_permission(self, request, obj=None):
-        return False
+        verify = _photo_thumbnail(a, size_px=140)
+        gallery = _snapshots_gallery_inner(a)
 
-    def has_change_permission(self, request, obj=None):
-        return False
+        cards.append(format_html(
+            '<div style="margin-bottom:16px;border:1px solid #2d2d44;'
+            'border-radius:12px;overflow:hidden;background:#0f0f1a">'
+            # ---- header ----
+            '<div style="padding:12px 16px;border-bottom:1px solid #2d2d44;'
+            'background:rgba(124,58,237,0.10)">'
+            '<div style="font-size:14px;font-weight:700;color:#fff">{} — Level {}</div>'
+            '<div style="font-size:12px;color:#cbd5e1;margin-top:4px">{} · {}</div>'
+            '</div>'
+            # ---- body ----
+            '<div style="padding:16px;display:flex;gap:20px;'
+            'align-items:flex-start;flex-wrap:wrap">'
+            # left: start photo
+            '<div style="flex-shrink:0">'
+            '<div style="font-size:10px;color:#9ca3af;text-transform:uppercase;'
+            'letter-spacing:1px;margin-bottom:6px">Start photo</div>{}'
+            '</div>'
+            # right: snapshot gallery
+            '<div style="flex:1;min-width:320px">'
+            '<div style="font-size:10px;color:#9ca3af;text-transform:uppercase;'
+            'letter-spacing:1px;margin-bottom:6px">Monitor snapshots</div>{}'
+            '</div>'
+            '</div>'
+            '</div>',
+            a.topic.name, a.level, status, when_str,
+            verify, gallery,
+        ))
 
-@admin.register(QuizAttempt)
+    return format_html('{}' * len(cards), *cards)
+
+
+def _snapshots_gallery_inner(attempt):
+    """Inner gallery (no outer wrapper) - reused by attempt detail page
+    AND by the user-history report."""
+    snaps = list(attempt.snapshots.all().order_by('captured_at'))
+    if not snaps:
+        return format_html(
+            '<span style="color:#9ca3af;font-size:12px">No monitor snapshots.</span>'
+        )
+
+    summary = format_html(
+        '<div style="margin-bottom:8px;color:#cbd5e1;font-size:12px">'
+        '<strong>{}</strong> snapshots · '
+        '<strong style="color:#ef4444">{}</strong> violations</div>',
+        len(snaps),
+        sum(1 for s in snaps if s.is_violation),
+    )
+
+    cards = []
+    for snap in snaps:
+        thumb = _snapshot_thumbnail(snap, size_px=96)
+        badge = _kind_badge(snap.kind, snap.is_violation)
+        time = snap.captured_at.strftime('%H:%M:%S')
+        cards.append(format_html(
+            '<div style="display:inline-flex;flex-direction:column;align-items:center;'
+            'gap:4px;padding:6px;border:1px solid #2d2d44;border-radius:8px;'
+            'background:#1a1a2e">{}<div>{}</div>'
+            '<div style="font-size:11px;color:#9ca3af">{}</div></div>',
+            thumb, badge, time,
+        ))
+    grid = format_html(
+        '<div style="display:flex;flex-wrap:wrap;gap:8px">{}</div>',
+        format_html('{}' * len(cards), *cards),
+    )
+    return format_html('{}{}', summary, grid)
+
+
+def _snapshots_gallery(attempt):
+    """
+    Render all snapshots for an attempt as a single grid of thumbnails
+    rather than as separate inline rows. Easier to scan than a table when
+    there are 5-10 photos per quiz.
+    """
+    snaps = list(attempt.snapshots.all().order_by('captured_at'))
+    if not snaps:
+        return format_html('<span style="color:#9ca3af">No snapshots yet.</span>')
+
+    cards = []
+    for snap in snaps:
+        thumb = _snapshot_thumbnail(snap, size_px=120)
+        badge = _kind_badge(snap.kind, snap.is_violation)
+        time = snap.captured_at.strftime('%H:%M:%S')
+        cards.append(format_html(
+            '<div style="display:inline-flex;flex-direction:column;align-items:center;'
+            'gap:4px;padding:6px;border:1px solid #2d2d44;border-radius:8px;'
+            'background:#0f0f1a">{}<div>{}</div>'
+            '<div style="font-size:11px;color:#9ca3af">{}</div></div>',
+            thumb, badge, time,
+        ))
+
+    summary = format_html(
+        '<div style="margin-bottom:12px;color:#cbd5e1;font-size:13px">'
+        '<strong>{}</strong> snapshots &middot; <strong style="color:#ef4444">{}</strong> violations'
+        '</div>',
+        len(snaps),
+        sum(1 for s in snaps if s.is_violation),
+    )
+    grid = format_html(
+        '<div style="display:flex;flex-wrap:wrap;gap:10px;max-width:1000px">{}</div>',
+        format_html('{}' * len(cards), *cards),
+    )
+    return format_html('{}{}', summary, grid)
+
+# Sidebar entry removed - "Quiz attempts" is redundant now that the
+# User admin's "Quiz activity" section shows the full per-user breakdown
+# (verification photo + monitor snapshots + score) for every attempt.
+# Keep the class around in case we want to bring it back later.
 class QuizAttemptAdmin(admin.ModelAdmin):
     list_display = [
         'photo_thumb', 'user', 'topic', 'level', 'score_display', 'stars',
@@ -126,9 +250,13 @@ class QuizAttemptAdmin(admin.ModelAdmin):
         'completed', 'passed', 'auto_failed', 'auto_failed_reason',
         'started_at', 'completed_at',
         'verification_captured_at', 'photo_full',
+        'snapshots_gallery',
     ]
     fields = readonly_fields  # everything is read-only; nothing to edit
-    inlines = [QuizSnapshotInline]
+
+    def snapshots_gallery(self, obj):
+        return _snapshots_gallery(obj)
+    snapshots_gallery.short_description = 'Monitor snapshots (in-quiz camera evidence)'
 
     def photo_thumb(self, obj):
         return _photo_thumbnail(obj, size_px=56)
@@ -180,7 +308,7 @@ class QuizAttemptAdmin(admin.ModelAdmin):
         return super().has_delete_permission(request, obj)
 
 
-@admin.register(QuizSnapshot)
+# Sidebar entry removed - same reason as QuizAttemptAdmin.
 class QuizSnapshotAdmin(admin.ModelAdmin):
     """Standalone browse view for monitor snapshots (cross-user spot check)."""
     list_display = ['snap_thumb', 'attempt_link', 'kind_badge', 'captured_at']
@@ -218,34 +346,11 @@ class QuizSnapshotAdmin(admin.ModelAdmin):
         return False
 
 
-class QuizAttemptInline(admin.TabularInline):
-    """
-    Read-only inline of a user's recent quiz attempts, shown on the User
-    admin detail page. Each row includes the verification photo thumbnail
-    so you can scan a user's history at a glance.
-    """
-    model = QuizAttempt
-    fk_name = 'user'
-    extra = 0
-    can_delete = False
-    show_change_link = True
-    verbose_name_plural = 'Recent quiz attempts (with verification photos)'
-    fields = ['photo_thumb', 'topic', 'level', 'score_display', 'stars', 'completed', 'verification_captured_at']
-    readonly_fields = fields
-    ordering = ['-verification_captured_at', '-started_at']
-
-    def photo_thumb(self, obj):
-        return _photo_thumbnail(obj, size_px=56)
-    photo_thumb.short_description = 'Photo'
-
-    def score_display(self, obj):
-        if not obj.completed:
-            return format_html('<span style="color:#9ca3af">in progress</span>')
-        return f'{obj.score}/{obj.total_questions}'
-    score_display.short_description = 'Score'
-
-    def has_add_permission(self, request, obj=None):
-        return False
+# NOTE: the old QuizAttemptInline tabular inline was replaced by the
+# stacked "Quiz activity" section on the User admin (see
+# _user_quiz_history_html above). One section per attempt with both the
+# verification photo and all monitor snapshots in one place is easier to
+# scan than rows of small thumbnails.
 
     def get_queryset(self, request):
         qs = super().get_queryset(request).select_related('topic')
