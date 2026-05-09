@@ -177,6 +177,12 @@ class QuizAttempt(models.Model):
     verification_photo = models.BinaryField(null=True, blank=True)
     verification_captured_at = models.DateTimeField(null=True, blank=True)
 
+    # Auto-failed by the in-quiz monitor (e.g. >2 min off-camera). Score and
+    # XP are not awarded; the row is preserved so admins can inspect the
+    # snapshot timeline that led to the cancel.
+    auto_failed = models.BooleanField(default=False)
+    auto_failed_reason = models.CharField(max_length=80, blank=True, default='')
+
     class Meta:
         db_table = 'quiz_attempts'
         ordering = ['-started_at']
@@ -197,6 +203,47 @@ class QuizAttempt(models.Model):
         if pct >= 0.5:
             return 1
         return 0
+
+
+class QuizSnapshot(models.Model):
+    """
+    A single in-quiz camera snapshot. Captured periodically while the quiz
+    is running plus on every face-monitor violation event (face leaves,
+    multiple faces, tab hidden). Used for admin review to spot impostors
+    and tab-switching during quizzes.
+
+    JPEG bytes live on `photo` and are wiped after 60 days by
+    cleanup_verification_photos. The row itself is kept.
+    """
+
+    KIND_CHOICES = [
+        ('routine', 'Routine'),
+        ('face_lost', 'Face Lost'),
+        ('face_returned', 'Face Returned'),
+        ('multiple_faces', 'Multiple Faces'),
+        ('tab_hidden', 'Tab Hidden'),
+    ]
+    VIOLATION_KINDS = {'face_lost', 'multiple_faces', 'tab_hidden'}
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    attempt = models.ForeignKey(
+        'QuizAttempt', on_delete=models.CASCADE, related_name='snapshots',
+    )
+    kind = models.CharField(max_length=20, choices=KIND_CHOICES, default='routine')
+    photo = models.BinaryField(null=True, blank=True)
+    captured_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'quiz_snapshots'
+        ordering = ['captured_at']
+        indexes = [models.Index(fields=['attempt', 'captured_at'])]
+
+    @property
+    def is_violation(self):
+        return self.kind in self.VIOLATION_KINDS
+
+    def __str__(self):
+        return f"{self.attempt_id} {self.kind} @ {self.captured_at:%H:%M:%S}"
 
 
 class UserAnswer(models.Model):

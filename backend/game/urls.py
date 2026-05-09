@@ -14,7 +14,10 @@ urlpatterns = [
     # Quiz
     path('quiz/<slug:category_slug>/<slug:topic_slug>/<int:level>/', views.QuizQuestionsView.as_view(), name='quiz-questions'),
     path('answer/', views.SubmitAnswerView.as_view(), name='submit-answer'),
+    path('timeout/', views.QuestionTimeoutView.as_view(), name='question-timeout'),
     path('complete/', views.CompleteQuizView.as_view(), name='complete-quiz'),
+    path('quiz-snapshot/', views.QuizSnapshotView.as_view(), name='quiz-snapshot'),
+    path('quiz-cancel/', views.QuizCancelView.as_view(), name='quiz-cancel'),
     
     # User data
     path('leaderboard/', views.LeaderboardView.as_view(), name='leaderboard'),

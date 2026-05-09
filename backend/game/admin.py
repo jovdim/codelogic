@@ -14,7 +14,7 @@ from django import forms
 
 import base64
 
-from .models import Category, Topic, Question, LearningResource, Certificate, UserCertificate, Lesson, QuizAttempt
+from .models import Category, Topic, Question, LearningResource, Certificate, UserCertificate, Lesson, QuizAttempt, QuizSnapshot
 from .models_settings import SiteSettings
 
 
@@ -54,25 +54,81 @@ def _photo_thumbnail(attempt, size_px=64, clickable=True):
     )
 
 
+def _snapshot_thumbnail(snapshot, size_px=64):
+    """Inline thumbnail for an in-quiz monitor snapshot. Bytes are JPEG."""
+    photo_bytes = snapshot.photo if snapshot else None
+    if not photo_bytes:
+        return format_html('<span style="color:#9ca3af">no photo</span>')
+    b64 = base64.b64encode(bytes(photo_bytes)).decode('ascii')
+    return format_html(
+        '<img src="data:image/jpeg;base64,{}" '
+        'style="width:{}px;height:{}px;object-fit:cover;border-radius:6px;'
+        'transform:scaleX(-1);box-shadow:0 1px 3px rgba(0,0,0,0.2)" />',
+        b64, size_px, size_px,
+    )
+
+
+def _kind_badge(kind, is_violation):
+    """Coloured pill summarising a snapshot's `kind`."""
+    color = '#ef4444' if is_violation else '#7c3aed'
+    label = dict(QuizSnapshot.KIND_CHOICES).get(kind, kind)
+    return format_html(
+        '<span style="background:{};color:white;padding:2px 8px;border-radius:999px;'
+        'font-size:11px;font-weight:600">{}</span>',
+        color, label,
+    )
+
+
 # ============================================================
 # QUIZ ATTEMPT ADMIN - browse all attempts + their face photos
 # ============================================================
 
+
+class QuizSnapshotInline(admin.TabularInline):
+    """In-quiz monitor snapshots for a single QuizAttempt detail page."""
+    model = QuizSnapshot
+    extra = 0
+    can_delete = False
+    show_change_link = False
+    verbose_name_plural = 'Monitor snapshots (in-quiz camera evidence)'
+    fields = ['snap_thumb', 'kind_badge', 'captured_at']
+    readonly_fields = fields
+    ordering = ['captured_at']
+
+    def snap_thumb(self, obj):
+        return _snapshot_thumbnail(obj, size_px=72)
+    snap_thumb.short_description = 'Snapshot'
+
+    def kind_badge(self, obj):
+        return _kind_badge(obj.kind, obj.is_violation)
+    kind_badge.short_description = 'Kind'
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
 @admin.register(QuizAttempt)
 class QuizAttemptAdmin(admin.ModelAdmin):
-    list_display = ['photo_thumb', 'user', 'topic', 'level', 'score_display', 'stars', 'completed', 'verification_captured_at']
+    list_display = [
+        'photo_thumb', 'user', 'topic', 'level', 'score_display', 'stars',
+        'completed', 'monitor_summary', 'verification_captured_at',
+    ]
     list_select_related = ['user', 'topic', 'topic__category']
-    list_filter = ['completed', 'passed', 'topic__category', 'level']
+    list_filter = ['completed', 'passed', 'auto_failed', 'topic__category', 'level']
     search_fields = ['user__email', 'user__username', 'topic__name']
     ordering = ['-verification_captured_at', '-started_at']
     list_per_page = 30
     readonly_fields = [
         'id', 'user', 'topic', 'level',
         'score', 'total_questions', 'stars', 'xp_earned', 'hearts_lost',
-        'completed', 'passed', 'started_at', 'completed_at',
+        'completed', 'passed', 'auto_failed', 'auto_failed_reason',
+        'started_at', 'completed_at',
         'verification_captured_at', 'photo_full',
     ]
     fields = readonly_fields  # everything is read-only; nothing to edit
+    inlines = [QuizSnapshotInline]
 
     def photo_thumb(self, obj):
         return _photo_thumbnail(obj, size_px=56)
@@ -83,10 +139,35 @@ class QuizAttemptAdmin(admin.ModelAdmin):
     photo_full.short_description = 'Verification photo'
 
     def score_display(self, obj):
+        if obj.auto_failed:
+            return format_html(
+                '<span style="color:#ef4444;font-weight:600">cancelled ({})</span>',
+                obj.auto_failed_reason or 'flagged',
+            )
         if not obj.completed:
             return format_html('<span style="color:#9ca3af">in progress</span>')
         return f'{obj.score}/{obj.total_questions}'
     score_display.short_description = 'Score'
+
+    def monitor_summary(self, obj):
+        """List-view monitor digest: total snapshots + count of violations."""
+        snaps = obj.snapshots.all()
+        total = len(snaps)
+        violations = sum(1 for s in snaps if s.is_violation)
+        if total == 0:
+            return format_html('<span style="color:#9ca3af">-</span>')
+        if violations:
+            return format_html(
+                '<span style="color:#ef4444;font-weight:600">{} ⚠ {} viol</span>',
+                total, violations,
+            )
+        return f'{total} ok'
+    monitor_summary.short_description = 'Monitor'
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        # Bring the snapshot rows so monitor_summary doesn't N+1 query.
+        return qs.prefetch_related('snapshots')
 
     def has_add_permission(self, request):
         return False  # attempts are created by the quiz flow only
@@ -97,6 +178,44 @@ class QuizAttemptAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         # Allow delete in case staff needs to wipe a sensitive photo manually.
         return super().has_delete_permission(request, obj)
+
+
+@admin.register(QuizSnapshot)
+class QuizSnapshotAdmin(admin.ModelAdmin):
+    """Standalone browse view for monitor snapshots (cross-user spot check)."""
+    list_display = ['snap_thumb', 'attempt_link', 'kind_badge', 'captured_at']
+    list_select_related = ['attempt', 'attempt__user', 'attempt__topic']
+    list_filter = ['kind', 'captured_at']
+    search_fields = [
+        'attempt__user__email', 'attempt__user__username',
+        'attempt__topic__name',
+    ]
+    ordering = ['-captured_at']
+    list_per_page = 50
+    readonly_fields = ['id', 'attempt_link', 'kind_badge', 'captured_at', 'snap_full']
+    fields = readonly_fields
+
+    def snap_thumb(self, obj):
+        return _snapshot_thumbnail(obj, size_px=56)
+    snap_thumb.short_description = 'Snapshot'
+
+    def snap_full(self, obj):
+        return _snapshot_thumbnail(obj, size_px=320)
+    snap_full.short_description = 'Photo'
+
+    def kind_badge(self, obj):
+        return _kind_badge(obj.kind, obj.is_violation)
+    kind_badge.short_description = 'Kind'
+
+    def attempt_link(self, obj):
+        return f'{obj.attempt.user} - {obj.attempt.topic.name} L{obj.attempt.level}'
+    attempt_link.short_description = 'Attempt'
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
 
 
 class QuizAttemptInline(admin.TabularInline):

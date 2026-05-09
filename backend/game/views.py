@@ -22,7 +22,7 @@ from django.db.models import F, Q, Count, Sum
 from django.db.models.functions import Coalesce
 import random
 
-from .models import Category, Topic, Question, QuizAttempt, UserAnswer, UserProgress, LearningResource, Lesson, UserCertificate
+from .models import Category, Topic, Question, QuizAttempt, UserAnswer, UserProgress, LearningResource, Lesson, UserCertificate, QuizSnapshot
 from .serializers import (
     CategorySerializer, TopicSerializer, TopicWithProgressSerializer,
     QuestionSerializer, LeaderboardUserSerializer,
@@ -325,6 +325,171 @@ class SubmitAnswerView(APIView):
             'heart_lost': heart_lost,
             'hearts_remaining': user.current_hearts,
         })
+
+
+class QuestionTimeoutView(APIView):
+    """
+    Register that the per-question 30s timer ran out without an answer.
+
+    The frontend was decrementing hearts client-side on timeout but never
+    telling the backend, so user.current_hearts in the DB stayed stale.
+    The next wrong-answer submission would then re-deduct from that stale
+    value and overwrite the optimistic UI decrement, effectively erasing
+    the timeout's heart loss.
+
+    This endpoint deducts the heart server-side. We deliberately do NOT
+    create a UserAnswer row - the question is still un-answered and the
+    user can pick on the retry timer. The attempt's hearts_lost counter
+    is bumped so completion math stays consistent.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        attempt_id = request.data.get('attempt_id')
+        if not attempt_id:
+            return Response(
+                {'error': 'Missing attempt_id'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            attempt = QuizAttempt.objects.get(id=attempt_id, user=request.user)
+        except (QuizAttempt.DoesNotExist, ValueError, TypeError):
+            return Response({'error': 'Invalid attempt'}, status=status.HTTP_404_NOT_FOUND)
+
+        if attempt.completed:
+            return Response(
+                {'error': 'Attempt already completed'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user = request.user
+        heart_lost = False
+        if user.current_hearts > 0:
+            user.current_hearts -= 1
+            user.last_heart_update = timezone.now()
+            user.save(update_fields=['current_hearts', 'last_heart_update'])
+            heart_lost = True
+
+        attempt.hearts_lost = (attempt.hearts_lost or 0) + 1
+        attempt.save(update_fields=['hearts_lost'])
+
+        return Response({
+            'heart_lost': heart_lost,
+            'hearts_remaining': user.current_hearts,
+        })
+
+
+class QuizSnapshotView(APIView):
+    """
+    Receive an in-quiz camera snapshot from the face monitor.
+
+    The frontend posts here on every routine snapshot tick (~25-50s) plus
+    every face-monitor violation event (face leaves, multiple faces, tab
+    hidden). We store JPEG bytes plus the violation kind for admin review.
+
+    A soft cap of MAX_PER_ATTEMPT prevents a misbehaving / runaway client
+    from spamming the DB. Beyond that we silently 200 so the client doesn't
+    surface the limit to the user.
+    """
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    MAX_PHOTO_BYTES = 250_000   # ~250 KB - frontend downscales aggressively
+    MAX_PER_ATTEMPT = 80        # soft ceiling per attempt
+
+    VALID_KINDS = {choice[0] for choice in QuizSnapshot.KIND_CHOICES}
+
+    def post(self, request):
+        attempt_id = request.data.get('attempt_id')
+        kind = (request.data.get('kind') or 'routine').strip()
+        photo_file = request.FILES.get('photo')
+
+        if not attempt_id:
+            return Response({'error': 'Missing attempt_id'}, status=status.HTTP_400_BAD_REQUEST)
+        if kind not in self.VALID_KINDS:
+            return Response({'error': f'Invalid kind: {kind}'}, status=status.HTTP_400_BAD_REQUEST)
+        if photo_file is None:
+            return Response({'error': 'Missing photo'}, status=status.HTTP_400_BAD_REQUEST)
+        if photo_file.size > self.MAX_PHOTO_BYTES:
+            return Response(
+                {'error': 'Photo too large.', 'code': 'PHOTO_TOO_LARGE'},
+                status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            )
+
+        try:
+            attempt = QuizAttempt.objects.only('id', 'user_id', 'completed').get(pk=attempt_id)
+        except QuizAttempt.DoesNotExist:
+            return Response({'error': 'Attempt not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        if attempt.user_id != request.user.id:
+            # Don't reveal whose attempt it is.
+            return Response({'error': 'Attempt not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Don't accept snapshots after the quiz is over - prevents replay
+        # noise and post-quiz inbox stuffing.
+        if attempt.completed:
+            return Response(
+                {'error': 'Quiz attempt is already completed.', 'code': 'ATTEMPT_COMPLETED'},
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        # Soft cap.
+        existing = QuizSnapshot.objects.filter(attempt_id=attempt.id).count()
+        if existing >= self.MAX_PER_ATTEMPT:
+            return Response({'message': 'Limit reached for this attempt.'}, status=status.HTTP_200_OK)
+
+        QuizSnapshot.objects.create(
+            attempt=attempt,
+            kind=kind,
+            photo=photo_file.read(),
+        )
+        return Response({'message': 'Snapshot stored.'}, status=status.HTTP_201_CREATED)
+
+
+class QuizCancelView(APIView):
+    """
+    Auto-fail an in-progress quiz attempt because the user spent too long
+    off-camera (or pulled some other monitor-disqualifying move). Sets
+    auto_failed/auto_failed_reason and marks completed without awarding any
+    score, XP, or stars. The frontend hits this when its pause timer trips
+    the 2-minute long-pause cap.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        attempt_id = request.data.get('attempt_id')
+        reason = (request.data.get('reason') or 'long_pause')[:80]
+
+        if not attempt_id:
+            return Response({'error': 'Missing attempt_id'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            attempt = QuizAttempt.objects.get(pk=attempt_id)
+        except QuizAttempt.DoesNotExist:
+            return Response({'error': 'Attempt not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        if attempt.user_id != request.user.id:
+            return Response({'error': 'Attempt not found'}, status=status.HTTP_404_NOT_FOUND)
+        if attempt.completed:
+            return Response({'message': 'Already finalised.'}, status=status.HTTP_200_OK)
+
+        attempt.completed = True
+        attempt.completed_at = timezone.now()
+        attempt.auto_failed = True
+        attempt.auto_failed_reason = reason
+        attempt.passed = False
+        attempt.score = 0
+        attempt.stars = 0
+        attempt.xp_earned = 0
+        attempt.save(update_fields=[
+            'completed', 'completed_at', 'auto_failed',
+            'auto_failed_reason', 'passed', 'score', 'stars', 'xp_earned',
+        ])
+        return Response(
+            {'message': 'Attempt cancelled.', 'auto_failed': True, 'reason': reason},
+            status=status.HTTP_200_OK,
+        )
 
 
 class CompleteQuizView(APIView):
