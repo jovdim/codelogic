@@ -5,11 +5,16 @@ Manage users and gamification settings.
 
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from django.contrib.auth.models import Group
 from django.utils.html import format_html
 from django.contrib import messages
 from django.db.models import Sum
 from .models import User
 from game.admin import UserCertificateInline, _user_quiz_history_html
+
+# Hide Django's default "Groups" admin - we don't use permission groups,
+# only is_staff / is_superuser flags. Decluttering the sidebar.
+admin.site.unregister(Group)
 
 
 # ============================================================
