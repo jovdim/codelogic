@@ -11,10 +11,9 @@ from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework.parsers import MultiPartParser, FormParser
 from django.contrib.auth import get_user_model
 from django.contrib.admin.views.decorators import staff_member_required
-from django.http import HttpResponse, Http404
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.views.decorators.cache import cache_control
 from django.utils import timezone
@@ -22,7 +21,7 @@ from django.db.models import F, Q, Count, Sum
 from django.db.models.functions import Coalesce
 import random
 
-from .models import Category, Topic, Question, QuizAttempt, UserAnswer, UserProgress, LearningResource, Lesson, UserCertificate, QuizSnapshot
+from .models import Category, Topic, Question, QuizAttempt, UserAnswer, UserProgress, LearningResource, Lesson, UserCertificate
 from .serializers import (
     CategorySerializer, TopicSerializer, TopicWithProgressSerializer,
     QuestionSerializer, LeaderboardUserSerializer,
@@ -162,42 +161,10 @@ class TopicDetailView(APIView):
 
 
 class QuizQuestionsView(APIView):
-    """
-    Start a quiz: accept the face-verification photo, create a QuizAttempt
-    bound to it, and return the questions to play. The photo is mandatory —
-    no attempt row is created without one. This is the single chokepoint
-    that gates the quiz on identity capture.
-    """
+    """Start a quiz: create a QuizAttempt and return the questions to play."""
     permission_classes = [IsAuthenticated]
-    # Face photo arrives as multipart/form-data from the verification modal.
-    parser_classes = [MultiPartParser, FormParser]
 
-    # Hard cap on what we'll accept and store in Postgres. The frontend
-    # downscales aggressively so real captures land well under this.
-    MAX_PHOTO_BYTES = 500_000  # ~500 KB
-
-    def post(self, request, category_slug, topic_slug, level):
-        photo_file = request.FILES.get('verification_photo')
-        if photo_file is None:
-            return Response(
-                {'error': 'Face verification photo is required to start a quiz.',
-                 'code': 'VERIFICATION_REQUIRED'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        if photo_file.size > self.MAX_PHOTO_BYTES:
-            return Response(
-                {'error': 'Verification photo is too large.',
-                 'code': 'PHOTO_TOO_LARGE'},
-                status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            )
-        photo_bytes = photo_file.read()
-        if not photo_bytes:
-            return Response(
-                {'error': 'Verification photo is empty.',
-                 'code': 'PHOTO_EMPTY'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
+    def get(self, request, category_slug, topic_slug, level):
         try:
             topic = Topic.objects.get(
                 category__slug=category_slug,
@@ -227,14 +194,11 @@ class QuizQuestionsView(APIView):
         random.shuffle(questions)
         questions = questions[:10]
 
-        # Create a quiz attempt with the verification photo attached.
         attempt = QuizAttempt.objects.create(
             user=user,
             topic=topic,
             level=level,
             total_questions=len(questions),
-            verification_photo=photo_bytes,
-            verification_captured_at=timezone.now(),
         )
         
         # Get lessons for this level
@@ -378,118 +342,6 @@ class QuestionTimeoutView(APIView):
             'heart_lost': heart_lost,
             'hearts_remaining': user.current_hearts,
         })
-
-
-class QuizSnapshotView(APIView):
-    """
-    Receive an in-quiz camera snapshot from the face monitor.
-
-    The frontend posts here on every routine snapshot tick (~25-50s) plus
-    every face-monitor violation event (face leaves, multiple faces, tab
-    hidden). We store JPEG bytes plus the violation kind for admin review.
-
-    A soft cap of MAX_PER_ATTEMPT prevents a misbehaving / runaway client
-    from spamming the DB. Beyond that we silently 200 so the client doesn't
-    surface the limit to the user.
-    """
-    permission_classes = [IsAuthenticated]
-    parser_classes = [MultiPartParser, FormParser]
-
-    MAX_PHOTO_BYTES = 250_000   # ~250 KB - frontend downscales aggressively
-    MAX_PER_ATTEMPT = 80        # soft ceiling per attempt
-
-    VALID_KINDS = {choice[0] for choice in QuizSnapshot.KIND_CHOICES}
-
-    def post(self, request):
-        attempt_id = request.data.get('attempt_id')
-        kind = (request.data.get('kind') or 'routine').strip()
-        photo_file = request.FILES.get('photo')
-
-        if not attempt_id:
-            return Response({'error': 'Missing attempt_id'}, status=status.HTTP_400_BAD_REQUEST)
-        if kind not in self.VALID_KINDS:
-            return Response({'error': f'Invalid kind: {kind}'}, status=status.HTTP_400_BAD_REQUEST)
-        if photo_file is None:
-            return Response({'error': 'Missing photo'}, status=status.HTTP_400_BAD_REQUEST)
-        if photo_file.size > self.MAX_PHOTO_BYTES:
-            return Response(
-                {'error': 'Photo too large.', 'code': 'PHOTO_TOO_LARGE'},
-                status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            )
-
-        try:
-            attempt = QuizAttempt.objects.only('id', 'user_id', 'completed').get(pk=attempt_id)
-        except QuizAttempt.DoesNotExist:
-            return Response({'error': 'Attempt not found'}, status=status.HTTP_404_NOT_FOUND)
-
-        if attempt.user_id != request.user.id:
-            # Don't reveal whose attempt it is.
-            return Response({'error': 'Attempt not found'}, status=status.HTTP_404_NOT_FOUND)
-
-        # Don't accept snapshots after the quiz is over - prevents replay
-        # noise and post-quiz inbox stuffing.
-        if attempt.completed:
-            return Response(
-                {'error': 'Quiz attempt is already completed.', 'code': 'ATTEMPT_COMPLETED'},
-                status=status.HTTP_409_CONFLICT,
-            )
-
-        # Soft cap.
-        existing = QuizSnapshot.objects.filter(attempt_id=attempt.id).count()
-        if existing >= self.MAX_PER_ATTEMPT:
-            return Response({'message': 'Limit reached for this attempt.'}, status=status.HTTP_200_OK)
-
-        QuizSnapshot.objects.create(
-            attempt=attempt,
-            kind=kind,
-            photo=photo_file.read(),
-        )
-        return Response({'message': 'Snapshot stored.'}, status=status.HTTP_201_CREATED)
-
-
-class QuizCancelView(APIView):
-    """
-    Auto-fail an in-progress quiz attempt because the user spent too long
-    off-camera (or pulled some other monitor-disqualifying move). Sets
-    auto_failed/auto_failed_reason and marks completed without awarding any
-    score, XP, or stars. The frontend hits this when its pause timer trips
-    the 2-minute long-pause cap.
-    """
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        attempt_id = request.data.get('attempt_id')
-        reason = (request.data.get('reason') or 'long_pause')[:80]
-
-        if not attempt_id:
-            return Response({'error': 'Missing attempt_id'}, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            attempt = QuizAttempt.objects.get(pk=attempt_id)
-        except QuizAttempt.DoesNotExist:
-            return Response({'error': 'Attempt not found'}, status=status.HTTP_404_NOT_FOUND)
-
-        if attempt.user_id != request.user.id:
-            return Response({'error': 'Attempt not found'}, status=status.HTTP_404_NOT_FOUND)
-        if attempt.completed:
-            return Response({'message': 'Already finalised.'}, status=status.HTTP_200_OK)
-
-        attempt.completed = True
-        attempt.completed_at = timezone.now()
-        attempt.auto_failed = True
-        attempt.auto_failed_reason = reason
-        attempt.passed = False
-        attempt.score = 0
-        attempt.stars = 0
-        attempt.xp_earned = 0
-        attempt.save(update_fields=[
-            'completed', 'completed_at', 'auto_failed',
-            'auto_failed_reason', 'passed', 'score', 'stars', 'xp_earned',
-        ])
-        return Response(
-            {'message': 'Attempt cancelled.', 'auto_failed': True, 'reason': reason},
-            status=status.HTTP_200_OK,
-        )
 
 
 class CompleteQuizView(APIView):
@@ -932,23 +784,6 @@ class LearningResourceDetailView(APIView):
         return Response(serializer.data)
 
 
-# ---------------------------------------------------------------------------
-# Django-admin helper: serve a verification photo as a JPEG response.
-# Linking to a real URL avoids the long-data-URI bug in some browsers where
-# new tabs render blank until reloaded.
-# ---------------------------------------------------------------------------
-
-@staff_member_required
-@cache_control(private=True, max_age=300)
-def admin_verification_photo(request, attempt_id):
-    try:
-        attempt = QuizAttempt.objects.only('verification_photo').get(pk=attempt_id)
-    except QuizAttempt.DoesNotExist:
-        raise Http404
-    photo = attempt.verification_photo
-    if not photo:
-        raise Http404
-    return HttpResponse(bytes(photo), content_type='image/jpeg')
 
 
 # ---------------------------------------------------------------------------

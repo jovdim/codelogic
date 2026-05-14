@@ -1,0 +1,22 @@
+{% extends "admin/change_form.html" %}
+
+{% comment %}
+Adds an "Enable user" / "Disable user" button to the bottom submit row of
+the User admin detail page. Handled in accounts.admin.UserAdmin.response_change
+via the _toggle_active POST flag.
+{% endcomment %}
+
+{% block submit_buttons_bottom %}
+    {% if original %}
+    <div class="submit-row" style="text-align:right;margin-top:-1px">
+        <button type="submit" name="_toggle_active"
+                style="background:{% if original.is_active %}#ef4444{% else %}#22c55e{% endif %};
+                       color:white;padding:10px 18px;border:0;border-radius:4px;
+                       font-weight:600;cursor:pointer;font-size:13px"
+                title="{% if original.is_active %}This user will no longer be able to log in.{% else %}Re-enable login for this user.{% endif %}">
+            {% if original.is_active %}🚫 Disable user{% else %}✅ Enable user{% endif %}
+        </button>
+    </div>
+    {% endif %}
+    {{ block.super }}
+{% endblock %}

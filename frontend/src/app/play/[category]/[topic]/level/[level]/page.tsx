@@ -10,12 +10,6 @@ import { ProtectedRoute } from "@/components/auth/RouteGuards";
 import { gameAPI } from "@/lib/api";
 import { invalidateCache } from "@/lib/dataCache";
 import { Modal, ModalButton } from "@/components/ui/Modal";
-import FaceVerificationModal from "@/components/FaceVerificationModal";
-import QuizFaceMonitor, {
-  type MonitorState,
-  type QuizFaceMonitorHandle,
-} from "@/components/QuizFaceMonitor";
-import MonitorPauseOverlay from "@/components/MonitorPauseOverlay";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
 import {
   Heart,
@@ -203,186 +197,52 @@ export default function LevelQuizPage() {
     sessionStorage.removeItem(timerStorageKey);
   }, [timerStorageKey]);
 
-  // ---- Pause / resume support for the in-quiz face monitor ----
-  // The question timer normally derives "remaining" from a stored startTime,
-  // so it survives a reload without granting extra time. To pause cleanly we
-  // freeze the displayed remaining value, then on resume we re-write the
-  // stored startTime so it computes back to that same remaining value. The
-  // interval just no-ops while paused.
-  const isTimerPausedRef = useRef(false);
-  const pausedRemainingRef = useRef<number | null>(null);
+  const loadQuiz = useCallback(async () => {
+    try {
+      setLoading(true);
+      await refreshUser();
 
-  const pauseTimer = useCallback(() => {
-    if (isTimerPausedRef.current) return;
-    pausedRemainingRef.current = getRemainingTime(currentQuestion);
-    isTimerPausedRef.current = true;
-  }, [getRemainingTime, currentQuestion]);
+      const response = await gameAPI.getQuizQuestions(
+        categoryId,
+        topicId,
+        levelId,
+      );
+      const lessonData = response.data.lessons || [];
+      setLessons(lessonData);
+      setCurrentLesson(0);
+      setShowingLessons(lessonData.length > 0);
+      setQuestions(response.data.questions);
+      setAttemptId(response.data.attempt_id);
+      setHearts(response.data.hearts);
+      setError(null);
 
-  const resumeTimer = useCallback(() => {
-    if (!isTimerPausedRef.current) return;
-    const remaining = pausedRemainingRef.current ?? 30;
-    // Shift the stored startTime forward so the next getRemainingTime() call
-    // returns the same `remaining` we captured at pause time.
-    const newStartTime = Date.now() - (30 - remaining) * 1000;
-    sessionStorage.setItem(
-      timerStorageKey,
-      JSON.stringify({ questionIndex: currentQuestion, startTime: newStartTime }),
-    );
-    isTimerPausedRef.current = false;
-    pausedRemainingRef.current = null;
-  }, [timerStorageKey, currentQuestion]);
-
-  // Face-verification gate: nothing loads until the modal hands us a photo.
-  const [showFaceModal, setShowFaceModal] = useState(true);
-
-  // ---- In-quiz face monitor ----
-  // The monitor stays mounted from "quiz loaded" through "quiz finished or
-  // cancelled". A non-"ok" state pauses the question timer + locks
-  // interactions. >LONG_PAUSE_CAP_S of continuous pause auto-fails the
-  // attempt server-side via gameAPI.cancelQuizAttempt.
-  const LONG_PAUSE_CAP_S = 120;
-  const monitorRef = useRef<QuizFaceMonitorHandle | null>(null);
-  const [monitorState, setMonitorState] = useState<MonitorState>("loading");
-  const [pauseElapsedSec, setPauseElapsedSec] = useState(0);
-  const [autoFailed, setAutoFailed] = useState(false);
-  // Monitoring (and the pause-on-violation overlay) is suppressed during
-  // the lesson-slides phase - lessons are passive reading and the camera
-  // isn't even running. The moment questions start, monitoring kicks in.
-  const isPaused =
-    monitorState !== "ok" &&
-    monitorState !== "loading" &&
-    !showResult &&
-    !autoFailed &&
-    !showingLessons;
-
-  // Pause / resume the question timer in lockstep with monitor state.
-  useEffect(() => {
-    if (isPaused) pauseTimer();
-    else resumeTimer();
-  }, [isPaused, pauseTimer, resumeTimer]);
-
-  // Track how long we've been continuously paused so the overlay can show
-  // a "auto-cancel in N seconds" warning, and so we can actually trigger
-  // the auto-cancel.
-  useEffect(() => {
-    if (!isPaused) {
-      setPauseElapsedSec(0);
-      return;
+      clearTimerStorage();
+      if (lessonData.length === 0) {
+        setTimeLeft(30);
+        saveTimerStart(0);
+      }
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to load questions";
+      if (typeof err === "object" && err !== null && "response" in err) {
+        const axiosError = err as {
+          response?: { data?: { error?: string } };
+        };
+        setError(axiosError.response?.data?.error || errorMessage);
+      } else {
+        setError(errorMessage);
+      }
+    } finally {
+      setLoading(false);
     }
-    const tick = window.setInterval(() => setPauseElapsedSec((n) => n + 1), 1000);
-    return () => window.clearInterval(tick);
-  }, [isPaused]);
+  }, [categoryId, topicId, levelId, refreshUser, clearTimerStorage, saveTimerStart]);
 
+  // Auto-load the quiz on mount. (Face verification used to gate this;
+  // it's been removed.)
   useEffect(() => {
-    if (autoFailed) return;
-    if (!isPaused) return;
-    if (pauseElapsedSec < LONG_PAUSE_CAP_S) return;
-    if (!attemptId) return;
-
-    // Long-pause cap reached - cancel the attempt server-side and bounce.
-    setAutoFailed(true);
-    void (async () => {
-      try {
-        await gameAPI.cancelQuizAttempt({
-          attempt_id: attemptId,
-          reason: monitorState === "tab_hidden" ? "tab_hidden_too_long" : "off_camera_too_long",
-        });
-      } catch (err) {
-        console.error("auto-cancel failed:", err);
-      } finally {
-        // Stop monitor + clear timer + leave the level page.
-        monitorRef.current?.stop();
-        clearTimerStorage();
-        invalidateCache();
-        setTimeout(() => {
-          router.push(`/play/${categoryId}/${topicId}`);
-        }, 1500);
-      }
-    })();
-  }, [
-    isPaused,
-    pauseElapsedSec,
-    autoFailed,
-    attemptId,
-    monitorState,
-    clearTimerStorage,
-    router,
-    categoryId,
-    topicId,
-  ]);
-
-  // Stop the monitor as soon as the quiz wraps - either completion or auto-fail.
-  useEffect(() => {
-    if (showResult || autoFailed) monitorRef.current?.stop();
-  }, [showResult, autoFailed]);
-
-  // Stable wrapper around monitorRef.attachPreview so the pause overlay's
-  // useEffect doesn't re-run on every parent re-render (the auto-cancel
-  // countdown ticks every second). Without this, the overlay's <video>
-  // gets its srcObject detached and re-attached every tick, causing a
-  // visible blink.
-  const attachMonitorPreview = useCallback(
-    (el: HTMLVideoElement | null) =>
-      monitorRef.current?.attachPreview(el) ?? (() => {}),
-    [],
-  );
-
-  const loadQuiz = useCallback(
-    async (photo: Blob) => {
-      try {
-        setLoading(true);
-        await refreshUser();
-
-        const response = await gameAPI.startQuiz(
-          categoryId,
-          topicId,
-          levelId,
-          photo,
-        );
-        const lessonData = response.data.lessons || [];
-        setLessons(lessonData);
-        setCurrentLesson(0);
-        setShowingLessons(lessonData.length > 0);
-        setQuestions(response.data.questions);
-        setAttemptId(response.data.attempt_id);
-        setHearts(response.data.hearts);
-        setError(null);
-
-        clearTimerStorage();
-        if (lessonData.length === 0) {
-          setTimeLeft(30);
-          saveTimerStart(0);
-        }
-      } catch (err: unknown) {
-        const errorMessage =
-          err instanceof Error ? err.message : "Failed to load questions";
-        if (typeof err === "object" && err !== null && "response" in err) {
-          const axiosError = err as {
-            response?: { data?: { error?: string } };
-          };
-          setError(axiosError.response?.data?.error || errorMessage);
-        } else {
-          setError(errorMessage);
-        }
-      } finally {
-        setLoading(false);
-      }
-    },
-    [categoryId, topicId, levelId, refreshUser, clearTimerStorage, saveTimerStart],
-  );
-
-  const handleFaceCaptured = useCallback(
-    (photo: Blob) => {
-      setShowFaceModal(false);
-      void loadQuiz(photo);
-    },
-    [loadQuiz],
-  );
-
-  const handleFaceCancelled = useCallback(() => {
-    // Student backed out of the camera prompt — bounce them off the quiz page.
-    router.push(`/play/${categoryId}/${topicId}`);
-  }, [router, categoryId, topicId]);
+    void loadQuiz();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const question = questions[currentQuestion];
   const totalQuestions = questions.length;
@@ -456,8 +316,6 @@ export default function LevelQuizPage() {
     if (isAnswered || showResult || loading || !question || showingLessons) return;
 
     const timer = setInterval(() => {
-      // Frozen by the in-quiz face monitor? Don't tick.
-      if (isTimerPausedRef.current) return;
       // Calculate remaining time from stored start timestamp
       const remaining = getRemainingTime(currentQuestion);
 
@@ -552,9 +410,8 @@ export default function LevelQuizPage() {
 
   const [noHeartsError, setNoHeartsError] = useState(false);
 
-  // Restart re-verifies the player — every fresh attempt needs a fresh photo.
+  // Reset all per-attempt state and re-fetch a fresh QuizAttempt.
   const restartQuiz = async () => {
-    await refreshUser();
     setNoHeartsError(false);
     setCurrentQuestion(0);
     setSelectedAnswer(null);
@@ -565,7 +422,7 @@ export default function LevelQuizPage() {
     setTimeLeft(30);
     setHeartsLost(0);
     setQuizSubmitted(false);
-    setShowFaceModal(true);
+    await loadQuiz();
   };
 
   // Calculate stars
@@ -643,22 +500,6 @@ export default function LevelQuizPage() {
       submitQuizResult();
     }
   }, [showResult, quizSubmitted]);
-
-  // Face verification gate — shown before any quiz data loads, and again on
-  // restart-after-out-of-hearts. Until the user passes, no questions are
-  // fetched and the rest of the page is hidden behind it.
-  if (showFaceModal) {
-    return (
-      <ProtectedRoute>
-        <div className="min-h-screen bg-gradient-to-b from-[#0f0f1a] to-[#1a1a2e]" />
-        <FaceVerificationModal
-          open
-          onCaptured={handleFaceCaptured}
-          onCancel={handleFaceCancelled}
-        />
-      </ProtectedRoute>
-    );
-  }
 
   // Loading state
   if (loading) {
@@ -756,70 +597,6 @@ export default function LevelQuizPage() {
   return (
     <ProtectedRoute>
       <div className="min-h-screen relative overflow-hidden bg-[#0f0f1a]">
-        {/* In-quiz face monitor + pause overlay. Idle during the lesson
-            slides phase (no monitoring, no snapshots) and during result/
-            auto-fail screens. Becomes active the moment questions start. */}
-        {attemptId && !autoFailed && (
-          <QuizFaceMonitor
-            ref={monitorRef}
-            attemptId={attemptId}
-            active={!showResult && !showingLessons}
-            onStateChange={setMonitorState}
-          />
-        )}
-        <MonitorPauseOverlay
-          open={isPaused}
-          reason={
-            (monitorState === "ok" || monitorState === "loading"
-              ? "no_face"
-              : monitorState) as Exclude<MonitorState, "ok" | "loading">
-          }
-          attachPreview={attachMonitorPreview}
-          pausedRemainingSeconds={
-            // Only show the per-question paused-at time while the question
-            // timer is actually running. After the user has answered (or
-            // during lesson slides) the question timer is logically frozen
-            // and "remaining" is computed from wall-clock - which would
-            // appear to keep shrinking on subsequent pauses. Hiding it
-            // avoids that misleading display.
-            isAnswered || showingLessons
-              ? undefined
-              : pausedRemainingRef.current ?? undefined
-          }
-          pauseElapsedSeconds={pauseElapsedSec}
-          longPauseCapSeconds={LONG_PAUSE_CAP_S}
-        />
-
-        {/* Auto-fail toast — shown briefly before redirect when the
-            long-pause cap trips, so the student sees why they were
-            kicked out. */}
-        {autoFailed && (
-          <div className="fixed inset-0 z-[210] flex items-center justify-center bg-black/85 backdrop-blur-sm">
-            <div className="max-w-sm mx-4 rounded-2xl bg-[#0f0f1a] border border-red-500/40 p-6 text-center">
-              <h3 className="text-lg font-bold text-red-400 mb-1">Attempt cancelled</h3>
-              <p className="text-sm text-gray-300">
-                Too much time off-camera. This attempt was discarded.
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* "Camera active" pill, top-right. Hidden during the verification
-            modal phase, the lessons phase (camera off), and the result
-            screen so it doesn't lie about an inactive camera. */}
-        {attemptId && !showResult && !autoFailed && !showingLessons && (
-          <div
-            className="fixed top-4 right-4 z-30 flex items-center gap-2 rounded-full bg-black/60 backdrop-blur-sm border border-white/10 px-3 py-1.5 text-xs text-gray-200"
-            title="Your camera is being used to keep the quiz fair."
-          >
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-70" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
-            </span>
-            Camera active
-          </div>
-        )}
-
         {/* Simple background with floating elements */}
         <div className="absolute inset-0">
           {/* Floating particles */}

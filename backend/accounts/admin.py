@@ -6,6 +6,7 @@ Manage users and gamification settings.
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import Group
+from django.http import HttpResponseRedirect
 from django.utils.html import format_html
 from django.contrib import messages
 from django.db.models import Sum
@@ -23,7 +24,8 @@ admin.site.unregister(Group)
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
-    list_display = ['email', 'username', 'display_name', 'level_badge', 'xp', 'hearts_display', 'streak_display', 'is_email_verified', 'is_active', 'date_joined']
+    change_form_template = 'admin/accounts/user/change_form.html'
+    list_display = ['email', 'username', 'display_name', 'level_badge', 'xp', 'hearts_display', 'streak_display', 'is_email_verified', 'active_badge', 'date_joined']
     list_filter = ['is_email_verified', 'is_active', 'is_staff', 'level', 'date_joined']
     search_fields = ['email', 'username', 'display_name']
     ordering = ['-date_joined']
@@ -99,6 +101,38 @@ class UserAdmin(BaseUserAdmin):
             return f"{obj.current_streak} {'day' if obj.current_streak == 1 else 'days'}"
         return "0 days"
     streak_display.short_description = 'Streak'
+
+    def active_badge(self, obj):
+        """Coloured pill version of is_active. Easier to scan than the
+        default boolean tick column."""
+        if obj.is_active:
+            return format_html(
+                '<span style="background:#22c55e;color:white;padding:2px 10px;'
+                'border-radius:12px;font-weight:600;font-size:11px">ACTIVE</span>'
+            )
+        return format_html(
+            '<span style="background:#ef4444;color:white;padding:2px 10px;'
+            'border-radius:12px;font-weight:600;font-size:11px">DISABLED</span>'
+        )
+    active_badge.short_description = 'Status'
+
+    def response_change(self, request, obj):
+        """
+        Handle the Enable/Disable button from the change_form template
+        (sends a POST with the _toggle_active hidden field). Toggle
+        is_active, save, flash a message, redirect back to the same page.
+        """
+        if '_toggle_active' in request.POST:
+            obj.is_active = not obj.is_active
+            obj.save(update_fields=['is_active'])
+            verb = 'enabled' if obj.is_active else 'disabled'
+            self.message_user(
+                request,
+                f'User {obj.email} has been {verb}.',
+                messages.SUCCESS if obj.is_active else messages.WARNING,
+            )
+            return HttpResponseRedirect(request.path)
+        return super().response_change(request, obj)
     
     @admin.action(description='Mark selected as Email Verified')
     def verify_email(self, request, queryset):

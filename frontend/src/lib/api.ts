@@ -131,44 +131,15 @@ export const gameAPI = {
   getTopic: (categorySlug: string, topicSlug: string) =>
     api.get(`/game/topics/${categorySlug}/${topicSlug}/`),
 
-  // Start a quiz: POST the face-verification photo, get questions + attempt_id back.
-  // The backend rejects the request if the photo is missing.
-  startQuiz: (
-    categorySlug: string,
-    topicSlug: string,
-    level: number,
-    photo: Blob,
-  ) => {
-    const form = new FormData();
-    form.append("verification_photo", photo, "face.jpg");
-    return api.post(
-      `/game/quiz/${categorySlug}/${topicSlug}/${level}/`,
-      form,
-      { headers: { "Content-Type": "multipart/form-data" } },
-    );
-  },
+  // Start a quiz: returns the questions + attempt_id.
+  getQuizQuestions: (categorySlug: string, topicSlug: string, level: number) =>
+    api.get(`/game/quiz/${categorySlug}/${topicSlug}/${level}/`),
 
   // Per-question timer expired without an answer. Backend deducts a heart
   // and bumps the attempt's hearts_lost counter; no UserAnswer is created
   // so the user can still answer on the retry timer.
   registerTimeout: (data: { attempt_id: string }) =>
     api.post("/game/timeout/", data),
-
-  // In-quiz face monitor: post a snapshot. `kind` is the snapshot reason
-  // (routine | face_lost | face_returned | multiple_faces | tab_hidden).
-  postQuizSnapshot: (data: { attempt_id: string; kind: string; photo: Blob }) => {
-    const form = new FormData();
-    form.append("attempt_id", data.attempt_id);
-    form.append("kind", data.kind);
-    form.append("photo", data.photo, "snapshot.jpg");
-    return api.post("/game/quiz-snapshot/", form, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
-  },
-
-  // Auto-fail an in-progress quiz attempt (e.g. >2 min off-camera).
-  cancelQuizAttempt: (data: { attempt_id: string; reason?: string }) =>
-    api.post("/game/quiz-cancel/", data),
 
   // Submit an answer
   submitAnswer: (data: {

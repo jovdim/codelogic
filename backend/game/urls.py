@@ -16,8 +16,6 @@ urlpatterns = [
     path('answer/', views.SubmitAnswerView.as_view(), name='submit-answer'),
     path('timeout/', views.QuestionTimeoutView.as_view(), name='question-timeout'),
     path('complete/', views.CompleteQuizView.as_view(), name='complete-quiz'),
-    path('quiz-snapshot/', views.QuizSnapshotView.as_view(), name='quiz-snapshot'),
-    path('quiz-cancel/', views.QuizCancelView.as_view(), name='quiz-cancel'),
     
     # User data
     path('leaderboard/', views.LeaderboardView.as_view(), name='leaderboard'),
@@ -31,11 +29,6 @@ urlpatterns = [
 
     # Server-side cert PDF rendering (logged-in users post HTML, get PDF back).
     path('cert/render-pdf/', views.RenderPdfView.as_view(), name='cert-render-pdf'),
-
-    # Django-admin photo viewer (staff-only). Serves the JPEG bytes of a
-    # QuizAttempt's verification photo at a stable URL so admin thumbnail
-    # links open reliably in a new tab.
-    path('admin-photo/<uuid:attempt_id>/', views.admin_verification_photo, name='admin-verification-photo'),
 
     # Django-admin certificate preview (staff-only). Renders any user's
     # earned certificate, matching the frontend design.
