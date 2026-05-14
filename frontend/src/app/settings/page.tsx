@@ -400,10 +400,17 @@ function PasswordSettings() {
     text: string;
   } | null>(null);
 
+  // Must match the backend StrongPasswordValidator. Mirror in
+  // frontend/src/app/register/page.tsx + reset-password/page.tsx if changed.
   const passwordRequirements = [
-    { label: "At least 8 characters", test: (p: string) => p.length >= 8 },
-    { label: "Contains a number", test: (p: string) => /\d/.test(p) },
-    { label: "Contains a letter", test: (p: string) => /[a-zA-Z]/.test(p) },
+    { label: "At least one lowercase letter", test: (p: string) => /[a-z]/.test(p) },
+    { label: "At least one uppercase letter", test: (p: string) => /[A-Z]/.test(p) },
+    { label: "At least one number", test: (p: string) => /\d/.test(p) },
+    {
+      label: "At least one special character (e.g. @ $ ! % * # ? & _ ^ ( ) -)",
+      test: (p: string) => /[@$!%*#?&_^()\-]/.test(p),
+    },
+    { label: "At least 12 characters", test: (p: string) => p.length >= 12 },
   ];
 
   const handleSubmit = async (e: React.FormEvent) => {
