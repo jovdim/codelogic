@@ -21,12 +21,14 @@ from .views import (
     CheckUsernameView,
     CheckEmailView,
     UpdateAvatarView,
+    LoginFaceVerifyView,
 )
 
 urlpatterns = [
     # Authentication
     path('register/', RegisterView.as_view(), name='register'),
     path('login/', LoginView.as_view(), name='login'),
+    path('login/face-verify/', LoginFaceVerifyView.as_view(), name='login_face_verify'),
     path('logout/', LogoutView.as_view(), name='logout'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     

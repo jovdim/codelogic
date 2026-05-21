@@ -726,8 +726,49 @@ class UpdateAvatarView(APIView):
         
         request.user.avatar = avatar
         request.user.save(update_fields=['avatar'])
-        
+
         return Response({
             'message': 'Avatar updated successfully.',
             'avatar': avatar
         }, status=status.HTTP_200_OK)
+
+
+# Max bytes accepted for the post-login face snapshot. The browser sends
+# ~640px JPEG at q=0.85 which is typically 30-80 KB, so 500 KB is a
+# comfortable ceiling that still rejects obvious abuse.
+LOGIN_FACE_PHOTO_MAX_BYTES = 500 * 1024
+
+
+class LoginFaceVerifyView(APIView):
+    """Receive and store the post-login face-verification snapshot.
+
+    The frontend captures a single JPEG from the camera the moment the
+    user passes the live face check. We overwrite the previous one — only
+    the latest snapshot per user is retained (mirrors how the prior
+    QuizSnapshot system kept the latest per-attempt photo).
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        photo = request.FILES.get('photo')
+        if not photo:
+            return Response(
+                {'error': 'photo file is required.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if photo.size > LOGIN_FACE_PHOTO_MAX_BYTES:
+            return Response(
+                {'error': 'Photo is too large.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        data = photo.read()
+        user = request.user
+        user.last_login_face_photo = data
+        user.last_login_face_captured_at = timezone.now()
+        user.save(update_fields=[
+            'last_login_face_photo',
+            'last_login_face_captured_at',
+        ])
+        return Response({'message': 'Face verification recorded.'},
+                        status=status.HTTP_200_OK)

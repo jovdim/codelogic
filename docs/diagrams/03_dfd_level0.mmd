@@ -1,0 +1,22 @@
+flowchart LR
+    Guest[Guest]
+    Student[Student]
+    Admin[Admin]
+    Email[Email Service]
+    PDFSvc[PDF Service]
+    System((0<br/><br/>CodeLogic<br/>Quiz Platform))
+
+    Guest -->|Registration Info / Login| System
+    System -->|Account Confirmation / Catalog| Guest
+
+    Student -->|Quiz Answers / Profile Updates / Cert Request| System
+    System -->|Questions / Lessons / Results / Stats / Certificate PDF| Student
+
+    Admin -->|User and Content Management Actions| System
+    System -->|User Records / Quiz Audit Data| Admin
+
+    System -->|Verification / Reset / Unlock Emails| Email
+    Email -->|Token Link Delivered| System
+
+    System -->|Certificate HTML| PDFSvc
+    PDFSvc -->|Rendered PDF File| System

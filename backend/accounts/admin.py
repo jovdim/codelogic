@@ -17,6 +17,20 @@ from game.admin import UserCertificateInline, _user_quiz_history_html
 # only is_staff / is_superuser flags. Decluttering the sidebar.
 admin.site.unregister(Group)
 
+# Hide SimpleJWT's "Token Blacklist" admin section - the app stays
+# INSTALLED (it's used to blacklist refresh tokens on logout/rotation,
+# per SIMPLE_JWT['BLACKLIST_AFTER_ROTATION']=True), we just don't need
+# to manage the tokens through the admin UI.
+try:
+    from rest_framework_simplejwt.token_blacklist.models import (
+        OutstandingToken, BlacklistedToken,
+    )
+    admin.site.unregister(OutstandingToken)
+    admin.site.unregister(BlacklistedToken)
+except Exception:
+    # If the models aren't registered (older simplejwt), skip silently.
+    pass
+
 
 # ============================================================
 # USER ADMIN - Manage all users
@@ -56,6 +70,10 @@ class UserAdmin(BaseUserAdmin):
             'fields': ('date_joined', 'last_active', 'last_activity_date'),
             'classes': ('collapse',),
         }),
+        ('Login face verification', {
+            'fields': ('login_face_display',),
+            'description': 'Most recent face snapshot captured after this user logged in.',
+        }),
         # Per-user stacked quiz history: each attempt is a section with the
         # start-of-quiz verification photo + all in-quiz monitor snapshots
         # + score / completion / timestamp. Easier to scan one user's full
@@ -72,13 +90,33 @@ class UserAdmin(BaseUserAdmin):
         }),
     )
 
-    readonly_fields = ['date_joined', 'last_active', 'quiz_history']
+    readonly_fields = ['date_joined', 'last_active', 'quiz_history', 'login_face_display']
 
     inlines = [UserCertificateInline]
 
     def quiz_history(self, obj):
         return _user_quiz_history_html(obj)
     quiz_history.short_description = 'Quiz attempts (verification photo + monitor snapshots)'
+
+    def login_face_display(self, obj):
+        if not obj.last_login_face_photo:
+            return format_html(
+                '<em style="color:#888">No login face snapshot recorded yet.</em>'
+            )
+        import base64
+        b64 = base64.b64encode(bytes(obj.last_login_face_photo)).decode('ascii')
+        captured = (
+            obj.last_login_face_captured_at.strftime('%Y-%m-%d %H:%M:%S')
+            if obj.last_login_face_captured_at else 'unknown'
+        )
+        return format_html(
+            '<div><img src="data:image/jpeg;base64,{}" '
+            'style="max-width:240px;border:1px solid #ccc;border-radius:4px"/>'
+            '<div style="font-size:11px;color:#666;margin-top:4px">'
+            'Captured: {}</div></div>',
+            b64, captured,
+        )
+    login_face_display.short_description = 'Last login face snapshot'
 
     def level_badge(self, obj):
         colors = {

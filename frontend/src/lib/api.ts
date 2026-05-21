@@ -95,6 +95,16 @@ export const authAPI = {
 
   updateAvatar: (avatar: number) => api.patch("/auth/avatar/", { avatar }),
 
+  // Upload the post-login face-verification snapshot. Multipart; the
+  // backend overwrites the previous photo on the user record.
+  loginFaceVerify: (photo: Blob) => {
+    const form = new FormData();
+    form.append("photo", photo, "login_face.jpg");
+    return api.post("/auth/login/face-verify/", form, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  },
+
   changePassword: (data: {
     current_password: string;
     new_password: string;

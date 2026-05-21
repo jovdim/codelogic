@@ -93,7 +93,13 @@ class User(AbstractBaseUser, PermissionsMixin):
     current_streak = models.PositiveIntegerField(default=0)
     longest_streak = models.PositiveIntegerField(default=0)
     last_activity_date = models.DateField(null=True, blank=True)
-    
+
+    # Post-login face verification snapshot. JPEG bytes captured by the
+    # browser when the user passes the face check after login. Stored
+    # for admin review (e.g. dispute / impersonation investigation).
+    last_login_face_photo = models.BinaryField(null=True, blank=True)
+    last_login_face_captured_at = models.DateTimeField(null=True, blank=True)
+
     objects = UserManager()
     
     USERNAME_FIELD = 'email'

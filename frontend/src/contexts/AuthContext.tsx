@@ -14,6 +14,8 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  needsFaceVerification: boolean;
+  markFaceVerified: () => void;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   register: (
@@ -27,13 +29,26 @@ interface AuthContextType {
   refreshUser: () => Promise<void>;
 }
 
+const FACE_VERIFIED_KEY = "face_verified_session";
+
+function isStudent(u: User | null): boolean {
+  return !!u && !u.is_staff;
+}
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [faceVerified, setFaceVerified] = useState(false);
 
   const isAuthenticated = !!user;
+  const needsFaceVerification = isStudent(user) && !faceVerified;
+
+  const markFaceVerified = () => {
+    sessionStorage.setItem(FACE_VERIFIED_KEY, "1");
+    setFaceVerified(true);
+  };
 
   // Check for existing session on mount
   useEffect(() => {
@@ -43,6 +58,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
           const response = await authAPI.getProfile();
           setUser(response.data);
+          // Restore the face-verified flag from sessionStorage so a page
+          // reload mid-session doesn't re-prompt. sessionStorage is cleared
+          // on tab close, so a fresh tab will still require verification.
+          if (sessionStorage.getItem(FACE_VERIFIED_KEY) === "1") {
+            setFaceVerified(true);
+          }
         } catch (error) {
           // Token is invalid, clear storage
           localStorage.removeItem("access_token");
@@ -62,6 +83,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("access_token", tokens.access);
     localStorage.setItem("refresh_token", tokens.refresh);
     setUser(userData);
+    // Staff/superusers skip the face check.
+    if (userData.is_staff) {
+      sessionStorage.setItem(FACE_VERIFIED_KEY, "1");
+      setFaceVerified(true);
+    } else {
+      sessionStorage.removeItem(FACE_VERIFIED_KEY);
+      setFaceVerified(false);
+    }
   };
 
   const logout = async () => {
@@ -75,7 +104,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       localStorage.removeItem("access_token");
       localStorage.removeItem("refresh_token");
+      sessionStorage.removeItem(FACE_VERIFIED_KEY);
       setUser(null);
+      setFaceVerified(false);
     }
   };
 
@@ -119,6 +150,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         isLoading,
         isAuthenticated,
+        needsFaceVerification,
+        markFaceVerified,
         login,
         logout,
         register,

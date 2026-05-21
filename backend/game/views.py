@@ -462,14 +462,13 @@ class LeaderboardView(APIView):
     permission_classes = [AllowAny]
     
     def get(self, request):
-        limit = min(int(request.query_params.get('limit', 15)), 15)
         # Exclude staff and superusers from leaderboard
         users = User.objects.filter(
             is_active=True,
             is_email_verified=True,
             is_staff=False,
             is_superuser=False
-        ).order_by('-xp', '-current_streak')[:limit]
+        ).order_by('-xp', '-current_streak')
         
         leaderboard = []
         for rank, user in enumerate(users, 1):

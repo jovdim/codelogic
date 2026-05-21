@@ -31,7 +31,7 @@ export const FOOTER_LINKS = {
 export const PLATFORM_STATS = [
   { label: "Quiz Topics", value: 50, suffix: "+" },
   { label: "Quiz Questions", value: 500, suffix: "+" },
-  { label: "Languages", value: 9, suffix: "" },
+  { label: "Languages", value: 7, suffix: "" },
   { label: "Free Forever", value: 100, suffix: "%" },
 ];
 

@@ -1,0 +1,368 @@
+/* ============================================================
+ * CodeLogic admin recolor
+ *
+ * SUBTLE recolor of the default Django admin: header bar gets
+ * the dark-purple brand look, links/buttons turn purple, active
+ * sidebar items get a purple accent. List rows + form fields
+ * are left at default Django styling so they stay readable.
+ * Mirrors the frontend palette from frontend/src/app/globals.css.
+ * ============================================================ */
+
+/* ---- HEADER BAR ---- */
+#header {
+  background: #1a1a2e !important;
+  color: #e2e2f0 !important;
+  border-bottom: 3px solid #7c3aed !important;
+}
+
+#header a:link,
+#header a:visited,
+#site-name a:link,
+#site-name a:visited,
+#branding h1,
+#branding h1 a:link,
+#branding h1 a:visited {
+  color: #e2e2f0 !important;
+}
+
+#header a:hover,
+#site-name a:hover {
+  color: #a78bfa !important;
+}
+
+#user-tools a {
+  border-bottom-color: #a78bfa !important;
+}
+
+/* ---- BREADCRUMBS ---- */
+div.breadcrumbs {
+  background: #252540 !important;
+  color: #a1a1b5 !important;
+  border-bottom: 1px solid #2d2d44 !important;
+}
+
+div.breadcrumbs a {
+  color: #a78bfa !important;
+}
+
+/* The 2nd breadcrumb link is always the app-index (e.g. "Game",
+   "Accounts") which goes to an un-styled Django app page. Disable
+   the click on it. Home (1st) and the model-list link (3rd, on
+   detail pages) stay clickable. */
+div.breadcrumbs a:nth-of-type(2) {
+  pointer-events: none !important;
+  color: #cbd5e1 !important;
+  cursor: default !important;
+  text-decoration: none !important;
+}
+
+/* ---- LINKS ---- */
+a:link,
+a:visited {
+  color: #6d28d9;
+}
+
+a:hover,
+a:focus {
+  color: #7c3aed;
+}
+
+/* ---- MODULE HEADERS (the app card title bars on the index) ---- */
+.module h2,
+.module caption,
+.inline-group h2 {
+  background: #1a1a2e !important;
+  color: #e2e2f0 !important;
+}
+
+.module h2 a:link,
+.module h2 a:visited {
+  color: #e2e2f0 !important;
+}
+
+/* ---- PRIMARY BUTTONS (Save, Save and continue, defaults) ---- */
+.button.default,
+input[type=submit].default,
+.submit-row input.default {
+  background: #7c3aed !important;
+  color: #fff !important;
+  border: none !important;
+  border-radius: 4px !important;
+  box-shadow: 0 3px 0 0 #5b21b6 !important;
+  font-weight: 600 !important;
+  transition: background-color 0.12s ease, transform 0.08s ease, box-shadow 0.08s ease !important;
+}
+
+.button.default:hover,
+input[type=submit].default:hover,
+.submit-row input.default:hover {
+  background: #6d28d9 !important;
+}
+
+.button.default:active,
+input[type=submit].default:active,
+.submit-row input.default:active {
+  box-shadow: 0 1px 0 0 #5b21b6 !important;
+  transform: translateY(2px);
+}
+
+/* Secondary buttons (Save and add another, Save and continue) */
+.button,
+input[type=submit],
+input[type=button],
+.submit-row input,
+.submit-row a.button {
+  border-radius: 4px;
+}
+
+/* ---- SELECTED ROW / FILTER STATES ---- */
+.selected a {
+  color: #7c3aed !important;
+}
+
+#changelist-filter li.selected a {
+  color: #7c3aed !important;
+}
+
+/* Object tools (Add user +, History buttons in top right of detail pages) */
+.object-tools a:link,
+.object-tools a:visited {
+  background: #1a1a2e !important;
+  color: #e2e2f0 !important;
+  border-radius: 4px;
+  transition: background-color 0.12s ease;
+}
+
+.object-tools a:hover,
+.object-tools a:focus {
+  background: #7c3aed !important;
+}
+
+.object-tools a.addlink {
+  background: #7c3aed !important;
+}
+
+.object-tools a.addlink:hover {
+  background: #6d28d9 !important;
+}
+
+/* ============================================================
+ * SIDEBAR - force always-visible, brand-styled
+ *
+ * Django's admin ships a collapsible left sidebar that auto-lists
+ * all registered apps/models. We force it permanently open (hide
+ * the toggle), make it wider, and paint it with the brand palette
+ * so it feels like a real dashboard side-nav.
+ * ============================================================ */
+
+/* Hide the collapse/expand toggle button entirely */
+#toggle-nav-sidebar {
+  display: none !important;
+}
+
+/* Force the sidebar to be visible no matter what the JS / localStorage
+   state says. Django toggles a body class to hide it; we override. */
+#nav-sidebar {
+  display: block !important;
+  flex: 0 0 260px !important;
+  width: 260px !important;
+  min-width: 260px !important;
+  background: #1a1a2e !important;
+  border-right: 1px solid #2d2d44 !important;
+  padding: 12px 0 !important;
+  z-index: 15;
+  min-height: 100vh;
+}
+
+/* Kill ALL the white/light backgrounds Django ships for tables inside
+   the sidebar - tbody rows, dividers, the empty filter-results row,
+   everything. Forces the whole sidebar surface to stay #1a1a2e.
+   NOTE: border-color is NOT forced transparent on .module, so the
+   module-separator rule below can draw a visible top divider. */
+#nav-sidebar,
+#nav-sidebar > *,
+#nav-sidebar table,
+#nav-sidebar thead,
+#nav-sidebar tbody,
+#nav-sidebar tr,
+#nav-sidebar th,
+#nav-sidebar td {
+  background: #1a1a2e !important;
+  background-color: #1a1a2e !important;
+  border-color: transparent !important;
+}
+
+#nav-sidebar .module {
+  background: #1a1a2e !important;
+  background-color: #1a1a2e !important;
+}
+
+/* Visible separator between app sections. Each app is its own
+   <div class="module">; we put a thin divider on top of every module
+   except the first one so groups feel cleanly grouped, not merged. */
+#nav-sidebar .module + .module,
+#nav-sidebar div.app-accounts + div.module,
+#nav-sidebar div.module + div.module {
+  margin-top: 14px !important;
+  padding-top: 10px !important;
+  border-top: 1px solid #2d2d44 !important;
+}
+
+/* Make sure main page layout accommodates it */
+body.is-toggled #nav-sidebar,
+body.no-sidebar #nav-sidebar {
+  display: block !important;
+  margin-left: 0 !important;
+  left: 0 !important;
+}
+
+#main {
+  display: flex !important;
+}
+
+#main > #content,
+#main > #container > #content {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+}
+
+/* App section headers (e.g. "ACCOUNTS", "GAME") - rendered as plain
+   labels, no link behaviour. Users navigate via the model rows below
+   (Users, Categories, etc.) instead of the section header, so clicking
+   the header doesn't jump to a half-styled app-index page. */
+#nav-sidebar caption {
+  padding: 6px 10px 10px !important;
+}
+
+#nav-sidebar caption,
+#nav-sidebar .section,
+#nav-sidebar table caption a {
+  background: transparent !important;
+  color: #6b7280 !important;
+  font-size: 10px !important;
+  font-weight: 500 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.8px !important;
+  pointer-events: none !important;
+  cursor: default !important;
+  text-decoration: none !important;
+}
+
+/* Each app model row */
+#nav-sidebar table {
+  margin: 0 !important;
+  width: 100% !important;
+}
+
+#nav-sidebar th,
+#nav-sidebar td {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+}
+
+#nav-sidebar a {
+  display: block !important;
+  padding: 9px 16px !important;
+  margin: 1px 8px !important;
+  color: #cbd5e1 !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  border-radius: 6px !important;
+  text-decoration: none !important;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+#nav-sidebar a:hover {
+  background: #252540 !important;
+  color: #ffffff !important;
+}
+
+/* Active row: filled purple pill with a soft shadow. 100% static -
+   identical declarations on :hover and :focus so the pill never
+   reflows, never re-animates. */
+#nav-sidebar .current-model a,
+#nav-sidebar .current-model a:hover,
+#nav-sidebar .current-model a:focus,
+#codelogic-dashboard-link[aria-current="page"],
+#codelogic-dashboard-link[aria-current="page"]:hover,
+#codelogic-dashboard-link[aria-current="page"]:focus {
+  background: #7c3aed !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  box-shadow:
+    0 4px 12px rgba(124, 58, 237, 0.30),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+/* Dashboard quick-link row, sits below the filter input and is styled
+   identically to a regular model row (Users / Categories / etc.).
+   When on /admin/ (dashboard landing) it gets the same purple pill
+   active state as the current-model highlight. */
+#codelogic-dashboard-row {
+  margin-bottom: 8px;
+}
+
+#codelogic-dashboard-link[aria-current="page"],
+#codelogic-dashboard-link[aria-current="page"]:hover {
+  background: #7c3aed !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+}
+
+/* Search box at top of sidebar (if present) */
+#nav-sidebar #nav-filter {
+  width: calc(100% - 24px) !important;
+  margin: 4px 12px 12px !important;
+  background: #0f0f1a !important;
+  border: 1px solid #2d2d44 !important;
+  color: #e2e2f0 !important;
+  padding: 7px 10px !important;
+  border-radius: 6px !important;
+  font-size: 12px !important;
+}
+
+#nav-sidebar #nav-filter:focus {
+  border-color: #7c3aed !important;
+  outline: none !important;
+  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.25) !important;
+}
+
+/* Hidden-by-filter rows */
+#nav-sidebar tr.no-results td {
+  color: #6b7280 !important;
+  padding: 8px 18px !important;
+  font-size: 12px !important;
+  font-style: italic;
+}
+
+/* "Add" / "Change" mini-links shown to the right of each model row */
+#nav-sidebar .changelink,
+#nav-sidebar .addlink,
+#nav-sidebar .viewlink {
+  display: none !important; /* keep nav clean; main link covers it */
+}
+
+/* ---- TABLE HEADER (list view column headers) ---- */
+#changelist table thead th {
+  background: #f1f1f1;
+}
+
+#changelist table thead th.sorted {
+  background: #ede9fe !important;
+}
+
+#changelist table thead th a {
+  color: #1a1a2e !important;
+}
+
+/* ---- PAGINATION ACTIVE ---- */
+.paginator a.this {
+  background: #7c3aed !important;
+  color: #fff !important;
+}
+
+/* ---- USER TOOLS (top-right link to dashboard, logout) ---- */
+#user-tools strong {
+  color: #a78bfa !important;
+}

@@ -1,0 +1,35 @@
+flowchart LR
+    Student((Student))
+    Admin((Admin))
+
+    subgraph System[CodeLogic Quiz Platform]
+        direction TB
+        UC_Login([Login])
+        UC_Logout([Logout])
+        UC_Register([Register Account])
+        UC_Reset([Reset Password])
+        UC_Quiz([Take Quiz])
+        UC_Progress([View Progress])
+        UC_Cert([Download Certificate])
+        UC_Learn([Browse Learning Resources])
+        UC_MgmtUsers([Manage Users])
+        UC_MgmtContent([Manage Quiz Content])
+        UC_Attempts([View Quiz Attempts])
+        UC_MgmtResources([Manage Learning Resources])
+    end
+
+    Student --- UC_Login
+    Student --- UC_Logout
+    Student --- UC_Register
+    Student --- UC_Reset
+    Student --- UC_Quiz
+    Student --- UC_Progress
+    Student --- UC_Cert
+    Student --- UC_Learn
+
+    UC_Login --- Admin
+    UC_Logout --- Admin
+    UC_MgmtUsers --- Admin
+    UC_MgmtContent --- Admin
+    UC_Attempts --- Admin
+    UC_MgmtResources --- Admin

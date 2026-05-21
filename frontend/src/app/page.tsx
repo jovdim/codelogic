@@ -1549,7 +1549,7 @@ export default function Home() {
 
                 <div className="grid grid-cols-2 gap-6">
                   {[
-                    { value: "9", label: "Languages", icon: Code2 },
+                    { value: "7", label: "Languages", icon: Code2 },
                     { value: "500+", label: "Quiz Questions", icon: Brain },
                     { value: "100%", label: "Free Forever", icon: Star },
                     {

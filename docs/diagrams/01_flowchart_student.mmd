@@ -1,0 +1,69 @@
+flowchart TD
+    Start([Start]) --> Landing[Landing Page]
+    Landing --> AuthChoice{Have Account?}
+    AuthChoice -->|No| Register[Register Account]
+    AuthChoice -->|Yes| Login[Login]
+
+    Register --> SendVerify[/Verification Email Sent/]
+    SendVerify --> VerifyEmail[Click Email Link]
+    VerifyEmail --> Login
+
+    Login --> LoginCheck{Credentials Valid?}
+    LoginCheck -->|"No (under 3 fails)"| Login
+    LoginCheck -->|3 Failed Attempts| Locked[Account Locked]
+    Locked --> RequestUnlock[Request Reactivation Email]
+    RequestUnlock --> VerifyEmail
+    LoginCheck -->|Yes| Dashboard[Dashboard]
+
+    Dashboard --> Menu{Main Menu}
+    Menu --> Play[Play]
+    Menu --> Learn[Learn Resources]
+    Menu --> Leaderboard[Leaderboard]
+    Menu --> Certs[My Certificates]
+    Menu --> Settings[Settings]
+    Menu --> Logout([Logout])
+
+    Play --> SelCategory[Select Category]
+    SelCategory --> SelTopic[Select Topic]
+    SelTopic --> SelLevel[Select Level]
+    SelLevel --> HeartCheck{Hearts greater than 0?}
+    HeartCheck -->|No| WaitHearts[Wait for Heart Regen]
+    WaitHearts --> SelLevel
+    HeartCheck -->|Yes| Lesson[View Lesson]
+    Lesson --> Quiz[Start Quiz - 10 Questions]
+
+    Quiz --> AnswerQ[Answer Question / 30s Timer]
+    AnswerQ --> CorrectCheck{Correct?}
+    CorrectCheck -->|Yes| AwardXP[+10 XP]
+    CorrectCheck -->|No or Timeout| LoseHeart[-1 Heart]
+    AwardXP --> MoreQ{More Questions?}
+    LoseHeart --> MoreQ
+    MoreQ -->|Yes| AnswerQ
+    MoreQ -->|No| Complete[Complete Quiz]
+
+    Complete --> ScoreCheck{Score 50% or more?}
+    ScoreCheck -->|No| ResultFail[Result: Failed]
+    ScoreCheck -->|Yes| ResultPass[Result: Passed + Stars + XP Bonus]
+    ResultPass --> FinalLvl{Final Level of Topic?}
+    FinalLvl -->|Yes| EarnCert[Earn Certificate]
+    FinalLvl -->|No| Dashboard
+    EarnCert --> Dashboard
+    ResultFail --> Dashboard
+
+    Learn --> SearchRes[Search / Filter Resources]
+    SearchRes --> ViewRes[View Resource]
+    ViewRes --> DownloadRes[Download PDF]
+    DownloadRes --> Dashboard
+
+    Certs --> ViewCert[View Certificate]
+    ViewCert --> DownloadCert[Download Certificate PDF]
+    DownloadCert --> Dashboard
+
+    Settings --> EditProfile[Edit Profile / Avatar]
+    Settings --> ChangePass[Change Password]
+    Settings --> DeleteAcct[Delete Account]
+    EditProfile --> Dashboard
+    ChangePass --> Dashboard
+    DeleteAcct --> End([End])
+
+    Logout --> End([End])

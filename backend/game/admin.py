@@ -84,9 +84,17 @@ def _user_quiz_history_html(user):
 
 # ============================================================
 # USER CERTIFICATE ADMIN - browse earned certs + view / print them
+#
+# NOT REGISTERED with the admin site: in production no UserCertificate
+# rows are ever created (CompleteQuizView doesn't persist them - the
+# frontend /certificates page computes eligibility on the fly from
+# UserProgress). Listing an always-empty page in the sidebar was
+# confusing, so we hide it. The class is kept (and `UserCertificateInline`
+# below still works on the User admin) so re-enabling is a one-line change
+# if the awarding logic is ever wired up.
 # ============================================================
 
-@admin.register(UserCertificate)
+# @admin.register(UserCertificate)  # re-enable if UserCertificate rows start being persisted
 class UserCertificateAdmin(admin.ModelAdmin):
     list_display = ['user', 'topic_display', 'completion_date', 'total_stars', 'total_xp_earned', 'certificate_code', 'view_link']
     list_select_related = ['user', 'certificate', 'certificate__topic']
@@ -158,9 +166,18 @@ class UserCertificateInline(admin.TabularInline):
 
 # ============================================================
 # SITE SETTINGS ADMIN (Singleton - ONE configuration for whole site)
+#
+# NOT REGISTERED with the admin site: all 31 fields are currently
+# unused in code - game mechanics are hardcoded as Python constants
+# in views.py (HEART_REGEN_MINUTES, XP_PER_CORRECT, etc.), feature
+# flags are never checked, branding/social/announcement fields are
+# not consumed by any API or frontend component. Listing a page of
+# config knobs that don't do anything was confusing, so we hide it.
+# Re-enable by uncommenting the decorator below once the fields are
+# actually wired up.
 # ============================================================
 
-@admin.register(SiteSettings)
+# @admin.register(SiteSettings)  # re-enable when SiteSettings fields are actually consumed
 class SiteSettingsAdmin(admin.ModelAdmin):
     list_display = ['site_name', 'maintenance_mode', 'registration_enabled', 'updated_at']
     

@@ -1,0 +1,66 @@
+flowchart TB
+    Guest[Guest]
+    Student[Student]
+    Admin[Admin]
+    Email[Email Service]
+    PDFSvc[PDF Service]
+
+    P1[1.0<br/>User and Auth<br/>Management]
+    P2[2.0<br/>Content Catalog]
+    P3[3.0<br/>Quiz Engine]
+    P4[4.0<br/>Progress and<br/>Gamification]
+    P5[5.0<br/>Certificate<br/>Management]
+    P6[6.0<br/>Learning<br/>Resources]
+
+    D1[(D1 Users)]
+    D2[(D2 Tokens)]
+    D3[(D3 Categories and Topics)]
+    D4[(D4 Questions and Lessons)]
+    D5[(D5 Quiz Attempts and Answers)]
+    D6[(D6 User Progress)]
+    D7[(D7 Certificates)]
+    D8[(D8 Learning Resources)]
+
+    Guest -->|Register / Login| P1
+    P1 -->|JWT / Auth Response| Guest
+    Student -->|Profile / Password Update| P1
+    P1 -->|User Data| Student
+    Admin -->|Activate / Deactivate User| P1
+    P1 -->|User Records| Admin
+    P1 --- D1
+    P1 --- D2
+    P1 -.->|Verify / Reset / Unlock| Email
+
+    Guest -->|Browse| P2
+    Student -->|Browse| P2
+    Admin -->|Manage Content| P2
+    P2 -->|Catalog Data| Guest
+    P2 -->|Catalog Data| Student
+    P2 --- D3
+    P2 --- D4
+
+    Student -->|Start / Submit / Timeout / Complete| P3
+    P3 -->|Questions / Result / Hearts| Student
+    P3 --- D4
+    P3 --- D5
+    P3 -->|Heart Deduction| D1
+
+    P3 -->|Final Score and XP| P4
+    Student -->|View Stats| P4
+    P4 -->|Stats / Streak / Level| Student
+    P4 --- D6
+    P4 -->|Update XP / Streak| D1
+
+    P4 -->|Topic Fully Completed| P5
+    Student -->|View / Download Cert| P5
+    P5 --- D7
+    P5 -->|Cert HTML| PDFSvc
+    PDFSvc -->|Cert PDF| P5
+    P5 -->|Certificate File| Student
+
+    Guest -->|Browse Resources| P6
+    Student -->|Browse / Download| P6
+    Admin -->|Manage Resources| P6
+    P6 -->|PDF / Metadata| Guest
+    P6 -->|PDF / Metadata| Student
+    P6 --- D8
