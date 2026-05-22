@@ -78,7 +78,7 @@ class UserAdmin(BaseUserAdmin):
         }),
         ('Login face verification', {
             'fields': ('login_face_display',),
-            'description': 'Most recent face snapshot captured after this user logged in.',
+            'description': 'Every face snapshot captured after this user logged in — newest first.',
         }),
         # Per-user stacked quiz history: each attempt is a section with the
         # start-of-quiz verification photo + all in-quiz monitor snapshots
@@ -117,27 +117,82 @@ class UserAdmin(BaseUserAdmin):
     quiz_history.short_description = 'Quiz attempts (verification photo + monitor snapshots)'
 
     def login_face_display(self, obj):
-        if not obj.last_login_face_photo:
-            return format_html(
-                '<em style="color:#888">No login face snapshot recorded yet.</em>'
-            )
+        """Render the FULL login-face history as a responsive grid.
+
+        Pulls from LoginFaceSnapshot (one row per login). Newest first.
+        For very heavy accounts we cap the rendered list at 60 and show
+        a "+N earlier captures" footer so the page stays snappy. The
+        legacy single-field snapshot on User is shown as a fallback for
+        rows that only exist from before the history table was added.
+        """
         import base64
-        b64 = base64.b64encode(bytes(obj.last_login_face_photo)).decode('ascii')
-        # Stored as UTC. Display in the configured TIME_ZONE (Asia/Manila).
-        captured = (
-            timezone.localtime(
-                obj.last_login_face_captured_at
-            ).strftime('%Y-%m-%d %H:%M:%S')
-            if obj.last_login_face_captured_at else 'unknown'
+
+        snapshots = list(
+            obj.login_face_snapshots.only('photo', 'captured_at')[:60]
         )
+        total = obj.login_face_snapshots.count()
+
+        # Backwards-compat: if no history rows yet but the user has the
+        # legacy single snapshot, show that one.
+        if not snapshots and obj.last_login_face_photo:
+            b64 = base64.b64encode(bytes(obj.last_login_face_photo)).decode('ascii')
+            captured = (
+                timezone.localtime(obj.last_login_face_captured_at).strftime('%Y-%m-%d %H:%M:%S')
+                if obj.last_login_face_captured_at else 'unknown'
+            )
+            return format_html(
+                '<div style="display:inline-block">'
+                '<img src="data:image/jpeg;base64,{}" '
+                'style="max-width:200px;border:1px solid #2d2d44;border-radius:6px;display:block"/>'
+                '<div style="font-size:11px;color:#9ca3af;margin-top:4px">{}</div>'
+                '<div style="font-size:10px;color:#6b7280;margin-top:2px">(legacy single snapshot)</div>'
+                '</div>',
+                b64, captured,
+            )
+
+        if not snapshots:
+            return format_html(
+                '<em style="color:#9ca3af">No login face snapshots recorded yet.</em>'
+            )
+
+        tiles = []
+        for i, snap in enumerate(snapshots, start=1):
+            b64 = base64.b64encode(bytes(snap.photo)).decode('ascii')
+            when = timezone.localtime(snap.captured_at).strftime('%Y-%m-%d %H:%M:%S')
+            # Latest snapshot gets a "Latest" pill to make scanning easier.
+            latest_pill = (
+                '<span style="display:inline-block;padding:1px 6px;border-radius:999px;'
+                'background:rgba(124,58,237,0.20);color:#a78bfa;border:1px solid rgba(124,58,237,0.40);'
+                'font-size:9px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;margin-left:6px">Latest</span>'
+                if i == 1 else ''
+            )
+            tiles.append(format_html(
+                '<div style="background:#1a1a2e;border:1px solid #2d2d44;border-radius:8px;padding:8px;width:200px">'
+                '<img src="data:image/jpeg;base64,{}" '
+                'style="width:100%;height:auto;border-radius:6px;display:block"/>'
+                '<div style="font-size:11px;color:#cbd5e1;margin-top:6px;display:flex;align-items:center">'
+                '#{}{}</div>'
+                '<div style="font-size:10px;color:#9ca3af;margin-top:2px;font-family:Consolas,monospace">{}</div>'
+                '</div>',
+                b64, total - i + 1, format_html(latest_pill), when,
+            ))
+
+        from django.utils.safestring import mark_safe
+        grid_inner = mark_safe(''.join(tiles))
+        footer = mark_safe('')
+        if total > len(snapshots):
+            footer = format_html(
+                '<div style="color:#9ca3af;font-size:12px;margin-top:10px;'
+                'padding:8px 12px;background:#1a1a2e;border:1px dashed #2d2d44;border-radius:6px">'
+                '+ {} earlier capture{} not shown</div>',
+                total - len(snapshots), 's' if (total - len(snapshots)) != 1 else '',
+            )
+
         return format_html(
-            '<div><img src="data:image/jpeg;base64,{}" '
-            'style="max-width:240px;border:1px solid #ccc;border-radius:4px"/>'
-            '<div style="font-size:11px;color:#666;margin-top:4px">'
-            'Captured: {}</div></div>',
-            b64, captured,
+            '<div style="display:flex;flex-wrap:wrap;gap:12px">{}</div>{}',
+            grid_inner, footer,
         )
-    login_face_display.short_description = 'Last login face snapshot'
+    login_face_display.short_description = 'Login face snapshots (newest first)'
 
     def level_badge(self, obj):
         colors = {

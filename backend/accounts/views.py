@@ -17,7 +17,7 @@ from django.utils.html import strip_tags
 
 from django.utils import timezone
 
-from .models import EmailVerificationToken, PasswordResetToken
+from .models import EmailVerificationToken, PasswordResetToken, LoginFaceSnapshot
 from .serializers import (
     UserRegistrationSerializer,
     UserLoginSerializer,
@@ -743,9 +743,12 @@ class LoginFaceVerifyView(APIView):
     """Receive and store the post-login face-verification snapshot.
 
     The frontend captures a single JPEG from the camera the moment the
-    user passes the live face check. We overwrite the previous one — only
-    the latest snapshot per user is retained (mirrors how the prior
-    QuizSnapshot system kept the latest per-attempt photo).
+    user passes the live face check. We **append** a new row to
+    LoginFaceSnapshot every time so admins can review the full login
+    history (impersonation / dispute investigations).
+
+    Also still writes the latest snapshot to the legacy User fields so
+    any older read paths keep working without a code change.
     """
     permission_classes = [IsAuthenticated]
 
@@ -764,6 +767,9 @@ class LoginFaceVerifyView(APIView):
 
         data = photo.read()
         user = request.user
+        # Append a new history row — this is the new source of truth.
+        LoginFaceSnapshot.objects.create(user=user, photo=data)
+        # Mirror to the legacy "latest" fields for backward compatibility.
         user.last_login_face_photo = data
         user.last_login_face_captured_at = timezone.now()
         user.save(update_fields=[

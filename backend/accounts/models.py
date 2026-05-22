@@ -141,6 +141,35 @@ class User(AbstractBaseUser, PermissionsMixin):
         super().save(*args, **kwargs)
 
 
+class LoginFaceSnapshot(models.Model):
+    """One row per post-login face-verification capture.
+
+    Replaces the single `last_login_face_photo` field on User: that field
+    overwrote on every login, losing history. This model appends, so admins
+    can review every login attempt for a given user (impersonation /
+    dispute investigations).
+
+    The legacy User fields are still around (read-only) so existing data
+    isn't lost; new captures only go here.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='login_face_snapshots',
+    )
+    photo = models.BinaryField()
+    captured_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'login_face_snapshots'
+        ordering = ['-captured_at']
+        indexes = [
+            models.Index(fields=['user', '-captured_at']),
+        ]
+
+    def __str__(self):
+        return f'Login snapshot for {self.user.email} at {self.captured_at:%Y-%m-%d %H:%M:%S}'
+
+
 class EmailVerificationToken(models.Model):
     """Token for email verification during registration."""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
