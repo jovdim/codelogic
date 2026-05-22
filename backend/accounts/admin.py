@@ -100,6 +100,18 @@ class UserAdmin(BaseUserAdmin):
 
     inlines = [UserCertificateInline]
 
+    def save_model(self, request, obj, form, change):
+        # Auto-verify users created through the admin. An admin adding a
+        # user is vouching for the account, so requiring them to also
+        # tick `is_email_verified` (or run the bulk action) is a footgun —
+        # the user can't log in until they do, and the error message
+        # ("Please verify your email") points to a flow that doesn't apply.
+        # `change` is False on add, True on edit; on edit we leave the
+        # checkbox alone so admins keep full control.
+        if not change:
+            obj.is_email_verified = True
+        super().save_model(request, obj, form, change)
+
     def quiz_history(self, obj):
         return _user_quiz_history_html(obj)
     quiz_history.short_description = 'Quiz attempts (verification photo + monitor snapshots)'

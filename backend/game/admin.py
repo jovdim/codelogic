@@ -448,7 +448,7 @@ class QuestionAdmin(admin.ModelAdmin):
         ('Code Snippet', {
             'fields': ('code_snippet', 'highlight_line'),
             'classes': ('cl-fs-code',),
-            'description': 'Required for Find-the-Error. Recommended for Output / Fill-in-the-Blank. Optional for Multiple Choice. highlight_line is the 1-based buggy line and is also the answer for Find-the-Error.'
+            'description': 'Required for Find-the-Error. Recommended for Output / Fill-in-the-Blank. Optional for Multiple Choice. The "Highlight line" field only applies to Find-the-Error — it is the 1-based buggy line, which is also the line the user must click to answer.'
         }),
         ('Multiple-Choice Options', {
             'fields': ('options', 'correct_answer'),

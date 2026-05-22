@@ -33,6 +33,17 @@
       }
       fs.style.display = show ? '' : 'none';
     });
+
+    // highlight_line only matters for find-error (the user clicks that line).
+    // Hide its form row otherwise so admins don't get confused by it on
+    // fill-blank / output / multiple-choice forms.
+    var hlField = document.getElementById('id_highlight_line');
+    if (hlField) {
+      var row = hlField.closest('.form-row');
+      if (row) {
+        row.style.display = (qtype === 'find-error') ? '' : 'none';
+      }
+    }
   }
 
   function init() {
