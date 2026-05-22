@@ -237,6 +237,8 @@ class SiteSettingsAdmin(admin.ModelAdmin):
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
+    change_list_template = 'admin/game/category/change_list.html'
+    change_form_template = 'admin/game/category/change_form.html'
     list_display = ['name', 'slug', 'icon_preview', 'topic_count', 'question_count', 'color_preview', 'order', 'is_active']
     list_filter = ['is_active']
     prepopulated_fields = {'slug': ('name',)}
@@ -321,6 +323,8 @@ class QuestionInline(admin.TabularInline):
 
 @admin.register(Topic)
 class TopicAdmin(admin.ModelAdmin):
+    # Custom card-list template (mirrors what we did for User).
+    change_list_template = 'admin/game/topic/change_list.html'
     list_display = ['name', 'category', 'slug', 'icon_preview', 'question_count', 'levels_with_questions', 'total_levels', 'is_active']
     list_filter = ['category', 'is_active']
     prepopulated_fields = {'slug': ('name',)}
@@ -394,6 +398,9 @@ class QuestionAdminForm(forms.ModelForm):
 @admin.register(Question)
 class QuestionAdmin(admin.ModelAdmin):
     form = QuestionAdminForm
+    # Dark card-list + hero change-form, mirroring User/Topic.
+    change_list_template = 'admin/game/question/change_list.html'
+    change_form_template = 'admin/game/question/change_form.html'
     list_display = ['short_question', 'topic', 'level', 'question_type_badge', 'options_count', 'correct_answer', 'xp_reward', 'is_active']
     list_filter = ['topic__category', 'topic', 'level', 'question_type', 'is_active']
     search_fields = ['question_text', 'code_snippet', 'explanation']
@@ -510,6 +517,8 @@ class QuestionAdmin(admin.ModelAdmin):
 
 @admin.register(LearningResource)
 class LearningResourceAdmin(admin.ModelAdmin):
+    change_list_template = 'admin/game/learningresource/change_list.html'
+    change_form_template = 'admin/game/learningresource/change_form.html'
     list_display = ['title', 'language', 'category', 'pages', 'views', 'is_active', 'is_featured', 'thumbnail_preview']
     list_filter = ['category', 'language', 'is_active', 'is_featured']
     search_fields = ['title', 'description', 'language']
@@ -559,6 +568,8 @@ class LearningResourceAdmin(admin.ModelAdmin):
 
 @admin.register(Certificate)
 class CertificateAdmin(admin.ModelAdmin):
+    change_list_template = 'admin/game/certificate/change_list.html'
+    change_form_template = 'admin/game/certificate/change_form.html'
     list_display = ['topic', 'category_name', 'icon_preview', 'title_display', 'created_at']
     list_filter = ['topic__category']
     search_fields = ['topic__name', 'title', 'description']
@@ -618,6 +629,8 @@ class CertificateAdmin(admin.ModelAdmin):
 
 @admin.register(Lesson)
 class LessonAdmin(admin.ModelAdmin):
+    change_list_template = 'admin/game/lesson/change_list.html'
+    change_form_template = 'admin/game/lesson/change_form.html'
     list_display = ['short_title', 'topic', 'level', 'has_code', 'has_tip', 'order', 'is_active']
     list_filter = ['topic__category', 'topic', 'level', 'is_active']
     search_fields = ['title', 'content', 'code_example', 'tip']

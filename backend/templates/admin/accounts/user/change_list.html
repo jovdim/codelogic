@@ -1,0 +1,283 @@
+{% extends "admin/change_list.html" %}
+{% load i18n admin_urls static admin_list %}
+
+{# Custom card-grid layout for the User admin changelist.
+   Extends the standard template so search bar, filters sidebar,
+   pagination, and bulk-action form all keep working - we only swap
+   the table for a card grid in the `result_list` block. #}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <style>
+    /* Dark surface for this page only - matches the dashboard look. */
+    body, #main, #content, #content-main, .main {
+      background: #0f0f1a !important;
+      color: #e2e2f0 !important;
+    }
+    #content h1, #content h2, .content-title { color: #ffffff !important; }
+    #content #changelist-form { background: transparent !important; }
+
+    /* Hide the default table header bar (column titles) - the card
+       grid doesn't need them. The search input + filters stay. */
+    #changelist .actions { background: #1a1a2e !important; border: 1px solid #2d2d44 !important; padding: 10px 14px !important; border-radius: 8px; margin-bottom: 16px; color: #cbd5e1; }
+    #changelist .actions label { color: #cbd5e1 !important; }
+    #changelist .actions select { background: #252540 !important; color: #fff !important; border: 1px solid #3d3d5c !important; border-radius: 6px; padding: 6px 10px; }
+    #changelist .actions button { background: #7c3aed !important; color: #fff !important; border: 0 !important; padding: 6px 14px !important; border-radius: 6px !important; font-weight: 600; }
+
+    /* Search bar */
+    #toolbar { background: transparent !important; border: 0 !important; padding: 0 !important; margin-bottom: 16px; }
+    #toolbar input[type="text"] { background: #1a1a2e !important; color: #fff !important; border: 1px solid #2d2d44 !important; padding: 10px 14px !important; border-radius: 8px !important; width: 320px; max-width: 100%; }
+    #toolbar input[type="submit"] { background: #7c3aed !important; color: #fff !important; border: 0 !important; padding: 10px 16px !important; border-radius: 8px !important; font-weight: 600; margin-left: 6px; }
+
+    /* Filters sidebar */
+    #changelist-filter { background: #1a1a2e !important; border: 1px solid #2d2d44 !important; border-radius: 8px; padding: 14px !important; color: #cbd5e1 !important; }
+    #changelist-filter h2, #changelist-filter h3 { color: #ffffff !important; background: transparent !important; font-size: 12px !important; text-transform: uppercase !important; letter-spacing: 0.8px; }
+    #changelist-filter li.selected { color: #a78bfa !important; }
+    #changelist-filter li a { color: #cbd5e1 !important; }
+    #changelist-filter li a:hover { color: #ffffff !important; }
+
+    /* ===== USER LIST (one user per row) ===== */
+    .cl-user-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 16px;
+    }
+    .cl-user-card {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      background: #1a1a2e;
+      border: 1px solid #2d2d44;
+      border-radius: 10px;
+      padding: 14px 20px 14px 16px;
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+    .cl-user-card:hover {
+      border-color: #7c3aed;
+      background: #1f1f36;
+    }
+    .cl-user-card:hover .cl-edit-link { opacity: 1; }
+
+    /* Bulk-action checkbox positioned at the left */
+    .cl-card-checkbox {
+      flex: 0 0 16px;
+      width: 16px;
+      height: 16px;
+      accent-color: #7c3aed;
+      cursor: pointer;
+      margin: 0;
+    }
+
+    /* Initial circle */
+    .cl-initials {
+      flex: 0 0 42px;
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      border: 2px solid rgba(255,255,255,0.08);
+    }
+
+    /* Name + email block (flex-grow to take remaining space) */
+    .cl-name-block { flex: 1 1 200px; min-width: 0; }
+    .cl-display-name {
+      color: #ffffff;
+      font-size: 14px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .cl-email {
+      color: #a1a1b5;
+      font-size: 12px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-top: 2px;
+    }
+
+    /* Level pill */
+    .cl-level-pill {
+      flex: 0 0 auto;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #ffffff;
+      white-space: nowrap;
+    }
+
+    /* Stats inline row */
+    .cl-stats {
+      display: flex;
+      flex: 0 0 auto;
+      gap: 18px;
+      padding: 0 18px;
+      border-left: 1px solid #2d2d44;
+      border-right: 1px solid #2d2d44;
+    }
+    .cl-stat {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-width: 50px;
+    }
+    .cl-stat-value {
+      color: #ffffff;
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1.1;
+    }
+    .cl-stat-value .cl-stat-suffix {
+      color: #6b7280;
+      font-size: 11px;
+      font-weight: 500;
+    }
+    .cl-stat-label {
+      color: #a1a1b5;
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-top: 3px;
+    }
+
+    /* Status pills */
+    .cl-status-pills {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      flex: 0 0 auto;
+    }
+    .cl-pill {
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+    }
+    .cl-pill-active   { background: rgba(34,197,94,0.15);  color: #4ade80; border: 1px solid rgba(34,197,94,0.35); }
+    .cl-pill-disabled { background: rgba(239,68,68,0.15);  color: #f87171; border: 1px solid rgba(239,68,68,0.35); }
+    .cl-pill-verified { background: rgba(124,58,237,0.15); color: #a78bfa; border: 1px solid rgba(124,58,237,0.35); }
+    .cl-pill-unverified { background: rgba(245,158,11,0.15); color: #fbbf24; border: 1px solid rgba(245,158,11,0.35); }
+
+    /* Join date */
+    .cl-joined {
+      color: #6b7280;
+      font-size: 11px;
+      flex: 0 0 auto;
+      white-space: nowrap;
+    }
+
+    /* Edit hover link */
+    .cl-edit-link {
+      flex: 0 0 auto;
+      padding: 6px 12px;
+      background: #7c3aed;
+      color: #ffffff !important;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      text-decoration: none !important;
+      opacity: 0;
+      transition: opacity 0.15s ease, background-color 0.12s ease;
+    }
+    .cl-edit-link:hover { background: #6d28d9; }
+
+    /* Empty state */
+    .cl-empty {
+      padding: 40px;
+      text-align: center;
+      color: #6b7280;
+      background: #1a1a2e;
+      border: 1px dashed #2d2d44;
+      border-radius: 12px;
+    }
+
+    /* On narrower screens, drop the dividers/stats and wrap */
+    @media (max-width: 1100px) {
+      .cl-stats { padding: 0; border: 0; gap: 12px; }
+      .cl-user-card { flex-wrap: wrap; }
+      .cl-name-block { flex: 1 1 100%; }
+    }
+
+    /* Pagination */
+    .paginator { color: #a1a1b5 !important; margin-top: 18px; }
+    .paginator a { color: #a78bfa !important; padding: 4px 10px; border-radius: 6px; background: #1a1a2e; border: 1px solid #2d2d44; margin: 0 2px; }
+    .paginator a:hover { background: #252540 !important; }
+    .paginator .this-page { background: #7c3aed !important; color: #fff !important; padding: 4px 10px; border-radius: 6px; }
+  </style>
+{% endblock %}
+
+{% block result_list %}
+{% if cl.result_list %}
+<div class="cl-user-grid">
+  {% for user_obj in cl.result_list %}
+  {% with disp=user_obj.display_name|default:user_obj.username %}
+  <div class="cl-user-card">
+    {# Bulk-action checkbox - keeps actions form working #}
+    <input type="checkbox" name="_selected_action" value="{{ user_obj.pk }}" class="action-select cl-card-checkbox" aria-label="Select {{ disp }}">
+
+    {# Initial circle, colored by user level #}
+    <div class="cl-initials" style="background: {% if user_obj.level < 3 %}#6b7280{% elif user_obj.level < 6 %}#22c55e{% elif user_obj.level < 9 %}#3b82f6{% elif user_obj.level < 11 %}#8b5cf6{% else %}#f59e0b{% endif %};">
+      {{ disp|slice:":1" }}{{ disp|slice:"1:2" }}
+    </div>
+
+    <div class="cl-name-block">
+      <div class="cl-display-name">{{ disp }}</div>
+      <div class="cl-email">{{ user_obj.email }}</div>
+    </div>
+
+    <div class="cl-level-pill" style="background: {% if user_obj.level < 3 %}#6b7280{% elif user_obj.level < 6 %}#22c55e{% elif user_obj.level < 9 %}#3b82f6{% elif user_obj.level < 11 %}#8b5cf6{% else %}#f59e0b{% endif %};">Lv. {{ user_obj.level }}</div>
+
+    <div class="cl-stats">
+      <div class="cl-stat">
+        <div class="cl-stat-value">{{ user_obj.xp }}</div>
+        <div class="cl-stat-label">XP</div>
+      </div>
+      <div class="cl-stat">
+        <div class="cl-stat-value">{{ user_obj.current_hearts }}<span class="cl-stat-suffix">/{{ user_obj.max_hearts }}</span></div>
+        <div class="cl-stat-label">Hearts</div>
+      </div>
+      <div class="cl-stat">
+        <div class="cl-stat-value">{{ user_obj.current_streak }}<span class="cl-stat-suffix"> d</span></div>
+        <div class="cl-stat-label">Streak</div>
+      </div>
+    </div>
+
+    <div class="cl-status-pills">
+      {% if user_obj.is_active %}
+        <span class="cl-pill cl-pill-active">Active</span>
+      {% else %}
+        <span class="cl-pill cl-pill-disabled">Disabled</span>
+      {% endif %}
+      {% if user_obj.is_email_verified %}
+        <span class="cl-pill cl-pill-verified">Verified</span>
+      {% else %}
+        <span class="cl-pill cl-pill-unverified">Unverified</span>
+      {% endif %}
+    </div>
+
+    <span class="cl-joined">{{ user_obj.date_joined|date:"M d, Y" }}</span>
+
+    <a href="{% url 'admin:accounts_user_change' user_obj.pk %}" class="cl-edit-link">Edit &rarr;</a>
+  </div>
+  {% endwith %}
+  {% endfor %}
+</div>
+{% else %}
+<div class="cl-user-grid">
+  <div class="cl-empty">No users match the current filter.</div>
+</div>
+{% endif %}
+{% endblock %}

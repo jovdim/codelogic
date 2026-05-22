@@ -1,0 +1,211 @@
+{% extends "admin/change_list.html" %}
+{% load i18n admin_urls static admin_list %}
+
+{# Custom card-list layout for Topic admin. Mirrors the User changelist
+   pattern: extends the stock template so search/filters/pagination/
+   bulk-actions keep working, only the row rendering changes. #}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <style>
+    /* Dark page surface scoped to this view only. */
+    body, #main, #content, #content-main, .main {
+      background: #0f0f1a !important;
+      color: #e2e2f0 !important;
+    }
+    #content h1, .content-title { color: #fff !important; }
+    #content #changelist-form { background: transparent !important; }
+
+    /* Restyle the surrounding chrome (search, filters, actions, paginator)
+       to match the dark theme. */
+    #changelist .actions { background: #1a1a2e !important; border: 1px solid #2d2d44 !important; padding: 10px 14px !important; border-radius: 8px; margin-bottom: 16px; color: #cbd5e1; }
+    #changelist .actions label { color: #cbd5e1 !important; }
+    #changelist .actions select { background: #252540 !important; color: #fff !important; border: 1px solid #3d3d5c !important; border-radius: 6px; padding: 6px 10px; }
+    #changelist .actions button { background: #7c3aed !important; color: #fff !important; border: 0 !important; padding: 6px 14px !important; border-radius: 6px !important; font-weight: 600; }
+
+    #toolbar { background: transparent !important; border: 0 !important; padding: 0 !important; margin-bottom: 16px; }
+    #toolbar input[type="text"] { background: #1a1a2e !important; color: #fff !important; border: 1px solid #2d2d44 !important; padding: 10px 14px !important; border-radius: 8px !important; width: 320px; max-width: 100%; }
+    #toolbar input[type="submit"] { background: #7c3aed !important; color: #fff !important; border: 0 !important; padding: 10px 16px !important; border-radius: 8px !important; font-weight: 600; margin-left: 6px; }
+
+    #changelist-filter { background: #1a1a2e !important; border: 1px solid #2d2d44 !important; border-radius: 8px; padding: 14px !important; color: #cbd5e1 !important; }
+    #changelist-filter h2, #changelist-filter h3 { color: #ffffff !important; background: transparent !important; font-size: 12px !important; text-transform: uppercase !important; letter-spacing: 0.8px; }
+    #changelist-filter li.selected { color: #a78bfa !important; }
+    #changelist-filter li a { color: #cbd5e1 !important; }
+    #changelist-filter li a:hover { color: #ffffff !important; }
+
+    /* ===== TOPIC ROW LIST ===== */
+    .cl-topic-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 16px;
+    }
+    .cl-topic-row {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      background: #1a1a2e;
+      border: 1px solid #2d2d44;
+      border-radius: 10px;
+      padding: 14px 20px 14px 16px;
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+    .cl-topic-row:hover { border-color: #7c3aed; background: #1f1f36; }
+    .cl-topic-row:hover .cl-edit-link { opacity: 1; }
+
+    .cl-card-checkbox {
+      flex: 0 0 16px; width: 16px; height: 16px;
+      accent-color: #7c3aed; cursor: pointer; margin: 0;
+    }
+
+    /* Topic icon box - shows icon_file image, falls back to category icon,
+       falls back to colored initial circle. */
+    .cl-topic-icon {
+      flex: 0 0 42px;
+      width: 42px; height: 42px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      font-weight: 700;
+      color: #fff;
+      text-transform: uppercase;
+      border: 1px solid rgba(255,255,255,0.08);
+      overflow: hidden;
+    }
+    .cl-topic-icon img { width: 28px; height: 28px; object-fit: contain; }
+
+    .cl-name-block { flex: 1 1 200px; min-width: 0; }
+    .cl-topic-name { color: #ffffff; font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cl-topic-slug { color: #6b7280; font-size: 11px; font-family: 'Consolas', monospace; margin-top: 2px; }
+
+    /* Category pill (uses the category's color via inline style) */
+    .cl-cat-pill {
+      flex: 0 0 auto;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #ffffff;
+      white-space: nowrap;
+      letter-spacing: 0.2px;
+    }
+
+    /* Inline stats: questions count, levels used / total */
+    .cl-stats {
+      display: flex;
+      flex: 0 0 auto;
+      gap: 18px;
+      padding: 0 18px;
+      border-left: 1px solid #2d2d44;
+      border-right: 1px solid #2d2d44;
+    }
+    .cl-stat {
+      display: flex; flex-direction: column; align-items: center; min-width: 56px;
+    }
+    .cl-stat-value { color: #ffffff; font-size: 14px; font-weight: 700; line-height: 1.1; }
+    .cl-stat-value .cl-stat-suffix { color: #6b7280; font-size: 11px; font-weight: 500; }
+    .cl-stat-label { color: #a1a1b5; font-size: 9px; text-transform: uppercase; letter-spacing: 0.8px; margin-top: 3px; }
+
+    /* Status pills */
+    .cl-pill {
+      padding: 3px 8px; border-radius: 999px;
+      font-size: 10px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.6px;
+    }
+    .cl-pill-active   { background: rgba(34,197,94,0.15);  color: #4ade80; border: 1px solid rgba(34,197,94,0.35); }
+    .cl-pill-inactive { background: rgba(107,114,128,0.20); color: #9ca3af; border: 1px solid rgba(107,114,128,0.40); }
+
+    /* Edit hover link */
+    .cl-edit-link {
+      flex: 0 0 auto;
+      padding: 6px 12px;
+      background: #7c3aed;
+      color: #ffffff !important;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      text-decoration: none !important;
+      opacity: 0;
+      transition: opacity 0.15s ease, background-color 0.12s ease;
+    }
+    .cl-edit-link:hover { background: #6d28d9; }
+
+    /* Empty state */
+    .cl-empty {
+      padding: 40px; text-align: center; color: #6b7280;
+      background: #1a1a2e; border: 1px dashed #2d2d44; border-radius: 12px;
+    }
+
+    @media (max-width: 1100px) {
+      .cl-stats { padding: 0; border: 0; gap: 12px; }
+      .cl-topic-row { flex-wrap: wrap; }
+      .cl-name-block { flex: 1 1 100%; }
+    }
+
+    /* Pagination */
+    .paginator { color: #a1a1b5 !important; margin-top: 18px; }
+    .paginator a { color: #a78bfa !important; padding: 4px 10px; border-radius: 6px; background: #1a1a2e; border: 1px solid #2d2d44; margin: 0 2px; }
+    .paginator a:hover { background: #252540 !important; }
+    .paginator .this-page { background: #7c3aed !important; color: #fff !important; padding: 4px 10px; border-radius: 6px; }
+  </style>
+{% endblock %}
+
+{% block result_list %}
+{% if cl.result_list %}
+<div class="cl-topic-list">
+  {% for topic in cl.result_list %}
+  <div class="cl-topic-row">
+    <input type="checkbox" name="_selected_action" value="{{ topic.pk }}" class="action-select cl-card-checkbox" aria-label="Select {{ topic.name }}">
+
+    {# Icon: topic's own icon if set, else category icon, else letter on category color. #}
+    <div class="cl-topic-icon" style="background: {{ topic.category.color|default:'#7c3aed' }};">
+      {% if topic.icon_file %}
+        <img src="{{ topic.icon_file.url }}" alt="">
+      {% elif topic.category.icon_file %}
+        <img src="{{ topic.category.icon_file.url }}" alt="" style="opacity: 0.85">
+      {% else %}
+        {{ topic.name|slice:":1" }}
+      {% endif %}
+    </div>
+
+    <div class="cl-name-block">
+      <div class="cl-topic-name">{{ topic.name }}</div>
+      <div class="cl-topic-slug">/{{ topic.slug }}</div>
+    </div>
+
+    <span class="cl-cat-pill" style="background: {{ topic.category.color|default:'#7c3aed' }};">{{ topic.category.name }}</span>
+
+    <div class="cl-stats">
+      <div class="cl-stat">
+        <div class="cl-stat-value">{{ topic.questions.count }}</div>
+        <div class="cl-stat-label">Questions</div>
+      </div>
+      <div class="cl-stat">
+        <div class="cl-stat-value">{{ topic.lessons.count }}</div>
+        <div class="cl-stat-label">Lessons</div>
+      </div>
+      <div class="cl-stat">
+        <div class="cl-stat-value">{{ topic.total_levels }}</div>
+        <div class="cl-stat-label">Levels</div>
+      </div>
+    </div>
+
+    {% if topic.is_active %}
+      <span class="cl-pill cl-pill-active">Active</span>
+    {% else %}
+      <span class="cl-pill cl-pill-inactive">Inactive</span>
+    {% endif %}
+
+    <a href="{% url 'admin:game_topic_change' topic.pk %}" class="cl-edit-link">Edit &rarr;</a>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="cl-topic-list">
+  <div class="cl-empty">No topics match the current filter.</div>
+</div>
+{% endif %}
+{% endblock %}

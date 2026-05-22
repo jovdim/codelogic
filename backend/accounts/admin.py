@@ -40,6 +40,11 @@ except Exception:
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
     change_form_template = 'admin/accounts/user/change_form.html'
+    # Custom card-grid layout instead of the default Django admin table.
+    # The template extends admin/change_list.html so search / filters /
+    # pagination / bulk-actions all keep working - we only override how
+    # individual rows render.
+    change_list_template = 'admin/accounts/user/change_list.html'
     list_display = ['email', 'username', 'display_name', 'level_badge', 'xp', 'hearts_display', 'streak_display', 'is_email_verified', 'active_badge', 'date_joined']
     list_filter = ['is_email_verified', 'is_active', 'is_staff', 'level', 'date_joined']
     search_fields = ['email', 'username', 'display_name']

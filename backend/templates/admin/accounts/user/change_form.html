@@ -1,10 +1,273 @@
 {% extends "admin/change_form.html" %}
+{% load i18n admin_urls %}
 
-{% comment %}
-Adds an "Enable user" / "Disable user" button to the bottom submit row of
-the User admin detail page. Handled in accounts.admin.UserAdmin.response_change
-via the _toggle_active POST flag.
-{% endcomment %}
+{# Custom User change form: dark "profile page" treatment instead of
+   the stock Django admin form. Adds a hero header with the user's
+   key stats and restyles the fieldsets as dark cards. Falls back
+   gracefully if `original` isn't set (e.g. add-user page). #}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <style>
+    /* Dark page surface scoped to this view. Other admin forms keep the
+       default light Django look. */
+    body, #main, #content, #content-main, .main {
+      background: #0f0f1a !important;
+      color: #e2e2f0 !important;
+    }
+    #content h1, #content > h1 { color: #fff !important; }
+    .breadcrumbs a { color: #a78bfa !important; }
+
+    /* ===== HERO HEADER ===== */
+    .cl-hero {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      background: linear-gradient(135deg, #1a1a2e 0%, #252540 100%);
+      border: 1px solid #2d2d44;
+      border-radius: 12px;
+      padding: 22px 24px;
+      margin-bottom: 22px;
+      position: relative;
+      overflow: hidden;
+    }
+    .cl-hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at top right, rgba(124,58,237,0.18), transparent 50%);
+      pointer-events: none;
+    }
+    .cl-hero-initials {
+      flex: 0 0 64px;
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      font-weight: 700;
+      color: #ffffff;
+      text-transform: uppercase;
+      border: 2px solid rgba(255,255,255,0.10);
+      position: relative;
+      z-index: 1;
+    }
+    .cl-hero-body { flex: 1 1 auto; min-width: 0; position: relative; z-index: 1; }
+    .cl-hero-name { color: #ffffff; font-size: 22px; font-weight: 700; line-height: 1.1; }
+    .cl-hero-email { color: #a1a1b5; font-size: 13px; margin-top: 4px; }
+    .cl-hero-pills { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+    .cl-hero-pill {
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+    }
+    .cl-pill-lvl       { color: #fff; }
+    .cl-pill-active    { background: rgba(34,197,94,0.18);  color: #4ade80; border: 1px solid rgba(34,197,94,0.40); }
+    .cl-pill-disabled  { background: rgba(239,68,68,0.18);  color: #f87171; border: 1px solid rgba(239,68,68,0.40); }
+    .cl-pill-verified  { background: rgba(124,58,237,0.18); color: #a78bfa; border: 1px solid rgba(124,58,237,0.40); }
+    .cl-pill-unverified{ background: rgba(245,158,11,0.18); color: #fbbf24; border: 1px solid rgba(245,158,11,0.40); }
+    .cl-pill-staff     { background: rgba(59,130,246,0.18); color: #60a5fa; border: 1px solid rgba(59,130,246,0.40); }
+
+    .cl-hero-stats {
+      display: flex;
+      gap: 24px;
+      padding-left: 24px;
+      border-left: 1px solid #2d2d44;
+      position: relative;
+      z-index: 1;
+    }
+    .cl-hero-stat { text-align: center; min-width: 60px; }
+    .cl-hero-stat-value { color: #ffffff; font-size: 20px; font-weight: 700; line-height: 1.1; }
+    .cl-hero-stat-value .cl-stat-suffix { color: #6b7280; font-size: 12px; font-weight: 500; }
+    .cl-hero-stat-label { color: #a1a1b5; font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; margin-top: 4px; }
+
+    /* ===== FIELDSETS AS DARK CARDS ===== */
+    fieldset.module {
+      background: #1a1a2e !important;
+      border: 1px solid #2d2d44 !important;
+      border-radius: 10px !important;
+      padding: 0 !important;
+      margin-bottom: 16px !important;
+      overflow: hidden;
+    }
+    fieldset.module h2 {
+      background: rgba(124,58,237,0.10) !important;
+      color: #ffffff !important;
+      border-bottom: 1px solid #2d2d44 !important;
+      padding: 12px 18px !important;
+      font-size: 13px !important;
+      font-weight: 600 !important;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+    fieldset.module .description {
+      color: #a1a1b5 !important;
+      padding: 10px 18px 0 !important;
+      font-size: 12px;
+      font-style: italic;
+    }
+    fieldset.module .form-row {
+      background: transparent !important;
+      border: 0 !important;
+      border-bottom: 1px solid #252540 !important;
+      padding: 14px 18px !important;
+    }
+    fieldset.module .form-row:last-child { border-bottom: 0 !important; }
+    fieldset.module .form-row label { color: #cbd5e1 !important; font-weight: 500; }
+    fieldset.module .help { color: #6b7280 !important; }
+
+    /* Form inputs */
+    fieldset.module input[type="text"],
+    fieldset.module input[type="email"],
+    fieldset.module input[type="number"],
+    fieldset.module input[type="password"],
+    fieldset.module input[type="date"],
+    fieldset.module input[type="datetime-local"],
+    fieldset.module input[type="time"],
+    fieldset.module textarea,
+    fieldset.module select {
+      background: #0f0f1a !important;
+      border: 1px solid #2d2d44 !important;
+      color: #ffffff !important;
+      border-radius: 6px !important;
+      padding: 8px 12px !important;
+    }
+    fieldset.module input:focus,
+    fieldset.module textarea:focus,
+    fieldset.module select:focus {
+      outline: none !important;
+      border-color: #7c3aed !important;
+      box-shadow: 0 0 0 3px rgba(124,58,237,0.20) !important;
+    }
+    fieldset.module input[readonly] { opacity: 0.7; }
+    fieldset.module .vDateField, fieldset.module .vTimeField { width: 140px; }
+    fieldset.module .related-widget-wrapper a, fieldset.module .related-lookup { color: #a78bfa !important; }
+
+    /* Collapsible sections (Permissions, Activity) */
+    fieldset.collapsed { background: transparent !important; }
+    fieldset.collapse h2 a, fieldset.collapsed h2 a { color: #a78bfa !important; }
+
+    /* Inline group (Earned certificates) */
+    .inline-group {
+      background: #1a1a2e !important;
+      border: 1px solid #2d2d44 !important;
+      border-radius: 10px !important;
+      overflow: hidden;
+      margin-top: 18px;
+    }
+    .inline-group h2 {
+      background: rgba(124,58,237,0.10) !important;
+      color: #ffffff !important;
+      border-bottom: 1px solid #2d2d44 !important;
+      padding: 12px 18px !important;
+      font-size: 13px !important;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+    .inline-group .tabular table { background: transparent !important; }
+    .inline-group .tabular th, .inline-group .tabular td { background: transparent !important; color: #e2e2f0 !important; border-color: #252540 !important; }
+    .inline-group .empty-form { display: none !important; } /* hide blank row for read-only inlines */
+
+    /* Submit row */
+    .submit-row {
+      background: #1a1a2e !important;
+      border: 1px solid #2d2d44 !important;
+      border-radius: 10px;
+      padding: 14px 18px !important;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      justify-content: flex-end;
+      margin-top: 18px;
+    }
+    .submit-row input, .submit-row a, .submit-row button {
+      background: #252540 !important;
+      color: #e2e2f0 !important;
+      border: 1px solid #3d3d5c !important;
+      padding: 8px 14px !important;
+      border-radius: 6px !important;
+      font-weight: 600 !important;
+    }
+    .submit-row input[name="_save"], .submit-row input.default {
+      background: #7c3aed !important;
+      color: #ffffff !important;
+      border: 0 !important;
+      box-shadow: 0 3px 0 0 #5b21b6 !important;
+    }
+    .submit-row input[name="_save"]:hover { background: #6d28d9 !important; }
+    .submit-row a.deletelink {
+      background: rgba(239,68,68,0.15) !important;
+      color: #f87171 !important;
+      border-color: rgba(239,68,68,0.40) !important;
+    }
+    .submit-row a.deletelink:hover { background: rgba(239,68,68,0.25) !important; }
+
+    /* Error notes */
+    .errornote, .errorlist {
+      background: rgba(239,68,68,0.15) !important;
+      color: #f87171 !important;
+      border: 1px solid rgba(239,68,68,0.40) !important;
+      border-radius: 6px;
+      padding: 10px 14px;
+    }
+
+    /* Object tools (History link on top right) */
+    .object-tools a {
+      background: #1a1a2e !important;
+      color: #e2e2f0 !important;
+      border: 1px solid #2d2d44 !important;
+      border-radius: 6px !important;
+    }
+    .object-tools a:hover { border-color: #7c3aed !important; color: #a78bfa !important; }
+  </style>
+{% endblock %}
+
+{% block content_title %}
+  {% if original %}
+    {% with disp=original.display_name|default:original.username %}
+    <div class="cl-hero">
+      <div class="cl-hero-initials" style="background: {% if original.level < 3 %}#6b7280{% elif original.level < 6 %}#22c55e{% elif original.level < 9 %}#3b82f6{% elif original.level < 11 %}#8b5cf6{% else %}#f59e0b{% endif %};">
+        {{ disp|slice:":1" }}{{ disp|slice:"1:2" }}
+      </div>
+      <div class="cl-hero-body">
+        <div class="cl-hero-name">{{ disp }}</div>
+        <div class="cl-hero-email">{{ original.email }}</div>
+        <div class="cl-hero-pills">
+          <span class="cl-hero-pill cl-pill-lvl" style="background: {% if original.level < 3 %}#6b7280{% elif original.level < 6 %}#22c55e{% elif original.level < 9 %}#3b82f6{% elif original.level < 11 %}#8b5cf6{% else %}#f59e0b{% endif %};">Lv. {{ original.level }}</span>
+          {% if original.is_active %}<span class="cl-hero-pill cl-pill-active">Active</span>{% else %}<span class="cl-hero-pill cl-pill-disabled">Disabled</span>{% endif %}
+          {% if original.is_email_verified %}<span class="cl-hero-pill cl-pill-verified">Verified</span>{% else %}<span class="cl-hero-pill cl-pill-unverified">Unverified</span>{% endif %}
+          {% if original.is_staff %}<span class="cl-hero-pill cl-pill-staff">Staff</span>{% endif %}
+        </div>
+      </div>
+      <div class="cl-hero-stats">
+        <div class="cl-hero-stat">
+          <div class="cl-hero-stat-value">{{ original.xp }}</div>
+          <div class="cl-hero-stat-label">XP</div>
+        </div>
+        <div class="cl-hero-stat">
+          <div class="cl-hero-stat-value">{{ original.current_hearts }}<span class="cl-stat-suffix">/{{ original.max_hearts }}</span></div>
+          <div class="cl-hero-stat-label">Hearts</div>
+        </div>
+        <div class="cl-hero-stat">
+          <div class="cl-hero-stat-value">{{ original.current_streak }}<span class="cl-stat-suffix"> d</span></div>
+          <div class="cl-hero-stat-label">Streak</div>
+        </div>
+        <div class="cl-hero-stat">
+          <div class="cl-hero-stat-value" style="font-size:14px;color:#a1a1b5">{{ original.date_joined|date:"M d, Y" }}</div>
+          <div class="cl-hero-stat-label">Joined</div>
+        </div>
+      </div>
+    </div>
+    {% endwith %}
+  {% else %}
+    {{ block.super }}
+  {% endif %}
+{% endblock %}
 
 {% block submit_buttons_bottom %}
     {% if original %}

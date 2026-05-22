@@ -1,0 +1,103 @@
+{% extends "admin/change_form.html" %}
+{% load i18n admin_urls %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <style>
+    body, #main, #content, #content-main, .main { background: #0f0f1a !important; color: #e2e2f0 !important; }
+    #content h1, #content > h1 { color: #fff !important; }
+    .breadcrumbs a { color: #a78bfa !important; }
+
+    .cl-hero {
+      display: flex; align-items: center; gap: 18px;
+      background: linear-gradient(135deg, #1a1a2e 0%, #252540 100%);
+      border: 1px solid #2d2d44; border-radius: 12px;
+      padding: 20px 22px; margin-bottom: 22px;
+      position: relative; overflow: hidden;
+    }
+    .cl-hero::before {
+      content: ""; position: absolute; inset: 0;
+      background: radial-gradient(circle at top right, rgba(124,58,237,0.18), transparent 50%);
+      pointer-events: none;
+    }
+    .cl-hero-lvl {
+      flex: 0 0 64px; width: 64px; height: 64px; border-radius: 16px;
+      background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      color: #fff; border: 2px solid rgba(255,255,255,0.10);
+      position: relative; z-index: 1;
+    }
+    .cl-hero-lvl-num { font-size: 24px; font-weight: 800; line-height: 1; }
+    .cl-hero-lvl-lbl { font-size: 9px; color: #c4b5fd; text-transform: uppercase; letter-spacing: 1px; margin-top: 2px; }
+
+    .cl-hero-body { flex: 1 1 auto; min-width: 0; position: relative; z-index: 1; }
+    .cl-hero-name { color: #ffffff; font-size: 20px; font-weight: 700; line-height: 1.2; }
+    .cl-hero-meta { color: #a78bfa; font-size: 13px; margin-top: 4px; font-weight: 500; }
+    .cl-hero-pills { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+    .cl-hero-pill { padding: 3px 10px; border-radius: 999px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; border: 1px solid; }
+    .cl-pill-code { background: rgba(124,58,237,0.20); color: #a78bfa; border-color: rgba(124,58,237,0.45); }
+    .cl-pill-tip  { background: rgba(245,158,11,0.20); color: #fbbf24; border-color: rgba(245,158,11,0.45); }
+    .cl-pill-active   { background: rgba(34,197,94,0.18);  color: #4ade80; border-color: rgba(34,197,94,0.40); }
+    .cl-pill-inactive { background: rgba(107,114,128,0.20); color: #9ca3af; border-color: rgba(107,114,128,0.50); }
+    .cl-pill-order { background: #252540; color: #cbd5e1; border-color: #2d2d44; }
+
+    fieldset.module { background: #1a1a2e !important; border: 1px solid #2d2d44 !important; border-radius: 10px !important; padding: 0 !important; margin-bottom: 16px !important; overflow: hidden; }
+    fieldset.module h2 { background: rgba(124,58,237,0.10) !important; color: #ffffff !important; border-bottom: 1px solid #2d2d44 !important; padding: 12px 18px !important; font-size: 13px !important; font-weight: 600 !important; text-transform: uppercase; letter-spacing: 0.8px; }
+    fieldset.module .description { color: #a1a1b5 !important; padding: 10px 18px 0 !important; font-size: 12px; font-style: italic; }
+    fieldset.module .form-row { background: transparent !important; border: 0 !important; border-bottom: 1px solid #252540 !important; padding: 14px 18px !important; }
+    fieldset.module .form-row:last-child { border-bottom: 0 !important; }
+    fieldset.module .form-row label { color: #cbd5e1 !important; font-weight: 500; }
+    fieldset.module .help { color: #6b7280 !important; }
+    fieldset.module input[type="text"], fieldset.module input[type="number"], fieldset.module textarea, fieldset.module select {
+      background: #0f0f1a !important; border: 1px solid #2d2d44 !important;
+      color: #ffffff !important; border-radius: 6px !important; padding: 8px 12px !important;
+    }
+    fieldset.module input:focus, fieldset.module textarea:focus, fieldset.module select:focus {
+      outline: none !important; border-color: #7c3aed !important;
+      box-shadow: 0 0 0 3px rgba(124,58,237,0.20) !important;
+    }
+    /* Code example textarea = code editor look */
+    fieldset.module textarea[name="code_example"] {
+      background: #0b0b14 !important; color: #e2e2f0 !important;
+      font-family: 'Consolas', 'Monaco', 'Courier New', monospace !important;
+      font-size: 13px !important; line-height: 1.55 !important;
+      border-left: 3px solid #7c3aed !important; padding: 12px 14px !important;
+      tab-size: 2;
+    }
+    fieldset.collapsed { background: transparent !important; }
+    fieldset.collapse h2 a, fieldset.collapsed h2 a { color: #a78bfa !important; }
+
+    .submit-row { background: #1a1a2e !important; border: 1px solid #2d2d44 !important; border-radius: 10px; padding: 14px 18px !important; display: flex; gap: 8px; align-items: center; justify-content: flex-end; margin-top: 18px; }
+    .submit-row input, .submit-row a, .submit-row button { background: #252540 !important; color: #e2e2f0 !important; border: 1px solid #3d3d5c !important; padding: 8px 14px !important; border-radius: 6px !important; font-weight: 600 !important; }
+    .submit-row input[name="_save"], .submit-row input.default { background: #7c3aed !important; color: #ffffff !important; border: 0 !important; box-shadow: 0 3px 0 0 #5b21b6 !important; }
+    .submit-row input[name="_save"]:hover { background: #6d28d9 !important; }
+    .submit-row a.deletelink { background: rgba(239,68,68,0.15) !important; color: #f87171 !important; border-color: rgba(239,68,68,0.40) !important; }
+
+    .errornote, .errorlist { background: rgba(239,68,68,0.15) !important; color: #f87171 !important; border: 1px solid rgba(239,68,68,0.40) !important; border-radius: 6px; padding: 10px 14px; }
+    .object-tools a { background: #1a1a2e !important; color: #e2e2f0 !important; border: 1px solid #2d2d44 !important; border-radius: 6px !important; }
+    .object-tools a:hover { border-color: #7c3aed !important; color: #a78bfa !important; }
+  </style>
+{% endblock %}
+
+{% block content_title %}
+  {% if original %}
+    <div class="cl-hero">
+      <div class="cl-hero-lvl">
+        <span class="cl-hero-lvl-num">{{ original.level }}</span>
+        <span class="cl-hero-lvl-lbl">Level</span>
+      </div>
+      <div class="cl-hero-body">
+        <div class="cl-hero-name">{{ original.title }}</div>
+        <div class="cl-hero-meta">{{ original.topic.name }}</div>
+        <div class="cl-hero-pills">
+          {% if original.code_example %}<span class="cl-hero-pill cl-pill-code">&#10003; Code</span>{% endif %}
+          {% if original.tip %}<span class="cl-hero-pill cl-pill-tip">&#10003; Tip</span>{% endif %}
+          <span class="cl-hero-pill cl-pill-order">Order {{ original.order }}</span>
+          {% if original.is_active %}<span class="cl-hero-pill cl-pill-active">Active</span>{% else %}<span class="cl-hero-pill cl-pill-inactive">Inactive</span>{% endif %}
+        </div>
+      </div>
+    </div>
+  {% else %}
+    {{ block.super }}
+  {% endif %}
+{% endblock %}
