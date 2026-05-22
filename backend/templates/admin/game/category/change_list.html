@@ -34,6 +34,7 @@
       flex: 0 0 48px; width: 48px; height: 48px; border-radius: 12px;
       display: flex; align-items: center; justify-content: center;
       font-size: 18px; font-weight: 700; color: #fff; text-transform: uppercase;
+      background: #252540;
       border: 1px solid rgba(255,255,255,0.08); overflow: hidden;
     }
     .cl-cat-icon img { width: 32px; height: 32px; object-fit: contain; }
@@ -97,7 +98,8 @@
   <div class="cl-cat-row">
     <input type="checkbox" name="_selected_action" value="{{ cat.pk }}" class="action-select cl-card-checkbox" aria-label="Select {{ cat.name }}">
 
-    <div class="cl-cat-icon" style="background: {{ cat.color|default:'#7c3aed' }};">
+    {% comment %}Neutral dark tile when there's an uploaded icon (so colored icons don't clash with a colored bg). Fall back to cat.color for the letter-only placeholder.{% endcomment %}
+    <div class="cl-cat-icon"{% if not cat.icon_file %} style="background: {{ cat.color|default:'#7c3aed' }};"{% endif %}>
       {% if cat.icon_file %}
         <img src="{{ cat.icon_file.url }}" alt="">
       {% else %}

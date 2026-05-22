@@ -72,6 +72,7 @@
       font-weight: 700;
       color: #fff;
       text-transform: uppercase;
+      background: #252540;
       border: 1px solid rgba(255,255,255,0.08);
       overflow: hidden;
     }
@@ -161,7 +162,8 @@
     <input type="checkbox" name="_selected_action" value="{{ topic.pk }}" class="action-select cl-card-checkbox" aria-label="Select {{ topic.name }}">
 
     {# Icon: topic's own icon if set, else category icon, else letter on category color. #}
-    <div class="cl-topic-icon" style="background: {{ topic.category.color|default:'#7c3aed' }};">
+    {% comment %}Neutral dark tile when there's an uploaded icon so already-colored icons don't clash. Category color is still shown in the pill to the right.{% endcomment %}
+    <div class="cl-topic-icon"{% if not topic.icon_file and not topic.category.icon_file %} style="background: {{ topic.category.color|default:'#7c3aed' }};"{% endif %}>
       {% if topic.icon_file %}
         <img src="{{ topic.icon_file.url }}" alt="">
       {% elif topic.category.icon_file %}

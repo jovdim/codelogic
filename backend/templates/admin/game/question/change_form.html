@@ -153,7 +153,9 @@
        Override the inline 'background: #1e1e1e; color: #d4d4d4' from
        QuestionAdminForm widget attrs - we want it to match our brand. */
     fieldset.module textarea[name="code_snippet"],
-    fieldset.module textarea[name="options"] {
+    fieldset.module textarea[name="options"],
+    fieldset.module textarea[name="correct_text_answer"],
+    fieldset.module textarea[name="accepted_answers"] {
       background: #0b0b14 !important;
       color: #e2e2f0 !important;
       font-family: 'Consolas', 'Monaco', 'Courier New', monospace !important;
@@ -165,6 +167,11 @@
       border-radius: 6px !important;
       tab-size: 2;
     }
+    /* Typed-answer fieldset accent (so admins instantly see it's the "user types this" group). */
+    fieldset.module.cl-fs-typed { border-color: #3b82f6 !important; }
+    fieldset.module.cl-fs-typed h2 { background: rgba(59,130,246,0.12) !important; }
+    fieldset.module.cl-fs-mc h2 { background: rgba(34,197,94,0.10) !important; }
+    fieldset.module.cl-fs-code h2 { background: rgba(239,68,68,0.08) !important; }
 
     /* Submit row */
     .submit-row {
@@ -239,14 +246,26 @@
           <div class="cl-hero-stat-value">{{ original.xp_reward }}</div>
           <div class="cl-hero-stat-label">XP</div>
         </div>
-        <div class="cl-hero-stat">
-          <div class="cl-hero-stat-value">{% if original.options %}{{ original.options|length }}{% else %}0{% endif %}</div>
-          <div class="cl-hero-stat-label">Options</div>
-        </div>
-        <div class="cl-hero-stat">
-          <div class="cl-hero-stat-value">#{{ original.correct_answer }}</div>
-          <div class="cl-hero-stat-label">Correct</div>
-        </div>
+        {% if original.question_type == 'multiple-choice' %}
+          <div class="cl-hero-stat">
+            <div class="cl-hero-stat-value">{% if original.options %}{{ original.options|length }}{% else %}0{% endif %}</div>
+            <div class="cl-hero-stat-label">Options</div>
+          </div>
+          <div class="cl-hero-stat">
+            <div class="cl-hero-stat-value">#{{ original.correct_answer }}</div>
+            <div class="cl-hero-stat-label">Correct</div>
+          </div>
+        {% elif original.question_type == 'find-error' %}
+          <div class="cl-hero-stat">
+            <div class="cl-hero-stat-value">L{{ original.highlight_line|default:"?" }}</div>
+            <div class="cl-hero-stat-label">Buggy Line</div>
+          </div>
+        {% else %}
+          <div class="cl-hero-stat">
+            <div class="cl-hero-stat-value" style="font-size: 13px; font-family: monospace; max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ original.correct_text_answer|default:"—"|truncatechars:24 }}</div>
+            <div class="cl-hero-stat-label">Typed Answer</div>
+          </div>
+        {% endif %}
       </div>
     </div>
   {% else %}

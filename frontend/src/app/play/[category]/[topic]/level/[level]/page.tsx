@@ -148,7 +148,15 @@ export default function LevelQuizPage() {
   const [error, setError] = useState<string | null>(null);
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
+  const [typedAnswer, setTypedAnswer] = useState("");
+  // For typed / find-error questions the server is authoritative — store its
+  // verdict so the UI can show correct/wrong without trusting the client.
+  const [serverVerdict, setServerVerdict] = useState<{
+    correct: boolean;
+    correct_answer_display: string;
+  } | null>(null);
   const [isAnswered, setIsAnswered] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [score, setScore] = useState(0);
   const [hearts, setHearts] = useState(5);
   const [xpEarned, setXpEarned] = useState(0);
@@ -348,43 +356,69 @@ export default function LevelQuizPage() {
     playSound,
   ]);
 
-  const handleAnswer = async (answerIndex: number) => {
-    if (isAnswered || !question) return;
+  // Send the answer to the backend and apply the result. Used by all four
+  // question types — `answerInt` is set for MC + find-error (option index /
+  // line number), `answerText` is set for fill-blank + output.
+  const submitToBackend = async (payload: { answerInt?: number; answerText?: string }) => {
+    if (!question || isAnswered || submitting) return;
+    setSubmitting(true);
+    lastTickRef.current = 0;
 
-    setSelectedAnswer(answerIndex);
-    setIsAnswered(true);
-    lastTickRef.current = 0; // Reset tick ref for next question
-
-    const isCorrect = answerIndex === question.correct_answer;
-
-    if (isCorrect) {
-      playSound("correct");
-      // XP: 10 base per correct answer (matching backend)
-      const baseXP = 10;
-      setScore((prev) => prev + 1);
-      setXpEarned((prev) => prev + baseXP);
-    } else {
-      playSound("wrong");
-      setHearts((prev) => Math.max(0, prev - 1));
-      setHeartsLost((prev) => prev + 1);
-    }
-
-    // Sync with backend to deduct hearts in database
     try {
       const response = await gameAPI.submitAnswer({
         question_id: question.id,
-        answer: answerIndex,
+        answer: payload.answerInt,
+        answer_text: payload.answerText,
         attempt_id: attemptId,
       });
-      // Update hearts from backend response for accuracy
-      if (response.data.hearts_remaining !== undefined) {
+
+      const isCorrect: boolean = !!response.data?.correct;
+      setServerVerdict({
+        correct: isCorrect,
+        correct_answer_display: response.data?.correct_answer_display ?? "",
+      });
+      setIsAnswered(true);
+
+      if (isCorrect) {
+        playSound("correct");
+        const baseXP = 10;
+        setScore((prev) => prev + 1);
+        setXpEarned((prev) => prev + baseXP);
+      } else {
+        playSound("wrong");
+        setHearts((prev) => Math.max(0, prev - 1));
+        setHeartsLost((prev) => prev + 1);
+      }
+
+      if (response.data?.hearts_remaining !== undefined) {
         setHearts(response.data.hearts_remaining);
-        // Update sidebar hearts in real-time
         updateUserHearts(response.data.hearts_remaining);
       }
     } catch (err) {
       console.error("Failed to submit answer to backend:", err);
+    } finally {
+      setSubmitting(false);
     }
+  };
+
+  // Multiple-choice click handler. Optimistic local selection + server check.
+  const handleAnswer = (answerIndex: number) => {
+    if (isAnswered || !question) return;
+    setSelectedAnswer(answerIndex);
+    void submitToBackend({ answerInt: answerIndex });
+  };
+
+  // Find-the-Error: user clicks the buggy line (1-based).
+  const handleLineClick = (lineNumber: number) => {
+    if (isAnswered || !question || question.question_type !== "find-error") return;
+    setSelectedAnswer(lineNumber);
+    void submitToBackend({ answerInt: lineNumber });
+  };
+
+  // Fill-in-the-Blank / What's the Output: typed answer + submit.
+  const handleTypedSubmit = () => {
+    if (isAnswered || !question || !typedAnswer.trim()) return;
+    void submitToBackend({ answerText: typedAnswer });
   };
 
   const nextQuestion = () => {
@@ -398,6 +432,8 @@ export default function LevelQuizPage() {
       const nextIndex = currentQuestion + 1;
       setCurrentQuestion(nextIndex);
       setSelectedAnswer(null);
+      setTypedAnswer("");
+      setServerVerdict(null);
       setIsAnswered(false);
       // Save new timer start for next question
       saveTimerStart(nextIndex);
@@ -415,6 +451,8 @@ export default function LevelQuizPage() {
     setNoHeartsError(false);
     setCurrentQuestion(0);
     setSelectedAnswer(null);
+    setTypedAnswer("");
+    setServerVerdict(null);
     setIsAnswered(false);
     setScore(0);
     setXpEarned(0);
@@ -835,93 +873,235 @@ export default function LevelQuizPage() {
                 <div className="w-12" />
               </div>
 
-              {/* Code Content */}
+              {/* Code Content. For multi-line Find-the-Error: lines are
+                  clickable. For single-line find-error (or no highlight_line),
+                  this is just a code display and the user picks from options
+                  below (legacy MC behavior). */}
               <div className="bg-[#0f0f1a] p-4 font-mono text-sm overflow-x-auto">
-                {question.code_snippet.split("\n").map((line, idx) => (
-                  <div
-                    key={idx}
-                    className={`flex items-start leading-6 ${
-                      question.highlight_line === idx + 1 && isAnswered
-                        ? selectedAnswer === question.correct_answer
-                          ? "bg-green-500/10 -mx-4 px-4 border-l-2 border-green-500"
-                          : "bg-red-500/10 -mx-4 px-4 border-l-2 border-red-500"
-                        : ""
-                    }`}
-                  >
-                    <span className="w-8 text-gray-600 select-none text-right pr-4 shrink-0">
-                      {idx + 1}
-                    </span>
-                    <code className="flex-1">{highlightCode(line)}</code>
-                  </div>
-                ))}
+                {(() => {
+                  const lines = question.code_snippet!.split("\n");
+                  // Click-the-line mode only when find-error has multi-line code
+                  // AND a highlight_line is set. Otherwise display-only.
+                  const clickMode =
+                    question.question_type === "find-error" &&
+                    lines.length > 1 &&
+                    !!question.highlight_line;
+                  return lines.map((line, idx) => {
+                    const lineNumber = idx + 1;
+                    const isBuggyLine = question.highlight_line === lineNumber;
+                    const isPickedLine = clickMode && selectedAnswer === lineNumber;
+                    const wasCorrectPick =
+                      isAnswered && isPickedLine && serverVerdict?.correct;
+                    const wasWrongPick =
+                      isAnswered && isPickedLine && serverVerdict && !serverVerdict.correct;
+                    const revealCorrect =
+                      clickMode &&
+                      isAnswered &&
+                      isBuggyLine &&
+                      !(serverVerdict?.correct && isPickedLine);
+
+                    const lineClasses = [
+                      "flex items-start leading-6",
+                      clickMode && !isAnswered
+                        ? "cursor-pointer hover:bg-purple-500/10 -mx-4 px-4 rounded transition-colors"
+                        : "",
+                      wasCorrectPick
+                        ? "bg-green-500/15 -mx-4 px-4 border-l-2 border-green-500"
+                        : "",
+                      wasWrongPick
+                        ? "bg-red-500/15 -mx-4 px-4 border-l-2 border-red-500"
+                        : "",
+                      revealCorrect
+                        ? "bg-green-500/10 -mx-4 px-4 border-l-2 border-green-500"
+                        : "",
+                    ].filter(Boolean).join(" ");
+
+                    return (
+                      <div
+                        key={idx}
+                        className={lineClasses}
+                        onClick={
+                          clickMode && !isAnswered
+                            ? () => handleLineClick(lineNumber)
+                            : undefined
+                        }
+                        role={clickMode && !isAnswered ? "button" : undefined}
+                        title={
+                          clickMode && !isAnswered
+                            ? `Click line ${lineNumber} if this is the buggy line`
+                            : undefined
+                        }
+                      >
+                        <span
+                          className={`w-8 select-none text-right pr-4 shrink-0 ${
+                            clickMode && !isAnswered
+                              ? "text-purple-400 font-bold"
+                              : "text-gray-600"
+                          }`}
+                        >
+                          {lineNumber}
+                        </span>
+                        <code className="flex-1">{highlightCode(line)}</code>
+                        {wasCorrectPick && (
+                          <Check className="w-4 h-4 text-green-500 shrink-0 mt-1" />
+                        )}
+                        {wasWrongPick && (
+                          <X className="w-4 h-4 text-red-500 shrink-0 mt-1" />
+                        )}
+                      </div>
+                    );
+                  });
+                })()}
               </div>
+              {question.question_type === "find-error" &&
+                question.code_snippet &&
+                question.code_snippet.split("\n").length > 1 &&
+                !!question.highlight_line &&
+                !isAnswered && (
+                  <div className="px-4 py-2 bg-[#1a1a2e] border-t border-[#2d2d44] text-xs text-gray-400 text-center">
+                    Click the line that contains the bug
+                  </div>
+                )}
             </div>
           )}
 
-          {/* Options - Clean Design */}
-          <div className="space-y-3 mb-8">
-            {question.options.map((option, index) => {
-              const isCorrect = index === question.correct_answer;
-              const isSelected = selectedAnswer === index;
-              const showCorrect = isAnswered && isCorrect;
-              const showWrong = isAnswered && isSelected && !isCorrect;
+          {/* Multiple Choice — 4 button options. Also used as the fallback
+              UI for find-error questions whose code is a single line (no
+              "click the line" makes sense) or that lack highlight_line. */}
+          {(question.question_type === "multiple-choice" ||
+            (question.question_type === "find-error" &&
+              (!question.code_snippet ||
+                question.code_snippet.split("\n").length <= 1 ||
+                !question.highlight_line))) && (
+            <div className="space-y-3 mb-8">
+              {question.options.map((option, index) => {
+                const isSelected = selectedAnswer === index;
+                const showCorrect =
+                  isAnswered && serverVerdict?.correct && isSelected;
+                const showWrong =
+                  isAnswered && isSelected && serverVerdict && !serverVerdict.correct;
+                const showCorrectReveal =
+                  isAnswered &&
+                  !isSelected &&
+                  !serverVerdict?.correct &&
+                  index === question.correct_answer;
 
-              return (
-                <button
-                  key={index}
-                  data-no-click-sound
-                  onClick={() => handleAnswer(index)}
-                  disabled={isAnswered}
-                  className={`w-full p-4 text-left rounded-lg border-2 transition-all duration-300 ease-out cursor-pointer transform hover:scale-[1.02] hover:shadow-lg animate-in slide-in-from-right-4 ${
-                    showCorrect
-                      ? "bg-green-50 border-green-500 text-green-700 dark:bg-green-900/20 dark:border-green-500 dark:text-green-400 shadow-md"
-                      : showWrong
-                        ? "bg-red-50 border-red-500 text-red-700 dark:bg-red-900/20 dark:border-red-500 dark:text-red-400 shadow-md"
-                        : isSelected
-                          ? "bg-purple-50 border-purple-500 text-purple-700 dark:bg-purple-900/20 dark:border-purple-500 dark:text-purple-400 shadow-md"
-                          : "bg-white border-gray-300 text-gray-700 hover:border-gray-400 hover:bg-gray-50 dark:bg-[#1a1a2e] dark:border-[#2d2d44] dark:text-gray-300 dark:hover:border-[#3d3d5c] dark:hover:bg-[#252540]"
-                  } ${isAnswered && !isSelected && !isCorrect ? "opacity-50 cursor-not-allowed hover:scale-100" : ""}`}
-                  style={{ animationDelay: `${700 + index * 150}ms` }}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <span
-                        className={`w-7 h-7 flex items-center justify-center rounded text-sm font-bold ${
-                          showCorrect
-                            ? "bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-200"
-                            : showWrong
-                              ? "bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-200"
-                              : "bg-gray-100 text-gray-800 dark:bg-[#0f0f1a] dark:text-gray-400"
-                        }`}
-                      >
-                        {String.fromCharCode(65 + index)}
-                      </span>
-                      <span className="font-medium">{option}</span>
+                return (
+                  <button
+                    key={index}
+                    data-no-click-sound
+                    onClick={() => handleAnswer(index)}
+                    disabled={isAnswered || submitting}
+                    className={`w-full p-4 text-left rounded-lg border-2 transition-all duration-300 ease-out cursor-pointer transform hover:scale-[1.02] hover:shadow-lg animate-in slide-in-from-right-4 ${
+                      showCorrect || showCorrectReveal
+                        ? "bg-green-50 border-green-500 text-green-700 dark:bg-green-900/20 dark:border-green-500 dark:text-green-400 shadow-md"
+                        : showWrong
+                          ? "bg-red-50 border-red-500 text-red-700 dark:bg-red-900/20 dark:border-red-500 dark:text-red-400 shadow-md"
+                          : isSelected
+                            ? "bg-purple-50 border-purple-500 text-purple-700 dark:bg-purple-900/20 dark:border-purple-500 dark:text-purple-400 shadow-md"
+                            : "bg-white border-gray-300 text-gray-700 hover:border-gray-400 hover:bg-gray-50 dark:bg-[#1a1a2e] dark:border-[#2d2d44] dark:text-gray-300 dark:hover:border-[#3d3d5c] dark:hover:bg-[#252540]"
+                    } ${isAnswered && !isSelected && !showCorrectReveal ? "opacity-50 cursor-not-allowed hover:scale-100" : ""}`}
+                    style={{ animationDelay: `${700 + index * 150}ms` }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <span
+                          className={`w-7 h-7 flex items-center justify-center rounded text-sm font-bold ${
+                            showCorrect || showCorrectReveal
+                              ? "bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-200"
+                              : showWrong
+                                ? "bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-200"
+                                : "bg-gray-100 text-gray-800 dark:bg-[#0f0f1a] dark:text-gray-400"
+                          }`}
+                        >
+                          {String.fromCharCode(65 + index)}
+                        </span>
+                        <span className="font-medium">{option}</span>
+                      </div>
+                      {(showCorrect || showCorrectReveal) && (
+                        <Check className="w-5 h-5 text-green-600 dark:text-green-400" />
+                      )}
+                      {showWrong && (
+                        <X className="w-5 h-5 text-red-600 dark:text-red-400" />
+                      )}
                     </div>
-                    {showCorrect && (
-                      <Check className="w-5 h-5 text-green-600 dark:text-green-400" />
-                    )}
-                    {showWrong && (
-                      <X className="w-5 h-5 text-red-600 dark:text-red-400" />
-                    )}
-                  </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Typed input — Fill in the Blank / What's the Output */}
+          {(question.question_type === "fill-blank" ||
+            question.question_type === "output") && (
+            <div className="mb-8 animate-in slide-in-from-right-4 duration-500">
+              <label className="block text-sm font-medium text-gray-400 mb-2">
+                {question.question_type === "fill-blank"
+                  ? "Type the missing code:"
+                  : "Type the expected output:"}
+              </label>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <input
+                  type="text"
+                  value={typedAnswer}
+                  onChange={(e) => setTypedAnswer(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !isAnswered && typedAnswer.trim()) {
+                      e.preventDefault();
+                      handleTypedSubmit();
+                    }
+                  }}
+                  disabled={isAnswered || submitting}
+                  autoFocus
+                  spellCheck={false}
+                  autoComplete="off"
+                  placeholder="Type your answer..."
+                  className={`flex-1 px-4 py-3 rounded-lg border-2 font-mono text-base transition-all duration-200 ${
+                    isAnswered
+                      ? serverVerdict?.correct
+                        ? "bg-green-900/20 border-green-500 text-green-300"
+                        : "bg-red-900/20 border-red-500 text-red-300"
+                      : "bg-[#0f0f1a] border-[#2d2d44] text-white focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/30"
+                  }`}
+                />
+                <button
+                  onClick={handleTypedSubmit}
+                  disabled={isAnswered || submitting || !typedAnswer.trim()}
+                  className="px-6 py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-lg font-bold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-purple-600 cursor-pointer flex items-center justify-center gap-2 pixel-box"
+                >
+                  {submitting ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Check className="w-4 h-4" />
+                  )}
+                  <span>Submit</span>
                 </button>
-              );
-            })}
-          </div>
+              </div>
+              {isAnswered && !serverVerdict?.correct && serverVerdict?.correct_answer_display && (
+                <div className="mt-3 px-4 py-3 bg-[#0b0b14] border border-[#2d2d44] rounded-lg">
+                  <div className="text-xs text-gray-500 mb-1">
+                    Correct answer:
+                  </div>
+                  <div className="font-mono text-sm text-green-400 break-all">
+                    {serverVerdict.correct_answer_display}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Explanation - Clean */}
-          {isAnswered && (
+          {isAnswered && serverVerdict && (
             <div className="pixel-box p-6 mb-8">
               <div className="flex items-center gap-3 mb-3">
                 <div
                   className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                    selectedAnswer === question.correct_answer
+                    serverVerdict.correct
                       ? "bg-green-500/20 text-green-400"
                       : "bg-red-500/20 text-red-400"
                   }`}
                 >
-                  {selectedAnswer === question.correct_answer ? (
+                  {serverVerdict.correct ? (
                     <Check className="w-5 h-5" />
                   ) : (
                     <X className="w-5 h-5" />
@@ -929,12 +1109,12 @@ export default function LevelQuizPage() {
                 </div>
                 <h4
                   className={`text-lg font-bold ${
-                    selectedAnswer === question.correct_answer
+                    serverVerdict.correct
                       ? "text-green-400"
                       : "text-red-400"
                   }`}
                 >
-                  {selectedAnswer === question.correct_answer
+                  {serverVerdict.correct
                     ? "Correct! Well Done!"
                     : "Incorrect - Learn from this"}
                 </h4>

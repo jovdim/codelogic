@@ -230,17 +230,30 @@ class QuizQuestionsView(APIView):
 
 
 class SubmitAnswerView(APIView):
-    """Submit an answer and get result. Persists the answer against the attempt."""
+    """Submit an answer and get result. Persists the answer against the attempt.
+
+    Accepts EITHER:
+      - `answer` (int): option index for multiple-choice, OR 1-based line number for find-error
+      - `answer_text` (str): typed answer for fill-blank / output
+
+    The server is authoritative for correctness; do not trust client-side checks.
+    """
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
         question_id = request.data.get('question_id')
         answer = request.data.get('answer')
+        answer_text = request.data.get('answer_text')
         attempt_id = request.data.get('attempt_id')
 
-        if question_id is None or answer is None or attempt_id is None:
+        if question_id is None or attempt_id is None:
             return Response(
-                {'error': 'Missing question_id, answer, or attempt_id'},
+                {'error': 'Missing question_id or attempt_id'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if answer is None and answer_text is None:
+            return Response(
+                {'error': 'Missing answer or answer_text'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -261,14 +274,64 @@ class SubmitAnswerView(APIView):
             )
 
         user = request.user
-        is_correct = (answer == question.correct_answer)
+        # Use the effective type so the validation logic mirrors what the
+        # frontend renders (e.g. structurally-incompatible "typed" questions
+        # are graded as MC).
+        qtype = question.effective_question_type
+
+        # Resolve correctness per question type. Find-error uses the
+        # 1-based line number stored in highlight_line as the answer.
+        # Typed types use check_text_answer (whitespace-collapsed,
+        # case-insensitive, with alternative variants).
+        is_correct = False
+        correct_answer_display = ''
+        selected_answer_int = -1
+        selected_text_value = None
+
+        if qtype in ('fill-blank', 'output'):
+            selected_text_value = '' if answer_text is None else str(answer_text)
+            is_correct = question.check_text_answer(selected_text_value)
+            correct_answer_display = question.resolved_text_answer
+        elif qtype == 'find-error':
+            # Multi-line find-error with a marked buggy line → click-the-line.
+            # (Single-line / missing highlight_line cases get rewritten by
+            # effective_question_type to 'multiple-choice' above, so we don't
+            # reach here in those cases.)
+            line_clicked = answer
+            if line_clicked is None and answer_text is not None:
+                try:
+                    line_clicked = int(answer_text)
+                except (TypeError, ValueError):
+                    line_clicked = None
+            target_line = question.highlight_line
+            if line_clicked is not None:
+                try:
+                    selected_answer_int = int(line_clicked)
+                    is_correct = (selected_answer_int == int(target_line))
+                except (TypeError, ValueError):
+                    is_correct = False
+            correct_answer_display = f'Line {target_line}'
+        else:
+            # multiple-choice (default)
+            try:
+                selected_answer_int = int(answer)
+            except (TypeError, ValueError):
+                return Response(
+                    {'error': 'answer must be an integer for multiple-choice'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            is_correct = (selected_answer_int == question.correct_answer)
+            opts = question.options or []
+            if 0 <= question.correct_answer < len(opts):
+                correct_answer_display = opts[question.correct_answer]
 
         # Record the answer (idempotent on retry — first answer wins).
         UserAnswer.objects.get_or_create(
             attempt=attempt,
             question=question,
             defaults={
-                'selected_answer': answer,
+                'selected_answer': selected_answer_int,
+                'selected_text': selected_text_value,
                 'is_correct': is_correct,
             },
         )
@@ -284,6 +347,7 @@ class SubmitAnswerView(APIView):
         return Response({
             'correct': is_correct,
             'correct_answer': question.correct_answer,
+            'correct_answer_display': correct_answer_display,
             'explanation': question.explanation,
             'xp_earned': xp_earned,
             'heart_lost': heart_lost,

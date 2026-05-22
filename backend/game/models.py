@@ -6,6 +6,7 @@ from django.db import models
 from django.conf import settings
 from django.utils import timezone
 from django.core.validators import FileExtensionValidator
+import re
 import uuid
 
 # Import settings models
@@ -100,20 +101,101 @@ class Question(models.Model):
     question_type = models.CharField(max_length=20, choices=QUESTION_TYPES, default='multiple-choice')
     question_text = models.TextField()
     code_snippet = models.TextField(blank=True)
-    options = models.JSONField(default=list)
+    options = models.JSONField(default=list, blank=True)
     correct_answer = models.PositiveIntegerField(default=0)
+    correct_text_answer = models.TextField(
+        blank=True,
+        help_text='For "Fill in the Blank" and "What is the Output" — the canonical text the user must type.',
+    )
+    accepted_answers = models.JSONField(
+        default=list, blank=True,
+        help_text='Optional alternative accepted answers as a JSON list, e.g. ["5", "five"]. Used alongside correct_text_answer.',
+    )
     explanation = models.TextField(blank=True)
-    highlight_line = models.PositiveIntegerField(null=True, blank=True)
+    highlight_line = models.PositiveIntegerField(
+        null=True, blank=True,
+        help_text='For "Find the Error" — the 1-based line number containing the bug. This is also the correct answer the user must click.',
+    )
     xp_reward = models.PositiveIntegerField(default=10)
     order = models.PositiveIntegerField(default=0)
     is_active = models.BooleanField(default=True)
-    
+
     class Meta:
         db_table = 'questions'
         ordering = ['topic', 'level', 'order']
-    
+
     def __str__(self):
         return f"{self.topic.name} L{self.level}: {self.question_text[:50]}"
+
+    @staticmethod
+    def _normalize_text(value):
+        """Normalize for comparison: ONLY strip outer whitespace.
+        Matching is case-sensitive and preserves internal whitespace —
+        `body` ≠ `BODY`, `console.log` ≠ `console . log`. If the admin
+        wants to accept casing variants, they add them to accepted_answers.
+        """
+        if value is None:
+            return ''
+        return str(value).strip()
+
+    @property
+    def resolved_text_answer(self):
+        """Canonical text answer for typed-type questions.
+
+        Falls back to options[correct_answer] when correct_text_answer is empty
+        — this keeps legacy seeded data (which only set options + correct_answer
+        index) working as typed-answer questions without a backfill.
+        """
+        if self.correct_text_answer:
+            return self.correct_text_answer
+        opts = self.options or []
+        if 0 <= self.correct_answer < len(opts):
+            return str(opts[self.correct_answer])
+        return ''
+
+    def check_text_answer(self, typed):
+        """Return True if `typed` matches the canonical answer or any accepted_answers variant."""
+        if not typed:
+            return False
+        normalized = self._normalize_text(typed)
+        if normalized == self._normalize_text(self.resolved_text_answer):
+            return True
+        for variant in (self.accepted_answers or []):
+            if normalized == self._normalize_text(variant):
+                return True
+        return False
+
+    @property
+    def is_single_line_code(self):
+        """find-error with one-line code can't be 'click the buggy line' — falls back to MC."""
+        return bool(self.code_snippet) and '\n' not in self.code_snippet.strip()
+
+    # Patterns where the "answer" is a display label (e.g. '[, ]' meaning
+    # 'open with [ and close with ]'). These questions have two blanks in the
+    # code and can't be answered by typing a single string — force MC.
+    _DISPLAY_LABEL_PATTERN = re.compile(r'^[\[\(\{\<],\s*[\]\)\}\>]$')
+
+    @property
+    def effective_question_type(self):
+        """The question type to render and grade against — after applying
+        compatibility fallbacks for legacy / structurally-incompatible data.
+
+        Forces 'multiple-choice' when:
+          * typed-type but resolved_text_answer is empty
+          * typed-type but answer looks like a display label (e.g. '[, ]')
+          * find-error with single-line code or no highlight_line
+        """
+        qtype = self.question_type
+        if qtype in ('fill-blank', 'output'):
+            resolved = self.resolved_text_answer
+            if not resolved:
+                return 'multiple-choice'
+            if self._DISPLAY_LABEL_PATTERN.match(resolved):
+                return 'multiple-choice'
+        elif qtype == 'find-error':
+            if self.is_single_line_code or not self.highlight_line:
+                return 'multiple-choice'
+        return qtype
 
 
 class Lesson(models.Model):
@@ -199,7 +281,13 @@ class UserAnswer(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     attempt = models.ForeignKey(QuizAttempt, on_delete=models.CASCADE, related_name='answers')
     question = models.ForeignKey('Question', on_delete=models.CASCADE)
-    selected_answer = models.IntegerField()
+    selected_answer = models.IntegerField(
+        help_text='Integer answer: option index for multiple-choice, line number for find-error. -1 when the answer is text-based (see selected_text).',
+    )
+    selected_text = models.TextField(
+        null=True, blank=True,
+        help_text='Raw typed answer for fill-blank / output questions.',
+    )
     is_correct = models.BooleanField()
     answered_at = models.DateTimeField(auto_now_add=True)
 

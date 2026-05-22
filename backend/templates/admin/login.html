@@ -1,0 +1,272 @@
+{% load i18n static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Log in | CodeLogic Admin</title>
+  <link rel="icon" href="{% static 'admin/img/codelogic-logo.svg' %}" type="image/svg+xml">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    :root {
+      --bg:           #0f0f1a;
+      --card-bg:      #1a1a2e;
+      --border:       #2d2d44;
+      --border-hover: #3d3d5c;
+      --text:         #e2e2f0;
+      --muted:        #9ca3af;
+      --primary:      #7c3aed;
+      --primary-light:#a78bfa;
+      --primary-dark: #5b21b6;
+      --primary-hover:#6d28d9;
+      --danger:       #ef4444;
+    }
+    html, body {
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 16px;
+      position: relative;
+      overflow-x: hidden;
+    }
+    /* Subtle grid + radial-glow background to match the frontend gamified feel. */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(124,58,237,0.10) 0, transparent 40%),
+        radial-gradient(circle at 80% 70%, rgba(16,185,129,0.06) 0, transparent 35%),
+        linear-gradient(rgba(124,58,237,0.04) 1px, transparent 1px) 0 0/40px 40px,
+        linear-gradient(90deg, rgba(124,58,237,0.04) 1px, transparent 1px) 0 0/40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .cl-login-shell {
+      width: 100%;
+      max-width: 420px;
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* Brand header */
+    .cl-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 28px;
+      text-decoration: none;
+    }
+    .cl-brand img {
+      width: 48px;
+      height: 48px;
+    }
+    .cl-brand-text { display: flex; flex-direction: column; line-height: 1.1; }
+    .cl-brand-name {
+      font-size: 22px;
+      font-weight: 800;
+      color: #ffffff;
+      letter-spacing: -0.5px;
+    }
+    .cl-brand-tag {
+      font-size: 11px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 2px;
+    }
+    .cl-brand-tag svg { width: 12px; height: 12px; color: var(--primary-light); }
+
+    /* Pixel-box card — same look as the frontend /login. */
+    .cl-card {
+      width: 100%;
+      background: var(--card-bg);
+      border: 2px solid var(--border);
+      padding: 32px;
+      box-shadow:
+        4px 4px 0 0 var(--primary-dark),
+        inset -1px -1px 0 0 rgba(255,255,255,0.05);
+    }
+
+    .cl-card h1 {
+      font-size: 22px;
+      font-weight: 700;
+      color: #ffffff;
+      text-align: center;
+      margin: 0 0 6px;
+    }
+    .cl-subtitle {
+      font-size: 13px;
+      color: var(--muted);
+      text-align: center;
+      margin: 0 0 22px;
+    }
+
+    .cl-field { margin-bottom: 16px; }
+    .cl-field label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: #cbd5e1;
+      margin-bottom: 6px;
+    }
+    .cl-field input {
+      width: 100%;
+      background: var(--bg);
+      border: 2px solid var(--border);
+      color: #ffffff;
+      padding: 12px 14px;
+      font-size: 14px;
+      font-family: inherit;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .cl-field input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(124,58,237,0.20);
+    }
+    .cl-field input::placeholder { color: #5b5b75; }
+
+    .cl-submit {
+      width: 100%;
+      background: var(--primary);
+      color: #ffffff;
+      border: 0;
+      padding: 13px 18px;
+      font-weight: 700;
+      font-size: 14px;
+      font-family: inherit;
+      cursor: pointer;
+      box-shadow: 0 4px 0 0 var(--primary-dark);
+      position: relative;
+      top: 0;
+      transition: background-color 0.15s ease;
+      margin-top: 6px;
+    }
+    .cl-submit:hover { background: var(--primary-hover); }
+    .cl-submit:active {
+      box-shadow: 0 2px 0 0 var(--primary-dark);
+      top: 2px;
+    }
+
+    .cl-extra {
+      margin-top: 14px;
+      text-align: center;
+      font-size: 13px;
+    }
+    .cl-extra a { color: var(--primary-light); text-decoration: none; }
+    .cl-extra a:hover { text-decoration: underline; }
+
+    .cl-error {
+      background: rgba(239,68,68,0.10);
+      color: #fca5a5;
+      border: 1px solid rgba(239,68,68,0.45);
+      padding: 12px 14px;
+      margin: 0 0 18px;
+      font-size: 13px;
+      list-style: none;
+    }
+    .cl-error ul { margin: 0; padding-left: 18px; }
+
+    .cl-foot {
+      margin-top: 22px;
+      color: var(--muted);
+      font-size: 12px;
+      text-align: center;
+    }
+    .cl-foot a { color: var(--primary-light); text-decoration: none; }
+    .cl-foot a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="cl-login-shell">
+    <a href="/" class="cl-brand">
+      <img src="{% static 'admin/img/codelogic-logo.svg' %}" alt="CodeLogic logo">
+      <div class="cl-brand-text">
+        <span class="cl-brand-name">CodeLogic</span>
+        <span class="cl-brand-tag">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M13 2 4 14h7l-1 8 9-12h-7z"/>
+          </svg>
+          Admin control panel
+        </span>
+      </div>
+    </a>
+
+    <div class="cl-card">
+      <h1>Welcome back</h1>
+      <p class="cl-subtitle">Sign in to manage CodeLogic</p>
+
+      {% if form.errors and not form.non_field_errors %}
+        <div class="cl-error">
+          {% blocktranslate count counter=form.errors.items|length %}Please correct the error below.{% plural %}Please correct the errors below.{% endblocktranslate %}
+        </div>
+      {% endif %}
+
+      {% if form.non_field_errors %}
+        {% for error in form.non_field_errors %}
+          <div class="cl-error">{{ error }}</div>
+        {% endfor %}
+      {% endif %}
+
+      <form action="{{ app_path }}" method="post" id="login-form" novalidate>
+        {% csrf_token %}
+
+        <div class="cl-field">
+          <label for="{{ form.username.id_for_label }}">{{ form.username.label }}</label>
+          <input
+            type="text"
+            name="{{ form.username.html_name }}"
+            id="{{ form.username.id_for_label }}"
+            autocomplete="username"
+            autofocus
+            required
+            value="{{ form.username.value|default:'' }}"
+            placeholder="you@example.com"
+          >
+          {% if form.username.errors %}<div class="cl-error">{{ form.username.errors }}</div>{% endif %}
+        </div>
+
+        <div class="cl-field">
+          <label for="{{ form.password.id_for_label }}">{% translate 'Password' %}</label>
+          <input
+            type="password"
+            name="{{ form.password.html_name }}"
+            id="{{ form.password.id_for_label }}"
+            autocomplete="current-password"
+            required
+            placeholder="Enter your password"
+          >
+          {% if form.password.errors %}<div class="cl-error">{{ form.password.errors }}</div>{% endif %}
+        </div>
+
+        <input type="hidden" name="next" value="{{ next }}">
+        <button type="submit" class="cl-submit">{% translate 'Log in' %}</button>
+
+        {% url 'admin_password_reset' as password_reset_url %}
+        {% if password_reset_url %}
+          <div class="cl-extra">
+            <a href="{{ password_reset_url }}">{% translate 'Forgotten your password or username?' %}</a>
+          </div>
+        {% endif %}
+      </form>
+    </div>
+
+    <p class="cl-foot">Staff access only &middot; <a href="/">Back to site</a></p>
+  </div>
+</body>
+</html>

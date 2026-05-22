@@ -198,6 +198,244 @@ class SubmitAnswerTests(QuizApiTestBase):
 
 
 # ---------------------------------------------------------------------------
+# SubmitAnswerView — typed-answer (fill-blank, output) & find-error click
+# ---------------------------------------------------------------------------
+
+class TypedAnswerSubmitTests(APITestCase):
+    """Covers the four question modes: MC, find-error (click line), fill-blank, output."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.category = Category.objects.create(name='Web', slug='web')
+        cls.topic = Topic.objects.create(
+            category=cls.category, name='HTML', slug='html', total_levels=1,
+        )
+        cls.q_fill = Question.objects.create(
+            topic=cls.topic, level=1,
+            question_type='fill-blank',
+            question_text='What tag wraps visible HTML content?',
+            options=[],
+            correct_answer=0,
+            correct_text_answer='body',
+            accepted_answers=['<body>'],
+            xp_reward=10,
+        )
+        cls.q_output = Question.objects.create(
+            topic=cls.topic, level=1,
+            question_type='output',
+            question_text='What does this print?',
+            code_snippet='print("Hello, World!")',
+            options=[],
+            correct_answer=0,
+            correct_text_answer='Hello, World!',
+            xp_reward=10,
+        )
+        cls.q_find = Question.objects.create(
+            topic=cls.topic, level=1,
+            question_type='find-error',
+            question_text='Which line has the bug?',
+            code_snippet='<html>\n<head>\n  <title>My Page<title>\n</head>',
+            options=[],
+            correct_answer=0,
+            highlight_line=3,
+            xp_reward=10,
+        )
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            email='player@example.com', username='player', password='pw-1234567',
+        )
+        self.user.current_hearts = 5
+        self.user.save()
+        self.client.force_authenticate(self.user)
+        self.attempt = QuizAttempt.objects.create(
+            user=self.user, topic=self.topic, level=1, total_questions=3,
+        )
+
+    def _submit(self, question, **payload):
+        return self.client.post(
+            '/api/game/answer/',
+            {'attempt_id': str(self.attempt.id), 'question_id': str(question.id), **payload},
+            format='json',
+        )
+
+    # ----- fill-blank -----
+
+    def test_fill_blank_exact_text_is_correct(self):
+        r = self._submit(self.q_fill, answer_text='body')
+        self.assertEqual(r.status_code, 200)
+        self.assertTrue(r.data['correct'])
+        ua = UserAnswer.objects.get(attempt=self.attempt, question=self.q_fill)
+        self.assertTrue(ua.is_correct)
+        self.assertEqual(ua.selected_text, 'body')
+        self.assertEqual(ua.selected_answer, -1)
+
+    def test_fill_blank_case_sensitive_wrong(self):
+        # Case matters now: `BODY` should NOT match `body`.
+        r = self._submit(self.q_fill, answer_text='BODY')
+        self.assertFalse(r.data['correct'])
+
+    def test_fill_blank_outer_whitespace_trimmed(self):
+        # Only outer whitespace is stripped — internal stays as-is.
+        r = self._submit(self.q_fill, answer_text='  body  ')
+        self.assertTrue(r.data['correct'])
+
+    def test_fill_blank_accepted_variant(self):
+        r = self._submit(self.q_fill, answer_text='<body>')
+        self.assertTrue(r.data['correct'])
+
+    def test_fill_blank_wrong_loses_heart(self):
+        r = self._submit(self.q_fill, answer_text='div')
+        self.assertFalse(r.data['correct'])
+        self.assertTrue(r.data['heart_lost'])
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.current_hearts, 4)
+
+    def test_fill_blank_correct_answer_display_returned(self):
+        r = self._submit(self.q_fill, answer_text='div')
+        self.assertEqual(r.data['correct_answer_display'], 'body')
+
+    # ----- output -----
+
+    def test_output_exact_match_correct(self):
+        r = self._submit(self.q_output, answer_text='Hello, World!')
+        self.assertTrue(r.data['correct'])
+
+    def test_output_wrong_text_loses_heart(self):
+        r = self._submit(self.q_output, answer_text='Hello World')
+        self.assertFalse(r.data['correct'])
+        self.assertTrue(r.data['heart_lost'])
+
+    # ----- find-error (clicked line number) -----
+
+    def test_find_error_correct_line_clicked(self):
+        r = self._submit(self.q_find, answer=3)
+        self.assertEqual(r.status_code, 200)
+        self.assertTrue(r.data['correct'])
+        ua = UserAnswer.objects.get(attempt=self.attempt, question=self.q_find)
+        self.assertEqual(ua.selected_answer, 3)
+        self.assertTrue(ua.is_correct)
+
+    def test_find_error_wrong_line_clicked(self):
+        r = self._submit(self.q_find, answer=1)
+        self.assertFalse(r.data['correct'])
+        self.assertEqual(r.data['correct_answer_display'], 'Line 3')
+        self.assertTrue(r.data['heart_lost'])
+
+    # ----- missing-fields safety -----
+
+    def test_typed_question_missing_text_rejected(self):
+        r = self._submit(self.q_fill)  # no answer or answer_text
+        self.assertEqual(r.status_code, 400)
+
+    # ----- legacy-data fallback: typed questions without correct_text_answer -----
+
+    def test_typed_question_falls_back_to_options_when_text_answer_missing(self):
+        """Legacy seeded fill-blank/output questions only have options + correct_answer.
+        They must still grade correctly without a backfill."""
+        legacy = Question.objects.create(
+            topic=self.topic, level=1,
+            question_type='fill-blank',
+            question_text='Legacy fill-blank with no correct_text_answer',
+            options=['console.log', 'print', 'echo', 'puts'],
+            correct_answer=0,
+            correct_text_answer='',  # the bug
+        )
+        r = self._submit(legacy, answer_text='console.log')
+        self.assertTrue(r.data['correct'], r.data)
+        self.assertEqual(r.data['correct_answer_display'], 'console.log')
+
+    def test_typed_question_fallback_wrong_answer(self):
+        legacy = Question.objects.create(
+            topic=self.topic, level=1,
+            question_type='output',
+            question_text='Legacy output',
+            options=['Hello, World!', 'hello', 'Error', 'undefined'],
+            correct_answer=0,
+            correct_text_answer='',
+        )
+        r = self._submit(legacy, answer_text='hello')
+        self.assertFalse(r.data['correct'])
+        self.assertEqual(r.data['correct_answer_display'], 'Hello, World!')
+
+    # ----- legacy-data fallback: single-line find-error reverts to MC -----
+
+    def test_find_error_single_line_falls_back_to_mc(self):
+        """Single-line find-error can't be 'click the buggy line'. The view
+        should evaluate `answer` as an option index against `correct_answer`."""
+        single = Question.objects.create(
+            topic=self.topic, level=1,
+            question_type='find-error',
+            question_text='Find the bug',
+            code_snippet='let x = 5',  # single line, no \n
+            options=['Missing semicolon', 'Wrong keyword', 'Wrong value', 'Nothing wrong'],
+            correct_answer=0,
+            highlight_line=1,
+        )
+        # answer=0 picks the first option → matches correct_answer → correct
+        r = self._submit(single, answer=0)
+        self.assertTrue(r.data['correct'], r.data)
+        # answer=1 picks the wrong option → wrong
+        single2 = Question.objects.create(
+            topic=self.topic, level=1,
+            question_type='find-error',
+            question_text='Find the bug 2',
+            code_snippet='print(x)',
+            options=['A', 'B', 'C', 'D'],
+            correct_answer=2,
+            highlight_line=1,
+        )
+        r2 = self._submit(single2, answer=1)
+        self.assertFalse(r2.data['correct'], r2.data)
+
+
+# ---------------------------------------------------------------------------
+# Question model: normalization helper
+# ---------------------------------------------------------------------------
+
+class CheckTextAnswerTests(APITestCase):
+    """check_text_answer: strict case-sensitive match, only outer-whitespace trim."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.category = Category.objects.create(name='C', slug='c')
+        cls.topic = Topic.objects.create(category=cls.category, name='T', slug='t', total_levels=1)
+        cls.q = Question.objects.create(
+            topic=cls.topic, level=1,
+            question_type='output',
+            question_text='?',
+            correct_text_answer='5',
+            accepted_answers=['five', 'V'],
+        )
+
+    def test_exact(self):
+        self.assertTrue(self.q.check_text_answer('5'))
+
+    def test_case_sensitive_mismatch(self):
+        # 'FIVE' should NOT match 'five' (admin can add it to accepted_answers if they want).
+        self.assertFalse(self.q.check_text_answer('FIVE'))
+
+    def test_outer_whitespace_trimmed_only(self):
+        self.assertTrue(self.q.check_text_answer('  five  '))
+
+    def test_internal_whitespace_matters(self):
+        # 'f i v e' should NOT match 'five' — internal whitespace preserved.
+        self.assertFalse(self.q.check_text_answer('f i v e'))
+
+    def test_variant_exact_case(self):
+        # 'V' is in accepted_answers; 'v' (lowercase) is not.
+        self.assertTrue(self.q.check_text_answer('V'))
+        self.assertFalse(self.q.check_text_answer('v'))
+
+    def test_empty_is_wrong(self):
+        self.assertFalse(self.q.check_text_answer(''))
+        self.assertFalse(self.q.check_text_answer(None))
+
+    def test_wrong(self):
+        self.assertFalse(self.q.check_text_answer('6'))
+
+
+# ---------------------------------------------------------------------------
 # CompleteQuizView
 # ---------------------------------------------------------------------------
 

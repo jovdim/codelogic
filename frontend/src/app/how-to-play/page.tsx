@@ -95,7 +95,7 @@ export default function HowToPlayPage() {
     {
       question: "What types of questions are there?",
       answer:
-        "We have 4 question types: Multiple Choice (pick the right answer), Find the Error (spot the bug in code), What's the Output (predict what code will print), and Fill in the Blank (complete the missing code).",
+        "We have 4 question types: Multiple Choice (pick from 4 options), Find the Error (click the buggy line in the code), What's the Output (type what the code will print), and Fill in the Blank (type the missing code).",
     },
     {
       question: "Can I redo a quiz I already completed?",
@@ -119,19 +119,19 @@ export default function HowToPlayPage() {
     {
       type: "Find the Error",
       icon: XCircle,
-      description: "Spot the bug or mistake in the code",
+      description: "Click the buggy line of code",
       color: "#ef4444",
     },
     {
       type: "What's the Output",
       icon: FileQuestion,
-      description: "Predict what the code will print",
+      description: "Type what the code will print",
       color: "#f59e0b",
     },
     {
       type: "Fill in the Blank",
       icon: Code,
-      description: "Complete the missing code snippet",
+      description: "Type the missing code snippet",
       color: "#3b82f6",
     },
   ];

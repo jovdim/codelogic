@@ -392,7 +392,36 @@ class QuestionAdminForm(forms.ModelForm):
             'code_snippet': forms.Textarea(attrs={'rows': 8, 'style': 'width: 100%; font-family: monospace; background: #1e1e1e; color: #d4d4d4;'}),
             'explanation': forms.Textarea(attrs={'rows': 3, 'style': 'width: 100%;'}),
             'options': forms.Textarea(attrs={'rows': 6, 'style': 'width: 100%; font-family: monospace;', 'placeholder': '["Option 1", "Option 2", "Option 3", "Option 4"]'}),
+            'correct_text_answer': forms.Textarea(attrs={'rows': 2, 'style': 'width: 100%; font-family: monospace;', 'placeholder': 'The exact text the user must type (whitespace + case are normalized)'}),
+            'accepted_answers': forms.Textarea(attrs={'rows': 3, 'style': 'width: 100%; font-family: monospace;', 'placeholder': '["alternative1", "alternative2"]  (optional alt answers)'}),
         }
+
+    def clean(self):
+        cleaned = super().clean()
+        qtype = cleaned.get('question_type')
+
+        if qtype == 'multiple-choice':
+            opts = cleaned.get('options') or []
+            if not isinstance(opts, list) or len(opts) < 2:
+                self.add_error('options', 'Multiple-choice questions need at least 2 options.')
+            correct = cleaned.get('correct_answer')
+            if isinstance(opts, list) and correct is not None and correct >= len(opts):
+                self.add_error('correct_answer', f'correct_answer index {correct} is out of range for {len(opts)} options.')
+
+        elif qtype == 'find-error':
+            if not cleaned.get('code_snippet'):
+                self.add_error('code_snippet', 'Find-the-Error questions need a code snippet.')
+            if not cleaned.get('highlight_line'):
+                self.add_error('highlight_line', 'Find-the-Error questions need highlight_line set to the 1-based line number of the bug — this is the answer the user clicks.')
+
+        elif qtype in ('fill-blank', 'output'):
+            if not (cleaned.get('correct_text_answer') or '').strip():
+                self.add_error('correct_text_answer', f'{qtype.replace("-", " ").title()} questions need a correct_text_answer — the text the user must type.')
+            accepted = cleaned.get('accepted_answers')
+            if accepted and not isinstance(accepted, list):
+                self.add_error('accepted_answers', 'accepted_answers must be a JSON list, e.g. ["foo", "bar"].')
+
+        return cleaned
 
 
 @admin.register(Question)
@@ -414,26 +443,35 @@ class QuestionAdmin(admin.ModelAdmin):
     fieldsets = (
         ('Question', {
             'fields': ('topic', 'level', 'question_type', 'question_text'),
-            'description': 'Basic question information'
+            'description': 'Basic question information. Pick the type — the fields below will adapt.'
         }),
-        ('Code (Optional)', {
+        ('Code Snippet', {
             'fields': ('code_snippet', 'highlight_line'),
-            'classes': ('collapse',),
-            'description': 'Add code for "Find Error" or "Output" questions'
+            'classes': ('cl-fs-code',),
+            'description': 'Required for Find-the-Error. Recommended for Output / Fill-in-the-Blank. Optional for Multiple Choice. highlight_line is the 1-based buggy line and is also the answer for Find-the-Error.'
         }),
-        ('Answer Options', {
+        ('Multiple-Choice Options', {
             'fields': ('options', 'correct_answer'),
-            'description': 'Options as JSON array: ["A", "B", "C", "D"]. correct_answer is index (0=A, 1=B, 2=C, 3=D)'
+            'classes': ('cl-fs-mc',),
+            'description': 'For Multiple Choice ONLY. Options as JSON array: ["A", "B", "C", "D"]. correct_answer is the index (0=A, 1=B, 2=C, 3=D).'
+        }),
+        ('Typed Answer', {
+            'fields': ('correct_text_answer', 'accepted_answers'),
+            'classes': ('cl-fs-typed',),
+            'description': 'For Fill-in-the-Blank and What-is-the-Output. The user must type their answer. Matching is whitespace-collapsed and case-insensitive. Use accepted_answers (JSON list) to allow variants like ["5", "five"].'
         }),
         ('Explanation', {
             'fields': ('explanation',),
             'classes': ('collapse',),
-            'description': 'Shown after answering - explain why the answer is correct'
+            'description': 'Shown after answering — explain why the answer is correct.'
         }),
         ('Settings', {
             'fields': ('xp_reward', 'order', 'is_active')
         }),
     )
+
+    class Media:
+        js = ('admin/codelogic-question-toggle.js',)
     
     def get_changeform_initial_data(self, request):
         """Pre-fill topic when coming from topic page."""
@@ -566,7 +604,12 @@ class LearningResourceAdmin(admin.ModelAdmin):
 # CERTIFICATE ADMIN
 # ============================================================
 
-@admin.register(Certificate)
+# Hidden from the admin sidebar on 2026-05-22 — the Certificate model is still
+# read by the frontend cert pages (TopicWithProgressSerializer surfaces title +
+# description, /certificates uses get_title fallback). To re-enable admin
+# customization of per-topic cert title/description, just uncomment the
+# @admin.register line below.
+# @admin.register(Certificate)
 class CertificateAdmin(admin.ModelAdmin):
     change_list_template = 'admin/game/certificate/change_list.html'
     change_form_template = 'admin/game/certificate/change_form.html'

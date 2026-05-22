@@ -26,6 +26,33 @@ api.interceptors.request.use(
   },
 );
 
+// Module-scoped state for the refresh flow:
+//   - `refreshPromise` deduplicates concurrent refreshes so 5 parallel 401s
+//     don't each try (and blacklist!) the refresh token.
+//   - Without this dedupe, the first refresh rotates+blacklists the token
+//     and the rest fail with 401 → user gets logged out mid-session.
+let refreshPromise: Promise<string> | null = null;
+
+async function refreshAccessToken(): Promise<string> {
+  const refreshToken = localStorage.getItem("refresh_token");
+  if (!refreshToken) {
+    throw new Error("No refresh token");
+  }
+  const response = await axios.post(`${API_URL}/auth/token/refresh/`, {
+    refresh: refreshToken,
+  });
+  const { access, refresh: newRefresh } = response.data;
+  localStorage.setItem("access_token", access);
+  // Django SimpleJWT is configured with ROTATE_REFRESH_TOKENS + BLACKLIST_AFTER_ROTATION,
+  // so every refresh returns a NEW refresh token and invalidates the old one.
+  // We must persist the new one — otherwise the next refresh hits a blacklisted
+  // token and the user gets auto-logged-out.
+  if (newRefresh) {
+    localStorage.setItem("refresh_token", newRefresh);
+  }
+  return access;
+}
+
 // Response interceptor to handle token refresh
 api.interceptors.response.use(
   (response) => response,
@@ -37,19 +64,17 @@ api.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        const refreshToken = localStorage.getItem("refresh_token");
-        if (refreshToken) {
-          const response = await axios.post(`${API_URL}/auth/token/refresh/`, {
-            refresh: refreshToken,
+        // Share a single in-flight refresh among all 401s that fire at once.
+        if (!refreshPromise) {
+          refreshPromise = refreshAccessToken().finally(() => {
+            refreshPromise = null;
           });
-
-          const { access } = response.data;
-          localStorage.setItem("access_token", access);
-
-          // Retry the original request with new token
-          originalRequest.headers.Authorization = `Bearer ${access}`;
-          return api(originalRequest);
         }
+        const access = await refreshPromise;
+
+        // Retry the original request with new token
+        originalRequest.headers.Authorization = `Bearer ${access}`;
+        return api(originalRequest);
       } catch (refreshError) {
         // Refresh failed, clear tokens and redirect to login
         localStorage.removeItem("access_token");
@@ -151,10 +176,13 @@ export const gameAPI = {
   registerTimeout: (data: { attempt_id: string }) =>
     api.post("/game/timeout/", data),
 
-  // Submit an answer
+  // Submit an answer. Use `answer` (int) for multiple-choice (option index)
+  // or find-error (1-based line number). Use `answer_text` for fill-blank
+  // and output (the typed answer string). Server is authoritative.
   submitAnswer: (data: {
     question_id: string;
-    answer: number;
+    answer?: number;
+    answer_text?: string;
     attempt_id: string;
   }) => api.post("/game/answer/", data),
 

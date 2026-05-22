@@ -147,10 +147,39 @@ class TopicWithProgressSerializer(serializers.ModelSerializer):
 
 
 class QuestionSerializer(serializers.ModelSerializer):
-    """Question serializer - includes all fields for quiz."""
+    """Question serializer for quiz playback.
+
+    Security note: for typed-answer types (fill-blank, output) we
+    deliberately do NOT include `correct_text_answer` or `accepted_answers`
+    in the payload — the client must submit answers and let the server
+    judge correctness. For multiple-choice we keep `correct_answer` for
+    backwards-compat (client-side instant feedback), and for find-error
+    `highlight_line` doubles as the answer; revisit if cheating becomes
+    an issue.
+    """
+    correct_answer = serializers.SerializerMethodField()
+    question_type = serializers.SerializerMethodField()
+
     class Meta:
         model = Question
-        fields = ['id', 'question_type', 'question_text', 'code_snippet', 'options', 'highlight_line', 'xp_reward', 'correct_answer', 'explanation']
+        fields = [
+            'id', 'question_type', 'question_text', 'code_snippet',
+            'options', 'highlight_line', 'xp_reward',
+            'correct_answer', 'explanation',
+        ]
+
+    def get_question_type(self, obj):
+        # Use the *effective* type so the frontend renders incompatible
+        # questions (empty answer, single-line find-error, display-label
+        # bracket pairs) as MC automatically.
+        return obj.effective_question_type
+
+    def get_correct_answer(self, obj):
+        # MC + find-error-as-MC-fallback expose the option index.
+        # True typed types return -1 to force the frontend to ask the server.
+        if obj.effective_question_type in ('fill-blank', 'output'):
+            return -1
+        return obj.correct_answer
 
 
 class LeaderboardUserSerializer(serializers.ModelSerializer):

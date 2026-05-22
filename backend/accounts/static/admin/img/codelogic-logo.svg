@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 580" fill="none">
+  <!-- Left ear -->
+  <path d="M108 220 C100 220 85 45 160 38 C235 45 220 220 212 220" fill="#7c3aed" stroke="#5b21b6" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Right ear -->
+  <path d="M388 220 C380 220 365 45 440 38 C515 45 500 220 492 220" fill="#7c3aed" stroke="#5b21b6" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Inner ear left -->
+  <path d="M128 200 C128 200 118 80 160 72 C202 80 192 200 192 200" fill="#6d28d9"/>
+  <!-- Inner ear right -->
+  <path d="M408 200 C408 200 398 80 440 72 C482 80 472 200 472 200" fill="#6d28d9"/>
+  <!-- Head -->
+  <rect x="30" y="170" width="540" height="385" rx="160" fill="#7c3aed" stroke="#5b21b6" stroke-width="12"/>
+  <!-- Face area -->
+  <rect x="72" y="206" width="456" height="310" rx="130" fill="#8b5cf6"/>
+  <!-- Left eye -->
+  <ellipse cx="216" cy="326" rx="50" ry="60" fill="#0f0f1a"/>
+  <!-- Left eye shine -->
+  <ellipse cx="198" cy="308" rx="14" ry="18" fill="white" opacity="0.85"/>
+  <!-- Right eye -->
+  <ellipse cx="384" cy="326" rx="50" ry="60" fill="#0f0f1a"/>
+  <!-- Right eye shine -->
+  <ellipse cx="366" cy="308" rx="14" ry="18" fill="white" opacity="0.85"/>
+  <!-- Mouth: </> -->
+  <text x="300" y="468" text-anchor="middle" font-family="'Courier New', monospace" font-weight="bold" font-size="56" fill="white">&lt;/&gt;</text>
+</svg>
