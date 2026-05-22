@@ -6,6 +6,7 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 from .models import EmailVerificationToken, PasswordResetToken
 
 User = get_user_model()
@@ -130,8 +131,8 @@ class UserProfileSerializer(serializers.ModelSerializer):
         ]
     
     def get_member_since(self, obj):
-        """Return formatted join date."""
-        return obj.date_joined.strftime('%B %d, %Y')
+        """Return formatted join date in the configured TIME_ZONE."""
+        return timezone.localtime(obj.date_joined).strftime('%B %d, %Y')
     
     def get_days_since_joined(self, obj):
         """Return number of days since user joined."""

@@ -970,7 +970,7 @@ def admin_view_certificate(request, user_certificate_id):
         'topic_display': uc.certificate.title or topic.name,
         'topic_icon_url': icon_url,
         'category': category.name if category else 'programming',
-        'completion_date_str': uc.completion_date.strftime('%B %d, %Y') if uc.completion_date else '',
+        'completion_date_str': timezone.localtime(uc.completion_date).strftime('%B %d, %Y') if uc.completion_date else '',
         'certificate_id': uc.certificate_code or str(uc.id),
         'skills': _skills_for_category(
             category.slug if category else '', topic.name,

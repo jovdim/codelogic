@@ -7,6 +7,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import Group
 from django.http import HttpResponseRedirect
+from django.utils import timezone
 from django.utils.html import format_html
 from django.contrib import messages
 from django.db.models import Sum
@@ -105,8 +106,11 @@ class UserAdmin(BaseUserAdmin):
             )
         import base64
         b64 = base64.b64encode(bytes(obj.last_login_face_photo)).decode('ascii')
+        # Stored as UTC. Display in the configured TIME_ZONE (Asia/Manila).
         captured = (
-            obj.last_login_face_captured_at.strftime('%Y-%m-%d %H:%M:%S')
+            timezone.localtime(
+                obj.last_login_face_captured_at
+            ).strftime('%Y-%m-%d %H:%M:%S')
             if obj.last_login_face_captured_at else 'unknown'
         )
         return format_html(

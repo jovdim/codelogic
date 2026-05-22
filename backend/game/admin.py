@@ -6,6 +6,7 @@ Provides a powerful, user-friendly admin interface for non-developers.
 from django.contrib import admin
 from django.contrib.admin import AdminSite
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.html import format_html
 from django.db import models
 from django.db.models import Count, Avg
@@ -52,7 +53,13 @@ def _user_quiz_history_html(user):
         else:
             status = format_html('<span style="color:#9ca3af">in progress</span>')
 
-        when_str = a.started_at.strftime('%b %d, %Y %I:%M %p') if a.started_at else '—'
+        # `started_at` is stored as UTC. Convert to the configured TIME_ZONE
+        # (Asia/Manila) before formatting, otherwise the admin shows times
+        # offset by 8 hours.
+        when_str = (
+            timezone.localtime(a.started_at).strftime('%b %d, %Y %I:%M %p')
+            if a.started_at else '—'
+        )
 
         # Duration from start-click to result-screen.
         if a.completed and a.started_at and a.completed_at:

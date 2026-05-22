@@ -122,7 +122,9 @@ class SiteSettings(models.Model):
         verbose_name_plural = 'Site Settings'
     
     def __str__(self):
-        return f"Site Settings (Updated: {self.updated_at.strftime('%Y-%m-%d %H:%M')})"
+        from django.utils import timezone
+        local = timezone.localtime(self.updated_at)
+        return f"Site Settings (Updated: {local.strftime('%Y-%m-%d %H:%M')})"
     
     def save(self, *args, **kwargs):
         # Ensure only one instance exists
