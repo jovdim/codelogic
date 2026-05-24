@@ -127,7 +127,7 @@ export default function CertificatesPage() {
   };
 
   // Builds the same CertData payload used by both the download and the
-  // in-page preview iframe — single source of truth for both surfaces.
+  // in-page preview iframe - single source of truth for both surfaces.
   const buildCertData = (cert: Certificate): CertData => {
     const completionDateStr = cert.completedAt
       ? new Date(cert.completedAt).toLocaleDateString("en-US", {

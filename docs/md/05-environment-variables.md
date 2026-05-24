@@ -37,7 +37,7 @@ These are the secret settings the app needs. You put them in a `.env` file. The 
 | `EMAIL_HOST_PASSWORD` | empty | A Gmail **App Password** (not your regular password). |
 | `FRONTEND_URL` | `http://localhost:3000` | Used in email links like the verification link. |
 
-### Optional — Cloud Storage
+### Optional - Cloud Storage
 
 These are only needed if you want uploaded files (PDFs, icons) to go to the cloud instead of the server's hard drive.
 

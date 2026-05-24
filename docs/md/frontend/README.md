@@ -4,12 +4,12 @@ The website is what users see and click. It's built with **Next.js** and **React
 
 ## What's Inside
 
-- [How it's built](./architecture.md) — The main parts.
-- [Pages and URLs](./routing.md) — Every page and what it does.
-- [Components](./components.md) — Reusable pieces.
-- [Talking to the server](./state-and-api.md) — How data goes back and forth.
-- [Music and sound](./audio-system.md) — The audio system.
-- [Colors and style](./styling.md) — Theme and design.
+- [How it's built](./architecture.md) - The main parts.
+- [Pages and URLs](./routing.md) - Every page and what it does.
+- [Components](./components.md) - Reusable pieces.
+- [Talking to the server](./state-and-api.md) - How data goes back and forth.
+- [Music and sound](./audio-system.md) - The audio system.
+- [Colors and style](./styling.md) - Theme and design.
 
 ## Main Folders
 

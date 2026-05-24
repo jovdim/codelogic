@@ -1,6 +1,6 @@
 # 2. Tech Stack
 
-The tools used to build CodeLogic. Don't worry if you don't recognize them — just think of it as the ingredients list.
+The tools used to build CodeLogic. Don't worry if you don't recognize them - just think of it as the ingredients list.
 
 ## The Website (Frontend)
 

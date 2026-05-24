@@ -18,7 +18,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='question',
             name='correct_text_answer',
-            field=models.TextField(blank=True, help_text='For "Fill in the Blank" and "What is the Output" — the canonical text the user must type.'),
+            field=models.TextField(blank=True, help_text='For "Fill in the Blank" and "What is the Output" - the canonical text the user must type.'),
         ),
         migrations.AddField(
             model_name='useranswer',
@@ -28,7 +28,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='question',
             name='highlight_line',
-            field=models.PositiveIntegerField(blank=True, help_text='For "Find the Error" — the 1-based line number containing the bug. This is also the correct answer the user must click.', null=True),
+            field=models.PositiveIntegerField(blank=True, help_text='For "Find the Error" - the 1-based line number containing the bug. This is also the correct answer the user must click.', null=True),
         ),
         migrations.AlterField(
             model_name='question',

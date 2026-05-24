@@ -3,7 +3,7 @@
 import { useCallback, useRef, useEffect } from "react";
 
 /**
- * Sound effects hook — uses .mp3 files for main sounds,
+ * Sound effects hook - uses .mp3 files for main sounds,
  * Web Audio API only for heartLost, timerTick, countdown.
  */
 
@@ -74,7 +74,7 @@ function playTone(
 // ── Sound effects map ─────────────────────────────────────────
 // All volumes set to 0.7 for consistency
 const soundEffects: Record<SoundType, () => void> = {
-  // MP3 file-based sounds — all at 0.7 volume
+  // MP3 file-based sounds - all at 0.7 volume
   correct: () => playFile("/sound-effects/correct-answer-sound-effect.mp3", 0.7),
   wrong: () => playFile("/sound-effects/wrong-answer-sound-effect.mp3", 0.7),
   click: () => playFile("/sound-effects/mouse-click-sound-effect.mp3", 0.7),

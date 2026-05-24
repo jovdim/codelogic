@@ -77,10 +77,10 @@ Each certificate has a unique code (like `CL-JAVA-A1B2C3D4`) that can be used to
 
 The dashboard also shows:
 
-- **Daily Challenges** — three goals per day (finish 3 quizzes, get 100%, answer 5 in a row right). Finish them for bonus XP. Reset at midnight.
-- **Recent Activity** — your last 6 quizzes.
-- **Recommended Topics** — topics you haven't tried yet.
-- **Achievements** — badges you unlock at levels 2, 4, 7, 10, 15.
+- **Daily Challenges** - three goals per day (finish 3 quizzes, get 100%, answer 5 in a row right). Finish them for bonus XP. Reset at midnight.
+- **Recent Activity** - your last 6 quizzes.
+- **Recommended Topics** - topics you haven't tried yet.
+- **Achievements** - badges you unlock at levels 2, 4, 7, 10, 15.
 
 ## 8. Leaderboard
 

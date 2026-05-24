@@ -11,11 +11,11 @@ The main user table. Login is by **email**, not username.
 
 Important fields:
 - `email`, `username`, `password`
-- `display_name` — the name you want to show
-- `avatar` — a number 1 to 5
-- `bio` — a short description
-- `is_active` — is the account on?
-- `is_email_verified` — did they confirm their email?
+- `display_name` - the name you want to show
+- `avatar` - a number 1 to 5
+- `bio` - a short description
+- `is_active` - is the account on?
+- `is_email_verified` - did they confirm their email?
 - `xp`, `level`
 - `current_hearts`, `max_hearts`
 - `current_streak`, `longest_streak`, `last_activity_date`
@@ -49,7 +49,7 @@ A short code for resetting passwords. Lasts 1 hour.
 
 ## Hearts Auto-Refill
 
-Every time a user reads their profile or starts a quiz, the server checks: "How long since their hearts were updated?". If it's been more than 2 minutes, it adds back hearts — 1 per 2 minutes, up to the max (10).
+Every time a user reads their profile or starts a quiz, the server checks: "How long since their hearts were updated?". If it's been more than 2 minutes, it adds back hearts - 1 per 2 minutes, up to the max (10).
 
 ## Display Name Cooldown
 

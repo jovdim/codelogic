@@ -46,7 +46,7 @@ def audit():
     total = qs.count()
 
     for q in qs:
-        # Audit against the EFFECTIVE type — that's what the user actually
+        # Audit against the EFFECTIVE type - that's what the user actually
         # plays and what the server grades against.
         qtype = q.effective_question_type
         counts[qtype] = counts.get(qtype, 0) + 1
@@ -68,7 +68,7 @@ def audit():
             is_single = len(lines) <= 1
             if is_single:
                 fe_single += 1
-                # Single-line falls back to MC — verify the MC data is valid.
+                # Single-line falls back to MC - verify the MC data is valid.
                 opts = q.options or []
                 if not isinstance(opts, list) or len(opts) < 2:
                     failures.append((q, 'FAIL', f'single-line find-error falls back to MC but has only {len(opts)} options'))
@@ -80,7 +80,7 @@ def audit():
                 fe_multi += 1
                 if not q.highlight_line:
                     fe_missing_hl += 1
-                    # Falls back to MC — same checks as single-line.
+                    # Falls back to MC - same checks as single-line.
                     opts = q.options or []
                     if not isinstance(opts, list) or len(opts) < 2:
                         failures.append((q, 'FAIL', f'multi-line find-error has no highlight_line and falls back to MC, but only {len(opts)} options'))
@@ -104,7 +104,7 @@ def audit():
             # Soft warning: trailing/leading whitespace in resolved answer is dangerous
             # since we trim user input but not the stored answer.
             if resolved != resolved.strip():
-                warnings.append((q, 'WARN', f'{qtype} resolved answer has leading/trailing whitespace — user typing same text without space will not match'))
+                warnings.append((q, 'WARN', f'{qtype} resolved answer has leading/trailing whitespace - user typing same text without space will not match'))
 
     print('=' * 78)
     print(f'TOTAL QUESTIONS: {total}')
@@ -125,7 +125,7 @@ def audit():
     print(f'  Has accepted_answers variants: {typed_with_variants}')
     print()
     print('=' * 78)
-    print(f'HARD FAILURES ({len(failures)}) — must fix before push:')
+    print(f'HARD FAILURES ({len(failures)}) - must fix before push:')
     print('=' * 78)
     if not failures:
         print('  (none)')
@@ -137,7 +137,7 @@ def audit():
             print(f'  ... and {len(failures) - 50} more')
     print()
     print('=' * 78)
-    print(f'SOFT WARNINGS ({len(warnings)}) — worth reviewing:')
+    print(f'SOFT WARNINGS ({len(warnings)}) - worth reviewing:')
     print('=' * 78)
     if not warnings:
         print('  (none)')

@@ -15,13 +15,13 @@ A subject like JavaScript or Python. Belongs to a category. Default: 15 levels. 
 ### `Question`
 A quiz question. Belongs to a topic and a level. Has:
 
-- `question_type` — one of: `multiple-choice`, `find-error`, `fill-blank`, `output`
+- `question_type` - one of: `multiple-choice`, `find-error`, `fill-blank`, `output`
 - `question_text`
-- `code_snippet` (optional) — code shown below the question
-- `options` — a list of 4 choices
-- `correct_answer` — the index of the right option (0, 1, 2, or 3)
-- `explanation` — shown after answering
-- `xp_reward` — default 10
+- `code_snippet` (optional) - code shown below the question
+- `options` - a list of 4 choices
+- `correct_answer` - the index of the right option (0, 1, 2, or 3)
+- `explanation` - shown after answering
+- `xp_reward` - default 10
 
 ### `Lesson`
 A teaching slide shown before the quiz starts for a level. Has a title, content, an optional code example, and an optional tip.

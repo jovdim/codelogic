@@ -132,7 +132,7 @@ export default function LoginFaceVerification({
       countdownTimerRef.current = window.setInterval(() => {
         setSecondsLeft((s) => {
           if (s <= 1) {
-            // Stop BOTH timers — otherwise the detect loop will tick once
+            // Stop BOTH timers - otherwise the detect loop will tick once
             // more after we set "failed_attempt" and clobber the phase
             // (e.g. back to "searching"), so the failed-attempt handler
             // never gets to advance to the next attempt or log out.
@@ -163,7 +163,7 @@ export default function LoginFaceVerification({
         const result = await faceapi.detectSingleFace(video, opts);
         // The interval may have been cancelled while detectSingleFace was
         // awaiting (e.g. timer expired or the user passed). If so, drop
-        // this late result — otherwise it can clobber "failed_attempt"
+        // this late result - otherwise it can clobber "failed_attempt"
         // back to "searching" and the modal gets stuck.
         if (detectTimerRef.current === null) return;
         if (result && result.score >= MIN_CONFIDENCE) {
@@ -179,7 +179,7 @@ export default function LoginFaceVerification({
 
             // Capture a JPEG from the current frame BEFORE we tear down
             // the camera stream, then upload it to the backend. If the
-            // upload fails (network/etc) we still let the user through —
+            // upload fails (network/etc) we still let the user through -
             // the detection passed locally, audit photo is best-effort.
             const videoEl = videoRef.current;
             const blobPromise = videoEl
@@ -222,7 +222,7 @@ export default function LoginFaceVerification({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  // Handle the end of an attempt — either advance to next attempt or fail.
+  // Handle the end of an attempt - either advance to next attempt or fail.
   useEffect(() => {
     if (phase !== "failed_attempt") return;
     if (attempt >= MAX_ATTEMPTS) {
@@ -255,7 +255,7 @@ export default function LoginFaceVerification({
       case "searching":
         return "Position your face inside the frame.";
       case "detected":
-        return "Face detected — hold still…";
+        return "Face detected - hold still…";
       case "passed":
         return "Verified!";
       case "failed_attempt":
@@ -296,7 +296,7 @@ export default function LoginFaceVerification({
           <span
             className={`font-mono ${secondsLeft <= 5 ? "text-red-400" : "text-gray-300"}`}
           >
-            {phase === "passed" ? "—" : `${secondsLeft}s`}
+            {phase === "passed" ? "-" : `${secondsLeft}s`}
           </span>
         </div>
 

@@ -1,4 +1,4 @@
-"""Build CodeLogic_Diagrams.docx — flowchart, use case, DFD L0, DFD L1."""
+"""Build CodeLogic_Diagrams.docx - flowchart, use case, DFD L0, DFD L1."""
 from pathlib import Path
 from docx import Document
 from docx.shared import Inches, Pt, RGBColor

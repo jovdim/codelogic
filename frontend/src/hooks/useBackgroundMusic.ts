@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 
 const STORAGE_KEY = "bg-music-playing";
 
-// Global singleton — survives component mount/unmount and page navigation
+// Global singleton - survives component mount/unmount and page navigation
 let globalAudio: HTMLAudioElement | null = null;
 let globalIsPlaying = false;
 let resumeListenerAdded = false;
@@ -52,7 +52,7 @@ export function useBackgroundMusic() {
     const audio = getAudio();
     if (localStorage.getItem(STORAGE_KEY) === "true" && !globalIsPlaying && audio.paused) {
       audio.play().then(() => notify(true)).catch(() => {
-        // Autoplay blocked — resume on first user interaction
+        // Autoplay blocked - resume on first user interaction
         addResumeListener();
         // Still show as "playing" since it will resume on interaction
         notify(true);

@@ -78,7 +78,7 @@ class UserAdmin(BaseUserAdmin):
         }),
         ('Login face verification', {
             'fields': ('login_face_display',),
-            'description': 'Every face snapshot captured after this user logged in — newest first.',
+            'description': 'Every face snapshot captured after this user logged in - newest first.',
         }),
         # Per-user stacked quiz history: each attempt is a section with the
         # start-of-quiz verification photo + all in-quiz monitor snapshots
@@ -103,7 +103,7 @@ class UserAdmin(BaseUserAdmin):
     def save_model(self, request, obj, form, change):
         # Auto-verify users created through the admin. An admin adding a
         # user is vouching for the account, so requiring them to also
-        # tick `is_email_verified` (or run the bulk action) is a footgun —
+        # tick `is_email_verified` (or run the bulk action) is a footgun -
         # the user can't log in until they do, and the error message
         # ("Please verify your email") points to a flow that doesn't apply.
         # `change` is False on add, True on edit; on edit we leave the

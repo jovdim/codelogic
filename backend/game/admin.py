@@ -58,7 +58,7 @@ def _user_quiz_history_html(user):
         # offset by 8 hours.
         when_str = (
             timezone.localtime(a.started_at).strftime('%b %d, %Y %I:%M %p')
-            if a.started_at else '—'
+            if a.started_at else '-'
         )
 
         # Duration from start-click to result-screen.
@@ -80,7 +80,7 @@ def _user_quiz_history_html(user):
             '<div style="margin-bottom:12px;border:1px solid #2d2d44;'
             'border-radius:12px;overflow:hidden;background:#0f0f1a">'
             '<div style="padding:12px 16px;background:rgba(124,58,237,0.10)">'
-            '<div style="font-size:14px;font-weight:700;color:#fff">{} — Level {}</div>'
+            '<div style="font-size:14px;font-weight:700;color:#fff">{} - Level {}</div>'
             '<div style="font-size:12px;color:#cbd5e1;margin-top:4px">{} · {}{}</div>'
             '</div></div>',
             a.topic.name, a.level, status, when_str, duration_html,
@@ -412,11 +412,11 @@ class QuestionAdminForm(forms.ModelForm):
             if not cleaned.get('code_snippet'):
                 self.add_error('code_snippet', 'Find-the-Error questions need a code snippet.')
             if not cleaned.get('highlight_line'):
-                self.add_error('highlight_line', 'Find-the-Error questions need highlight_line set to the 1-based line number of the bug — this is the answer the user clicks.')
+                self.add_error('highlight_line', 'Find-the-Error questions need highlight_line set to the 1-based line number of the bug - this is the answer the user clicks.')
 
         elif qtype in ('fill-blank', 'output'):
             if not (cleaned.get('correct_text_answer') or '').strip():
-                self.add_error('correct_text_answer', f'{qtype.replace("-", " ").title()} questions need a correct_text_answer — the text the user must type.')
+                self.add_error('correct_text_answer', f'{qtype.replace("-", " ").title()} questions need a correct_text_answer - the text the user must type.')
             accepted = cleaned.get('accepted_answers')
             if accepted and not isinstance(accepted, list):
                 self.add_error('accepted_answers', 'accepted_answers must be a JSON list, e.g. ["foo", "bar"].')
@@ -443,12 +443,12 @@ class QuestionAdmin(admin.ModelAdmin):
     fieldsets = (
         ('Question', {
             'fields': ('topic', 'level', 'question_type', 'question_text'),
-            'description': 'Basic question information. Pick the type — the fields below will adapt.'
+            'description': 'Basic question information. Pick the type - the fields below will adapt.'
         }),
         ('Code Snippet', {
             'fields': ('code_snippet', 'highlight_line'),
             'classes': ('cl-fs-code',),
-            'description': 'Required for Find-the-Error. Recommended for Output / Fill-in-the-Blank. Optional for Multiple Choice. The "Highlight line" field only applies to Find-the-Error — it is the 1-based buggy line, which is also the line the user must click to answer.'
+            'description': 'Required for Find-the-Error. Recommended for Output / Fill-in-the-Blank. Optional for Multiple Choice. The "Highlight line" field only applies to Find-the-Error - it is the 1-based buggy line, which is also the line the user must click to answer.'
         }),
         ('Multiple-Choice Options', {
             'fields': ('options', 'correct_answer'),
@@ -463,7 +463,7 @@ class QuestionAdmin(admin.ModelAdmin):
         ('Explanation', {
             'fields': ('explanation',),
             'classes': ('collapse',),
-            'description': 'Shown after answering — explain why the answer is correct.'
+            'description': 'Shown after answering - explain why the answer is correct.'
         }),
         ('Settings', {
             'fields': ('xp_reward', 'order', 'is_active')
@@ -604,7 +604,7 @@ class LearningResourceAdmin(admin.ModelAdmin):
 # CERTIFICATE ADMIN
 # ============================================================
 
-# Hidden from the admin sidebar on 2026-05-22 — the Certificate model is still
+# Hidden from the admin sidebar on 2026-05-22 - the Certificate model is still
 # read by the frontend cert pages (TopicWithProgressSerializer surfaces title +
 # description, /certificates uses get_title fallback). To re-enable admin
 # customization of per-topic cert title/description, just uncomment the

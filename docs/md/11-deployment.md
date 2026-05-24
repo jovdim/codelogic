@@ -6,11 +6,11 @@ Full step-by-step guide (with detail): [../DEPLOYMENT.md](../../DEPLOYMENT.md). 
 
 ## What You'll Use
 
-- **Vercel** — free, hosts the website.
-- **Digital Ocean** — hosts the server and the database. Around $20/month.
-- **Gmail** — sends emails (sign-up link, password reset).
+- **Vercel** - free, hosts the website.
+- **Digital Ocean** - hosts the server and the database. Around $20/month.
+- **Gmail** - sends emails (sign-up link, password reset).
 
-## Part 1 — Server on Digital Ocean
+## Part 1 - Server on Digital Ocean
 
 1. **Make a database.**
    - On Digital Ocean → Create → Databases → PostgreSQL.
@@ -46,7 +46,7 @@ python manage.py createsuperuser
 python manage.py seed_questions
 ```
 
-## Part 2 — Gmail App Password
+## Part 2 - Gmail App Password
 
 Gmail won't let you use your normal password for this. You need an **App Password**.
 
@@ -55,7 +55,7 @@ Gmail won't let you use your normal password for this. You need an **App Passwor
 3. Pick "Mail" → "Other" → type "CodeLogic".
 4. Copy the 16-character password. Remove the spaces. That's your `EMAIL_HOST_PASSWORD`.
 
-## Part 3 — Website on Vercel
+## Part 3 - Website on Vercel
 
 1. Go to https://vercel.com and sign in.
 2. New Project → import your GitHub repo.
@@ -68,7 +68,7 @@ NEXT_PUBLIC_API_URL=https://<your-app-name>.ondigitalocean.app/api
 
 5. Click Deploy. When done, you'll get a URL like `https://your-site.vercel.app`.
 
-## Part 4 — Connect Them
+## Part 4 - Connect Them
 
 Go back to Digital Ocean → your app → Settings. Update these to your Vercel URL:
 
@@ -79,13 +79,13 @@ FRONTEND_URL=https://<your-site>.vercel.app
 
 Save. It redeploys automatically.
 
-## Part 5 — Test It
+## Part 5 - Test It
 
 - Open your Vercel URL.
 - Register. Did you get the email?
 - Click the link in the email. Can you log in?
 - Play a quiz. Does the score save?
-- Admin panel at `https://<your-app>.ondigitalocean.app/admin/` — can you log in?
+- Admin panel at `https://<your-app>.ondigitalocean.app/admin/` - can you log in?
 
 ## Common Problems
 

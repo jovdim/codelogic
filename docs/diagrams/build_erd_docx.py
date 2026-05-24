@@ -1,4 +1,4 @@
-"""Build CodeLogic_ERD.docx — ERD only, portrait."""
+"""Build CodeLogic_ERD.docx - ERD only, portrait."""
 from pathlib import Path
 from docx import Document
 from docx.shared import Inches, Pt

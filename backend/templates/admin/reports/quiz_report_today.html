@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Daily Quiz Report - {{ report_date }}</title>
+<style>
+  @page {
+    size: A4 portrait;
+    margin: 14mm 12mm;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Helvetica', 'Arial', sans-serif;
+    color: #1f2937;
+    font-size: 11px;
+    line-height: 1.4;
+    margin: 0;
+    padding: 18px 20px;
+  }
+  @media print {
+    /* Print uses @page margins; remove screen padding so content fills page. */
+    body { padding: 0; }
+  }
+  .header {
+    border-bottom: 3px solid #7c3aed;
+    padding-bottom: 10px;
+    margin-bottom: 16px;
+  }
+  .header h1 {
+    margin: 0;
+    font-size: 22px;
+    color: #1f2937;
+    font-weight: 800;
+  }
+  .header .sub {
+    color: #6b7280;
+    font-size: 11px;
+    margin-top: 2px;
+  }
+  .header .gen {
+    color: #9ca3af;
+    font-size: 10px;
+    margin-top: 4px;
+  }
+
+  .summary {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .summary .card {
+    flex: 1;
+    border: 1px solid #e5e7eb;
+    background: #fafafa;
+    border-radius: 6px;
+    padding: 10px 14px;
+  }
+  .summary .label {
+    font-size: 9px;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin-bottom: 3px;
+  }
+  .summary .value {
+    font-size: 22px;
+    font-weight: 800;
+    color: #1f2937;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9.5px;
+    table-layout: fixed;
+  }
+  thead th {
+    background: #f3f4f6;
+    color: #374151;
+    text-align: left;
+    padding: 6px 7px;
+    border-bottom: 2px solid #d1d5db;
+    font-size: 8.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+  tbody td {
+    padding: 6px 7px;
+    border-bottom: 1px solid #e5e7eb;
+    vertical-align: top;
+    overflow-wrap: anywhere;
+  }
+  tbody tr:nth-child(even) td { background: #fafafa; }
+  /* Column widths tuned for portrait A4. Numbers add to ~100% of usable width. */
+  th.col-num     { width: 4%; }
+  th.col-student { width: 18%; }
+  th.col-topic   { width: 22%; }
+  th.col-level   { width: 6%; }
+  th.col-when    { width: 18%; }
+  th.col-dur     { width: 10%; }
+  th.col-score   { width: 9%; }
+  /* When the Student column is hidden (per-user report), other columns expand. */
+  table.no-student th.col-topic { width: 28%; }
+  table.no-student th.col-when  { width: 22%; }
+
+  .pill {
+    display: inline-block;
+    padding: 3px 9px;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 9.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    white-space: nowrap;
+    background: #f3f4f6;
+    color: #1f2937;
+    border: 1px solid #d1d5db;
+  }
+  /* Tiny text-only color hint so the three statuses are still scannable
+     in print, without painting whole rectangles. */
+  .pill.passed      { color: #15803d; }
+  .pill.failed      { color: #b91c1c; }
+  .pill.in-progress { color: #92400e; }
+
+  .empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: #6b7280;
+    background: #f9fafb;
+    border: 1px dashed #d1d5db;
+    border-radius: 8px;
+  }
+  .footer {
+    margin-top: 20px;
+    color: #9ca3af;
+    font-size: 9px;
+    text-align: center;
+    border-top: 1px solid #e5e7eb;
+    padding-top: 10px;
+  }
+  /* "Print" button only appears when this template is served as raw HTML
+     (i.e. no PDF engine is available at all — rare). Normally the endpoint
+     returns a PDF directly. */
+  .print-bar {
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .print-bar button {
+    background: #1f2937;
+    color: #fff;
+    border: 0;
+    padding: 8px 14px;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .print-bar button:hover { background: #374151; }
+  @media print { .print-bar { display: none !important; } }
+</style>
+</head>
+<body>
+<div class="print-bar">
+  <button onclick="window.print()" type="button">Print / Save as PDF</button>
+</div>
+
+<div class="header">
+  <h1>{{ report_title|default:"Daily Quiz Report" }}</h1>
+  <div class="sub">{{ report_subtitle }}</div>
+  {% if report_user %}
+    <div class="sub" style="margin-top: 4px"><strong>{{ report_user.name }}</strong> &middot; {{ report_user.email }}</div>
+  {% endif %}
+  <div class="gen">Generated at {{ generated_at }}</div>
+</div>
+
+<div class="summary">
+  <div class="card total">
+    <div class="label">Total Attempts</div>
+    <div class="value">{{ total_count }}</div>
+  </div>
+  <div class="card passed">
+    <div class="label">Passed</div>
+    <div class="value">{{ passed_count }}</div>
+  </div>
+  <div class="card failed">
+    <div class="label">Failed</div>
+    <div class="value">{{ failed_count }}</div>
+  </div>
+</div>
+
+{% if rows %}
+  <table{% if not show_student_column %} class="no-student"{% endif %}>
+    <thead>
+      <tr>
+        <th class="col-num">#</th>
+        {% if show_student_column %}<th class="col-student">Student</th>{% endif %}
+        <th class="col-topic">Topic</th>
+        <th class="col-level">Level</th>
+        <th class="col-when">When</th>
+        <th class="col-dur">Duration</th>
+        <th class="col-score">Score</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+      <tr>
+        <td>{{ forloop.counter }}</td>
+        {% if show_student_column %}
+          <td class="student"><strong>{{ r.student_name }}</strong></td>
+        {% endif %}
+        <td>{{ r.topic }}<div style="color:#9ca3af;font-size:8.5px">{{ r.category }}</div></td>
+        <td>L{{ r.level }}</td>
+        <td>
+          <div>{{ r.started_at }}</div>
+          {% if r.completed_at and r.completed_at != '—' %}
+            <div style="color:#9ca3af;font-size:8.5px">to {{ r.completed_at }}</div>
+          {% endif %}
+        </td>
+        <td>{{ r.duration }}</td>
+        <td>{{ r.score }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% else %}
+  <div class="empty">
+    No quiz attempts recorded for today yet.
+  </div>
+{% endif %}
+
+<div class="footer">
+  CodeLogic Quiz Report &middot; {{ report_subtitle }}
+</div>
+
+</body>
+</html>

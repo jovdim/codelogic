@@ -66,9 +66,9 @@ Or in a CSS class (globals.css):
 
 Three fonts loaded in `src/app/layout.tsx` using `next/font/google`:
 
-- **Geist** — main body text.
-- **Geist Mono** — code blocks.
-- **Space Grotesk** — display/titles.
+- **Geist** - main body text.
+- **Geist Mono** - code blocks.
+- **Space Grotesk** - display/titles.
 
 Each is wired up as a CSS variable: `--font-geist-sans`, `--font-geist-mono`, `--font-display`.
 
@@ -76,25 +76,25 @@ Each is wired up as a CSS variable: `--font-geist-sans`, `--font-geist-mono`, `-
 
 There are some custom utility classes in `globals.css` for the pixel-art look:
 
-- `.pixel-box` — boxes with sharp corners, pixel-art-style border.
-- `.btn-primary`, `.btn-secondary` — main button styles.
-- `.input-field` — text inputs.
+- `.pixel-box` - boxes with sharp corners, pixel-art-style border.
+- `.btn-primary`, `.btn-secondary` - main button styles.
+- `.input-field` - text inputs.
 
 Check `globals.css` for the full list.
 
 ## Icons
 
-- **Lucide React** (`lucide-react`) — the default icon pack. Example: `<Heart className="w-5 h-5" />`.
-- **React Icons** (`react-icons/di`) — for language logos: DiPython, DiJavascript1, etc.
-- **TopicIcon** component — use this when you need a topic icon with automatic fallbacks.
+- **Lucide React** (`lucide-react`) - the default icon pack. Example: `<Heart className="w-5 h-5" />`.
+- **React Icons** (`react-icons/di`) - for language logos: DiPython, DiJavascript1, etc.
+- **TopicIcon** component - use this when you need a topic icon with automatic fallbacks.
 
 ## Responsive
 
 The site works on mobile. Key classes:
 
-- `md:hidden` — hide on medium screens and up.
-- `md:flex` — show as flex on medium screens and up.
-- `max-w-7xl mx-auto` — center content with a max width.
+- `md:hidden` - hide on medium screens and up.
+- `md:flex` - show as flex on medium screens and up.
+- `max-w-7xl mx-auto` - center content with a max width.
 
 The sidebar turns into a slide-out menu on mobile (uses the hamburger icon).
 

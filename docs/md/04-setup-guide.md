@@ -9,14 +9,14 @@ This gets CodeLogic running on your own computer so you can play with it. If you
 - **Git**
 - (Optional) **PostgreSQL**. If you don't install it, the app uses a simple file-based database called SQLite instead.
 
-## Step 1 — Get the Code
+## Step 1 - Get the Code
 
 ```bash
 git clone <your-repo-url> codelogic
 cd codelogic
 ```
 
-## Step 2 — Set Up the Backend
+## Step 2 - Set Up the Backend
 
 ```bash
 cd backend
@@ -59,7 +59,7 @@ python manage.py runserver            # Start the server
 
 The server is now at **http://localhost:8000**. The admin panel is at **http://localhost:8000/admin/**.
 
-## Step 3 — Set Up the Frontend
+## Step 3 - Set Up the Frontend
 
 Open a second terminal window and run:
 
@@ -82,7 +82,7 @@ npm run dev
 
 The website is now at **http://localhost:3000**.
 
-## Step 4 — Try It Out
+## Step 4 - Try It Out
 
 1. Go to http://localhost:3000
 2. Click **Register** and make an account.

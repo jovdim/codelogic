@@ -47,15 +47,15 @@ play("levelComplete");
 
 Available sounds:
 
-- `correct` — MP3
-- `wrong` — MP3
-- `click` — MP3
-- `levelComplete` — MP3
-- `levelFailed` — MP3
-- `lessonAdvance` — MP3 (uses click sound)
-- `heartLost` — synth tones (three notes descending)
-- `timerTick` — synth tone (a short tick)
-- `countdown` — two synth beeps
+- `correct` - MP3
+- `wrong` - MP3
+- `click` - MP3
+- `levelComplete` - MP3
+- `levelFailed` - MP3
+- `lessonAdvance` - MP3 (uses click sound)
+- `heartLost` - synth tones (three notes descending)
+- `timerTick` - synth tone (a short tick)
+- `countdown` - two synth beeps
 
 All volumes default to `0.7`.
 

@@ -1,4 +1,4 @@
-"""DFD Level 0 (Context Diagram) for CodeLogic — arrows touch both endpoints."""
+"""DFD Level 0 (Context Diagram) for CodeLogic - arrows touch both endpoints."""
 import math
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont

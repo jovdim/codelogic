@@ -34,8 +34,8 @@ A minimal page shell for login/register/verify pages. Centered card with the log
 
 ### `RouteGuards.tsx`
 Two components:
-- `<ProtectedRoute>` — blocks unauthenticated users.
-- `<PublicRoute>` — redirects authenticated users away.
+- `<ProtectedRoute>` - blocks unauthenticated users.
+- `<PublicRoute>` - redirects authenticated users away.
 
 Both show a loading spinner while checking.
 
@@ -47,16 +47,16 @@ A modal shown on the landing page. When guests click "Start Playing", it asks th
 ### `Modal.tsx`
 A generic pop-up modal. Exports:
 
-- `<Modal>` — the container.
-- `<ModalButton>` — styled button to use inside.
+- `<Modal>` - the container.
+- `<ModalButton>` - styled button to use inside.
 
 Used for logout confirmation, level failed, level complete, etc.
 
 ### `ScrollAnimations.tsx`
 Three small components:
-- `<ScrollReveal>` — fades elements in as you scroll to them.
-- `<ScrollProgressBar>` — a bar at the top of the page that fills as you scroll.
-- `<ScrollToTop>` — a button bottom-right that scrolls to top.
+- `<ScrollReveal>` - fades elements in as you scroll to them.
+- `<ScrollProgressBar>` - a bar at the top of the page that fills as you scroll.
+- `<ScrollToTop>` - a button bottom-right that scrolls to top.
 
 ### `TopicIcon.tsx`
 Inline SVG icons for each programming language. Fallback to a generic code icon.
@@ -74,7 +74,7 @@ Attaches a click listener to the whole document. Plays a click sound on any butt
 
 If you're new, start with:
 
-1. `layout/Navbar.tsx` — to see how the public shell works.
-2. `layout/Sidebar.tsx` — for the logged-in shell.
-3. `auth/RouteGuards.tsx` — for how pages are protected.
-4. `ui/Modal.tsx` — for how popups work.
+1. `layout/Navbar.tsx` - to see how the public shell works.
+2. `layout/Sidebar.tsx` - for the logged-in shell.
+3. `auth/RouteGuards.tsx` - for how pages are protected.
+4. `ui/Modal.tsx` - for how popups work.

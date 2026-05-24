@@ -6,7 +6,7 @@ How the website gets and saves data.
 
 File: `src/lib/api.ts`
 
-It uses **Axios** — a small library for making HTTP requests.
+It uses **Axios** - a small library for making HTTP requests.
 
 It exports two grouped helpers:
 
@@ -52,8 +52,8 @@ gameAPI.getResource(slug)
 
 When you log in, the server sends two tokens:
 
-- `access_token` — used on every request
-- `refresh_token` — used when the access one expires
+- `access_token` - used on every request
+- `refresh_token` - used when the access one expires
 
 Both are saved in `localStorage`.
 

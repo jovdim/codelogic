@@ -145,6 +145,10 @@ export default function DashboardPage() {
   const [dailyChallenges, setDailyChallenges] = useState<DailyChallenge[]>([]);
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
   const [hoursUntilReset, setHoursUntilReset] = useState(8);
+  // True once the user has at least one QuizAttempt (started, even if not finished).
+  // Drives the Start-vs-Continue Playing label so brand-new accounts don't get
+  // "Continue Playing" before they've ever played anything.
+  const [hasQuizAttempts, setHasQuizAttempts] = useState(false);
   const [popularTopics, setPopularTopics] = useState<PopularTopic[]>([]);
   const [popularTopicsLoading, setPopularTopicsLoading] = useState(true);
   const [loading, setLoading] = useState(true);
@@ -232,6 +236,7 @@ export default function DashboardPage() {
         setDailyChallenges(response.data.daily_challenges || []);
         setRecentActivity(response.data.recent_activity || []);
         setHoursUntilReset(response.data.hours_until_reset || 8);
+        setHasQuizAttempts(!!response.data.has_quiz_attempts);
       } catch (error) {
         console.error("Failed to fetch daily stats:", error);
         // Use default empty data
@@ -424,16 +429,18 @@ export default function DashboardPage() {
                     </div>
                     <div>
                       <h2 className="text-xl font-bold text-white group-hover:text-cyan-400 transition-colors">
-                        Continue Playing
+                        {hasQuizAttempts ? "Continue Playing" : "Start Playing"}
                       </h2>
                       <p className="text-gray-400 text-sm">
-                        Jump back into quizzes and earn XP
+                        {hasQuizAttempts
+                          ? "Jump back into quizzes and earn XP"
+                          : "Take your first quiz and earn XP"}
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 text-cyan-400">
                     <span className="hidden sm:block font-medium">
-                      Play Now
+                      {hasQuizAttempts ? "Play Now" : "Get Started"}
                     </span>
                     <ChevronRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
                   </div>

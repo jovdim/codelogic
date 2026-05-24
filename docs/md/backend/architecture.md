@@ -34,10 +34,10 @@ Everything about the quiz: categories, topics, questions, lessons, progress, cer
 
 ## Login System
 
-Login is done with **JWT tokens** — two small strings:
+Login is done with **JWT tokens** - two small strings:
 
-- **Access token** — works for 60 minutes.
-- **Refresh token** — works for 7 days. Used to get a new access token.
+- **Access token** - works for 60 minutes.
+- **Refresh token** - works for 7 days. Used to get a new access token.
 
 Both are made by a library called `djangorestframework-simplejwt`. Every logged-in API call sends the access token in the `Authorization` header.
 

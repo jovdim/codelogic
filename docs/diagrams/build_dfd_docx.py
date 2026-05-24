@@ -1,4 +1,4 @@
-"""Build CodeLogic_DFD.docx — Level 0 (landscape) + Level 1 (portrait)."""
+"""Build CodeLogic_DFD.docx - Level 0 (landscape) + Level 1 (portrait)."""
 from pathlib import Path
 from docx import Document
 from docx.shared import Inches, Pt
@@ -28,7 +28,7 @@ style.font.size = Pt(11)
 def add_figure(image_path: Path, fig_num: int, caption: str, width_in: float):
     title = doc.add_paragraph()
     title.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    run = title.add_run(f"CodeLogic: Data Flow Diagram — Level {fig_num - 1}")
+    run = title.add_run(f"CodeLogic: Data Flow Diagram - Level {fig_num - 1}")
     run.bold = True
     run.font.size = Pt(18)
 

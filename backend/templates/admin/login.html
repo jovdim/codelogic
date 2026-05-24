@@ -91,7 +91,7 @@
     }
     .cl-brand-tag svg { width: 12px; height: 12px; color: var(--primary-light); }
 
-    /* Pixel-box card — same look as the frontend /login. */
+    /* Pixel-box card - same look as the frontend /login. */
     .cl-card {
       width: 100%;
       background: var(--card-bg);
@@ -194,7 +194,7 @@
 </head>
 <body>
   <div class="cl-login-shell">
-    <a href="/" class="cl-brand">
+    <a href="{{ frontend_url }}" class="cl-brand">
       <img src="{% static 'admin/img/codelogic-logo.svg' %}" alt="CodeLogic logo">
       <div class="cl-brand-text">
         <span class="cl-brand-name">CodeLogic</span>
@@ -266,7 +266,7 @@
       </form>
     </div>
 
-    <p class="cl-foot">Staff access only &middot; <a href="/">Back to site</a></p>
+    <p class="cl-foot">Staff access only &middot; <a href="{{ frontend_url }}">Back to site</a></p>
   </div>
 </body>
 </html>

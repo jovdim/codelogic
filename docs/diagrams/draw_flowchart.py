@@ -1,4 +1,4 @@
-"""Complete branched flowchart for CodeLogic — no connectors, direct arrows."""
+"""Complete branched flowchart for CodeLogic - no connectors, direct arrows."""
 import math
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont

@@ -10,7 +10,7 @@ How to actually use the site, for players.
 4. Check your email for a confirmation link. Click it.
 5. Go to **Login** and sign in.
 
-If the email doesn't come, go back to the login page — there's a **Resend** button.
+If the email doesn't come, go back to the login page - there's a **Resend** button.
 
 ## The Dashboard
 
@@ -19,9 +19,9 @@ After you log in, you land on the **Dashboard**. You'll see:
 - Your avatar, level, and XP bar.
 - How many hearts you have.
 - Your streak (days in a row you've played).
-- **Daily Challenges** — 3 small goals per day. Finish them for bonus XP.
-- **Recent Activity** — your last few quizzes.
-- **Topics** — jump into a topic and start playing.
+- **Daily Challenges** - 3 small goals per day. Finish them for bonus XP.
+- **Recent Activity** - your last few quizzes.
+- **Topics** - jump into a topic and start playing.
 
 ## Playing a Quiz
 
@@ -96,4 +96,4 @@ Your music choice is remembered across pages.
 
 - Read the lesson slides. They teach the answers.
 - If you run out of hearts, switch to a topic you know well, or take a break.
-- Daily challenges stack with normal XP — the fastest way to level up.
+- Daily challenges stack with normal XP - the fastest way to level up.

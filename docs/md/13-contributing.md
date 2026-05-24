@@ -10,10 +10,10 @@ See [How to Set It Up](./04-setup-guide.md).
 
 Use a short prefix followed by a plain description.
 
-- `feat:` — a new feature
-- `fix:` — a bug fix
-- `refactor:` — tidying up code
-- `docs:` — docs changes
+- `feat:` - a new feature
+- `fix:` - a bug fix
+- `refactor:` - tidying up code
+- `docs:` - docs changes
 
 Example: `feat: add cooldown to resend button`
 
@@ -61,10 +61,10 @@ Public? Wrap with `<Navbar>`.
 
 ## Style Rules
 
-- TypeScript on the frontend — don't use `any` without a reason.
+- TypeScript on the frontend - don't use `any` without a reason.
 - Use the color variables (like `var(--primary)`) instead of hard-coded hex codes.
 - Icons: Lucide first. Use `react-icons/di` for language logos.
-- Don't make your own `<audio>` tags — use the sound effect hook.
+- Don't make your own `<audio>` tags - use the sound effect hook.
 
 ## Testing
 
@@ -74,4 +74,4 @@ There are no automated tests yet. Before a pull request, test by hand:
 - Play a quiz and finish it (try both passing and failing)
 - Lose all hearts and check the message
 - Finish a full topic and check the certificate
-- Toggle music and navigate pages — it should keep playing
+- Toggle music and navigate pages - it should keep playing

@@ -29,7 +29,7 @@ if DEBUG:
         '0.0.0.0',
     ]
     # Show toolbar on all requests (including AJAX/API).
-    # During tests, suppress the toolbar entirely — its rendering needs the
+    # During tests, suppress the toolbar entirely - its rendering needs the
     # collected static manifest, which isn't built in test runs.
     DEBUG_TOOLBAR_CONFIG = {
         'SHOW_TOOLBAR_CALLBACK': lambda request: not TESTING,
@@ -83,6 +83,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'core.context_processors.frontend_url',
             ],
         },
     },

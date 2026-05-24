@@ -10,10 +10,10 @@ You pick a topic (like HTML, Python, CSS, or JavaScript). The topic has **15 lev
 
 There are four kinds of questions:
 
-- **Multiple choice** — pick the right answer from 4 options.
-- **Find the error** — find the broken line of code.
-- **What's the output** — say what the code will print.
-- **Fill in the blank** — put the missing word in the code.
+- **Multiple choice** - pick the right answer from 4 options.
+- **Find the error** - find the broken line of code.
+- **What's the output** - say what the code will print.
+- **Fill in the blank** - put the missing word in the code.
 
 ## Game Rules (short version)
 
@@ -35,7 +35,7 @@ There are four kinds of questions:
 
 ## Other Features
 
-- **Learning Resources** — a section with free PDF guides you can read.
-- **Profile** — pick one of 5 avatars, set a display name and a short bio.
-- **Music and sound** — background music and sound effects you can turn on or off.
-- **Admin panel** — a website admins use to add topics, questions, and lessons.
+- **Learning Resources** - a section with free PDF guides you can read.
+- **Profile** - pick one of 5 avatars, set a display name and a short bio.
+- **Music and sound** - background music and sound effects you can turn on or off.
+- **Admin panel** - a website admins use to add topics, questions, and lessons.

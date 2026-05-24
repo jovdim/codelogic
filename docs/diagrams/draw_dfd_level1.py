@@ -1,4 +1,4 @@
-"""DFD Level 1 for CodeLogic — one process per row, FOSSH style."""
+"""DFD Level 1 for CodeLogic - one process per row, FOSSH style."""
 import math
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont

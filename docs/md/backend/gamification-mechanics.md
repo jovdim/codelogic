@@ -6,7 +6,7 @@ Exactly how the numbers work.
 
 You earn XP by answering questions right.
 
-- **Each correct answer:** 10 XP (the default `xp_reward` on each question — an admin can change it per question)
+- **Each correct answer:** 10 XP (the default `xp_reward` on each question - an admin can change it per question)
 - **Perfect score on a quiz:** +50 bonus
 - **No hearts lost during a quiz:** +25 bonus
 - **Wrong answer:** 0 XP
@@ -52,7 +52,7 @@ Every day you play, the streak goes up by 1. Miss a day, it resets.
 - Played **yesterday**? +1.
 - Missed a day? Reset to 1.
 
-Your **longest streak** is separate — it only goes up and stays there.
+Your **longest streak** is separate - it only goes up and stays there.
 
 ## Stars
 
@@ -85,9 +85,9 @@ Example: `CL-JAVA-A1B2C3D4`
 
 Three challenges per day. They reset at midnight (Asia/Manila time).
 
-1. **Quick Learner** — complete 3 quizzes today. +150 XP
-2. **Perfect Score** — get 100% on any quiz. +200 XP
-3. **Streak Master** — get 5 correct in a row in one quiz. +100 XP
+1. **Quick Learner** - complete 3 quizzes today. +150 XP
+2. **Perfect Score** - get 100% on any quiz. +200 XP
+3. **Streak Master** - get 5 correct in a row in one quiz. +100 XP
 
 ## Leaderboard
 

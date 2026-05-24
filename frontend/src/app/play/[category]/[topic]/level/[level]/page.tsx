@@ -142,6 +142,10 @@ export default function LevelQuizPage() {
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [currentLesson, setCurrentLesson] = useState(0);
   const [showingLessons, setShowingLessons] = useState(true);
+  // What the student has typed into the type-along editor for the current lesson.
+  // Reset each time the lesson advances. The Continue button on a lesson with a
+  // code_example stays disabled until the typed code matches line-by-line.
+  const [lessonTyped, setLessonTyped] = useState("");
   const [questions, setQuestions] = useState<Question[]>([]);
   const [attemptId, setAttemptId] = useState<string>("");
   const [loading, setLoading] = useState(true);
@@ -149,7 +153,7 @@ export default function LevelQuizPage() {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [typedAnswer, setTypedAnswer] = useState("");
-  // For typed / find-error questions the server is authoritative — store its
+  // For typed / find-error questions the server is authoritative - store its
   // verdict so the UI can show correct/wrong without trusting the client.
   const [serverVerdict, setServerVerdict] = useState<{
     correct: boolean;
@@ -218,6 +222,7 @@ export default function LevelQuizPage() {
       const lessonData = response.data.lessons || [];
       setLessons(lessonData);
       setCurrentLesson(0);
+      setLessonTyped("");
       setShowingLessons(lessonData.length > 0);
       setQuestions(response.data.questions);
       setAttemptId(response.data.attempt_id);
@@ -260,6 +265,9 @@ export default function LevelQuizPage() {
 
   // Lesson navigation
   const nextLesson = () => {
+    // Clear the type-along editor for the next lesson - otherwise the prior
+    // lesson's typed text would carry over and either auto-complete or look broken.
+    setLessonTyped("");
     if (currentLesson < lessons.length - 1) {
       setCurrentLesson(prev => prev + 1);
     } else {
@@ -357,7 +365,7 @@ export default function LevelQuizPage() {
   ]);
 
   // Send the answer to the backend and apply the result. Used by all four
-  // question types — `answerInt` is set for MC + find-error (option index /
+  // question types - `answerInt` is set for MC + find-error (option index /
   // line number), `answerText` is set for fill-blank + output.
   const submitToBackend = async (payload: { answerInt?: number; answerText?: string }) => {
     if (!question || isAnswered || submitting) return;
@@ -452,6 +460,7 @@ export default function LevelQuizPage() {
     setCurrentQuestion(0);
     setSelectedAnswer(null);
     setTypedAnswer("");
+    setLessonTyped("");
     setServerVerdict(null);
     setIsAnswered(false);
     setScore(0);
@@ -515,7 +524,7 @@ export default function LevelQuizPage() {
             attempt_id: attemptId,
             hearts_lost: heartsLost,
           });
-          // Backend is authoritative for score/xp/stars — sync local state so the
+          // Backend is authoritative for score/xp/stars - sync local state so the
           // result modal can never disagree with what gets stored.
           if (response.data.xp_earned !== undefined) {
             setXpEarned(response.data.xp_earned);
@@ -756,63 +765,152 @@ export default function LevelQuizPage() {
               <p className="text-gray-300 text-base leading-relaxed pl-[52px]">{lesson.content}</p>
             </div>
 
-            {/* Code example */}
-            {lesson.code_example && (
-              <div className="mb-6 pixel-box overflow-hidden animate-in slide-in-from-right-4 duration-700 delay-400">
-                {/* Terminal Header */}
-                <div className="flex items-center justify-between px-4 py-3 bg-[#1a1a2e] border-b border-[#2d2d44]">
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-1.5">
-                      <Circle className="w-3 h-3 text-red-500 fill-red-500" />
-                      <Circle className="w-3 h-3 text-yellow-500 fill-yellow-500" />
-                      <Circle className="w-3 h-3 text-green-500 fill-green-500" />
-                    </div>
-                    <span className="text-xs text-gray-400 font-medium">Example</span>
-                  </div>
-                  <div className="flex items-center gap-2 px-3 py-1 bg-[#0f0f1a] rounded border border-[#2d2d44]">
-                    <span className="text-xs text-gray-400 font-medium">code</span>
-                  </div>
-                  <div className="w-12" />
-                </div>
-                {/* Code Content */}
-                <div className="bg-[#0f0f1a] p-4 font-mono text-sm overflow-x-auto">
-                  {lesson.code_example.split("\n").map((line, idx) => (
-                    <div key={idx} className="flex items-start leading-6">
-                      <span className="w-8 text-gray-600 select-none text-right pr-4 shrink-0">{idx + 1}</span>
-                      <code className="flex-1">{highlightCode(line)}</code>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            {(() => {
+              // Type-along bookkeeping for this lesson. All derivations are
+              // pure-functional on `lesson.code_example` + `lessonTyped`, so
+              // they recompute on every keystroke without extra state.
+              const refLines = lesson.code_example ? lesson.code_example.split("\n") : [];
+              const typedLines = lessonTyped.split("\n");
+              const normalize = (s: string) => s.replace(/\s+$/, ""); // trim trailing ws only
+              const matchedAt = (idx: number): boolean => {
+                if (idx >= refLines.length) return false;
+                const t = typedLines[idx] ?? "";
+                return normalize(t) === normalize(refLines[idx]);
+              };
+              const matchedCount = refLines.reduce(
+                (acc, _, i) => acc + (matchedAt(i) ? 1 : 0),
+                0,
+              );
+              const typingRequired = refLines.length > 0;
+              const typingComplete = typingRequired && matchedCount === refLines.length;
+              const continueDisabled = typingRequired && !typingComplete;
 
-            {/* Tip box */}
-            {lesson.tip && (
-              <div className="mb-8 pixel-box p-4 border-l-4 border-purple-500 animate-in slide-in-from-bottom-4 duration-700 delay-600">
-                <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-purple-500/20 shrink-0 mt-0.5">
-                    <Lightbulb className="w-4 h-4 text-purple-400" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-purple-400 mb-1">Did you know?</p>
-                    <p className="text-gray-300 text-sm leading-relaxed">{lesson.tip}</p>
-                  </div>
-                </div>
-              </div>
-            )}
+              return (
+                <>
+                  {/* Reference code - same look as before, but each matched
+                      line lights up green as the student types it correctly. */}
+                  {lesson.code_example && (
+                    <div className="mb-6 pixel-box overflow-hidden animate-in slide-in-from-right-4 duration-700 delay-400">
+                      <div className="flex items-center justify-between px-4 py-3 bg-[#1a1a2e] border-b border-[#2d2d44]">
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-1.5">
+                            <Circle className="w-3 h-3 text-red-500 fill-red-500" />
+                            <Circle className="w-3 h-3 text-yellow-500 fill-yellow-500" />
+                            <Circle className="w-3 h-3 text-green-500 fill-green-500" />
+                          </div>
+                          <span className="text-xs text-gray-400 font-medium">Example</span>
+                        </div>
+                        <div className="flex items-center gap-2 px-3 py-1 bg-[#0f0f1a] rounded border border-[#2d2d44]">
+                          <span className="text-xs text-gray-400 font-medium">
+                            {matchedCount} / {refLines.length} lines
+                          </span>
+                        </div>
+                        <div className="w-12" />
+                      </div>
+                      <div className="bg-[#0f0f1a] p-4 font-mono text-sm overflow-x-auto">
+                        {refLines.map((line, idx) => {
+                          const ok = matchedAt(idx);
+                          return (
+                            <div
+                              key={idx}
+                              className={`flex items-start leading-6 ${
+                                ok ? "bg-green-500/10 -mx-4 px-4 border-l-2 border-green-500" : ""
+                              }`}
+                            >
+                              <span className={`w-8 select-none text-right pr-4 shrink-0 ${ok ? "text-green-500" : "text-gray-600"}`}>
+                                {idx + 1}
+                              </span>
+                              <code className="flex-1">{highlightCode(line)}</code>
+                              {ok && <Check className="w-4 h-4 text-green-500 ml-2 shrink-0 mt-1" />}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
 
-            {/* Got it button */}
-            <div className="flex justify-center animate-in fade-in duration-500 delay-800">
-              <button
-                onClick={nextLesson}
-                className="group px-8 py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-bold transition-all duration-300 ease-out pixel-box cursor-pointer transform hover:scale-105 hover:shadow-lg"
-              >
-                <div className="flex items-center gap-2">
-                  <span>{currentLesson < lessons.length - 1 ? "Got it" : "Start Quiz"}</span>
-                  <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
-                </div>
-              </button>
-            </div>
+                  {/* Type-along editor. Only shown when there IS code to type. */}
+                  {lesson.code_example && (
+                    <div className="mb-6 pixel-box overflow-hidden animate-in slide-in-from-left-4 duration-700 delay-500">
+                      <div className="flex items-center justify-between px-4 py-3 bg-[#1a1a2e] border-b border-[#2d2d44]">
+                        <div className="flex items-center gap-2">
+                          <Edit className="w-3.5 h-3.5 text-purple-400" />
+                          <span className="text-xs text-purple-400 font-semibold uppercase tracking-wide">
+                            Type the code above
+                          </span>
+                        </div>
+                        {typingComplete ? (
+                          <div className="flex items-center gap-1.5 px-3 py-1 bg-green-500/15 rounded border border-green-500/40">
+                            <Check className="w-3 h-3 text-green-400" />
+                            <span className="text-xs text-green-400 font-bold">Matched</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 px-3 py-1 bg-[#0f0f1a] rounded border border-[#2d2d44]">
+                            <span className="text-xs text-gray-400 font-medium">your input</span>
+                          </div>
+                        )}
+                      </div>
+                      <textarea
+                        value={lessonTyped}
+                        onChange={(e) => setLessonTyped(e.target.value)}
+                        spellCheck={false}
+                        autoComplete="off"
+                        autoCapitalize="off"
+                        autoCorrect="off"
+                        placeholder="Start typing the code here, line by line..."
+                        rows={Math.max(refLines.length + 1, 4)}
+                        className={`w-full bg-[#0f0f1a] text-white font-mono text-sm leading-6 p-4 resize-none focus:outline-none placeholder-gray-600 ${
+                          typingComplete ? "border-l-2 border-green-500" : ""
+                        }`}
+                        style={{ tabSize: 2 }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Tip box */}
+                  {lesson.tip && (
+                    <div className="mb-8 pixel-box p-4 border-l-4 border-purple-500 animate-in slide-in-from-bottom-4 duration-700 delay-600">
+                      <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-purple-500/20 shrink-0 mt-0.5">
+                          <Lightbulb className="w-4 h-4 text-purple-400" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-purple-400 mb-1">Did you know?</p>
+                          <p className="text-gray-300 text-sm leading-relaxed">{lesson.tip}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Action row: Skip (only when type-along is active and unfinished)
+                      + Continue (disabled until matched). */}
+                  <div className="flex justify-center gap-3 animate-in fade-in duration-500 delay-800">
+                    {continueDisabled && (
+                      <button
+                        onClick={nextLesson}
+                        className="px-6 py-3 bg-transparent border-2 border-[#2d2d44] hover:border-[#3d3d5c] text-gray-400 hover:text-gray-300 rounded-xl font-bold transition-all cursor-pointer"
+                      >
+                        Skip
+                      </button>
+                    )}
+                    <button
+                      onClick={nextLesson}
+                      disabled={continueDisabled}
+                      className={`group px-8 py-3 rounded-xl font-bold transition-all duration-300 ease-out pixel-box ${
+                        continueDisabled
+                          ? "bg-purple-600/20 text-purple-300/40 cursor-not-allowed"
+                          : "bg-purple-600 hover:bg-purple-500 text-white cursor-pointer transform hover:scale-105 hover:shadow-lg"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span>{currentLesson < lessons.length - 1 ? "Got it" : "Start Quiz"}</span>
+                        <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
+                      </div>
+                    </button>
+                  </div>
+                </>
+              );
+            })()}
           </div>
         )}
 
@@ -965,7 +1063,7 @@ export default function LevelQuizPage() {
             </div>
           )}
 
-          {/* Multiple Choice — 4 button options. Also used as the fallback
+          {/* Multiple Choice - 4 button options. Also used as the fallback
               UI for find-error questions whose code is a single line (no
               "click the line" makes sense) or that lack highlight_line. */}
           {(question.question_type === "multiple-choice" ||
@@ -1031,7 +1129,7 @@ export default function LevelQuizPage() {
             </div>
           )}
 
-          {/* Typed input — Fill in the Blank / What's the Output */}
+          {/* Typed input - Fill in the Blank / What's the Output */}
           {(question.question_type === "fill-blank" ||
             question.question_type === "output") && (
             <div className="mb-8 animate-in slide-in-from-right-4 duration-500">

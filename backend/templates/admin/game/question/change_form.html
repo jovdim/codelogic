@@ -262,7 +262,7 @@
           </div>
         {% else %}
           <div class="cl-hero-stat">
-            <div class="cl-hero-stat-value" style="font-size: 13px; font-family: monospace; max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ original.correct_text_answer|default:"—"|truncatechars:24 }}</div>
+            <div class="cl-hero-stat-value" style="font-size: 13px; font-family: monospace; max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ original.correct_text_answer|default:"-"|truncatechars:24 }}</div>
             <div class="cl-hero-stat-label">Typed Answer</div>
           </div>
         {% endif %}

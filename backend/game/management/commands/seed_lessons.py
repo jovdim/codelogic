@@ -23,9 +23,9 @@ HTML_LESSONS = [
       '<!DOCTYPE html>\n<html>\n<head>\n  <title>My First Page</title>\n</head>\n<body>\n  <h1>Hello World</h1>\n  <p>Welcome to my website.</p>\n</body>\n</html>',
       'Every HTML page needs three things: <!DOCTYPE html> at the top, a <head> section for page info, and a <body> section for all visible content.'),
     L(1, 'Tags, Elements, and Structure',
-      'HTML uses opening tags like <p> and closing tags like </p> to wrap content. The <body> tag contains everything visible on the page. Headings range from <h1> (the largest) to <h6> (the smallest). Always close your tags properly — writing <title> instead of </title> is a common mistake.',
+      'HTML uses opening tags like <p> and closing tags like </p> to wrap content. The <body> tag contains everything visible on the page. Headings range from <h1> (the largest) to <h6> (the smallest). Always close your tags properly - writing <title> instead of </title> is a common mistake.',
       '<h1>Main Heading</h1>\n<h2>Subheading</h2>\n<h3>Smaller Heading</h3>\n<p>A paragraph of text.</p>\n<br>\n<!-- br is a self-closing tag -->',
-      'Some tags like <br> and <img> are self-closing — they do not need a separate closing tag. The <head> tag is for metadata, not visible content.'),
+      'Some tags like <br> and <img> are self-closing - they do not need a separate closing tag. The <head> tag is for metadata, not visible content.'),
 
     # Level 2: Text Elements
     L(2, 'Headings and Paragraphs',
@@ -41,9 +41,9 @@ HTML_LESSONS = [
     L(3, 'Creating Links with Anchor Tags',
       'The <a> tag creates clickable links. The href attribute tells the browser where to go when the link is clicked. You can link to external URLs, other pages on your site, or even sections within the same page. Use target="_blank" to open links in a new tab.',
       '<a href="https://example.com">Visit Example</a>\n<a href="about.html">About Page</a>\n<a href="#top" target="_blank">Open in New Tab</a>',
-      'The href attribute is required for links — without it, the <a> tag will not work as a link. Do not confuse href (for links) with src (for images).'),
+      'The href attribute is required for links - without it, the <a> tag will not work as a link. Do not confuse href (for links) with src (for images).'),
     L(3, 'Adding Images',
-      'The <img> tag displays images on a page. It requires two important attributes: src for the file path and alt for accessibility text. The alt attribute is essential — it describes the image for screen readers and shows text when the image cannot load.',
+      'The <img> tag displays images on a page. It requires two important attributes: src for the file path and alt for accessibility text. The alt attribute is essential - it describes the image for screen readers and shows text when the image cannot load.',
       '<img src="photo.jpg" alt="A sunset over the ocean">\n<img src="logo.png" alt="Company Logo" width="200">\n<!-- img is self-closing, no </img> needed -->',
       'Always include the alt attribute on every image. It is required for accessibility and helps search engines understand your images.'),
 
@@ -59,9 +59,9 @@ HTML_LESSONS = [
 
     # Level 5: Tables
     L(5, 'Building Tables',
-      'Tables organize data in rows and columns. The structure uses <table> as the container, <tr> for each row, <th> for header cells (bold and centered), and <td> for data cells. Table cells <td> must always be inside a <tr> row — putting <td> directly inside <table> is an error.',
+      'Tables organize data in rows and columns. The structure uses <table> as the container, <tr> for each row, <th> for header cells (bold and centered), and <td> for data cells. Table cells <td> must always be inside a <tr> row - putting <td> directly inside <table> is an error.',
       '<table>\n  <tr>\n    <th>Name</th>\n    <th>Age</th>\n  </tr>\n  <tr>\n    <td>Alice</td>\n    <td>25</td>\n  </tr>\n</table>',
-      'Remember: <tr> = table row, <th> = table header, <td> = table data. Never put <td> outside of a <tr> — that is a common mistake.'),
+      'Remember: <tr> = table row, <th> = table header, <td> = table data. Never put <td> outside of a <tr> - that is a common mistake.'),
     L(5, 'Spanning and Sectioning Tables',
       'Use colspan to make a cell span multiple columns and rowspan for multiple rows. Group table sections with <thead>, <tbody>, and <tfoot> for better structure and accessibility.',
       '<table>\n  <thead>\n    <tr><th colspan="2">Full Width Header</th></tr>\n  </thead>\n  <tbody>\n    <tr>\n      <td>Cell 1</td>\n      <td>Cell 2</td>\n    </tr>\n  </tbody>\n</table>',
@@ -69,29 +69,29 @@ HTML_LESSONS = [
 
     # Level 6: Forms Basics
     L(6, 'Creating Forms',
-      'The <form> tag collects user input and sends it to a server. The action attribute specifies WHERE to send the data, and the method attribute specifies HOW (GET or POST). Every input field should have a name attribute — without it, the data will not be submitted.',
+      'The <form> tag collects user input and sends it to a server. The action attribute specifies WHERE to send the data, and the method attribute specifies HOW (GET or POST). Every input field should have a name attribute - without it, the data will not be submitted.',
       '<form action="/submit" method="post">\n  <input type="text" name="username">\n  <button type="submit">Send</button>\n</form>',
       'The action attribute tells the form where to send data. The name attribute on inputs is required for the data to be included in the submission.'),
     L(6, 'Input Types',
       'The <input> tag creates form fields. The type attribute determines the field type: text for regular text, password for hidden text, email for email validation, and number for numeric values. Using the correct type enables built-in browser validation and shows the right keyboard on mobile.',
       '<input type="text" name="user" placeholder="Name">\n<input type="password" name="pass">\n<input type="email" name="email">\n<input type="number" name="age" min="1" max="120">',
-      'Always specify the type attribute — it defaults to "text" but being explicit makes your code clearer and enables proper validation.'),
+      'Always specify the type attribute - it defaults to "text" but being explicit makes your code clearer and enables proper validation.'),
 
     # Level 7: Form Elements
     L(7, 'Dropdowns and Textareas',
       'Use <select> with <option> tags to create dropdown menus. Use <textarea> for multi-line text input. Radio buttons in the same group must share the same name attribute so the browser knows they are related choices.',
       '<select name="color">\n  <option value="red">Red</option>\n  <option value="blue">Blue</option>\n</select>\n\n<textarea name="message" rows="4" cols="50">\nEnter your message</textarea>',
-      'Radio buttons in a group need the SAME name attribute. If they have different name values, users can select multiple — which defeats the purpose.'),
+      'Radio buttons in a group need the SAME name attribute. If they have different name values, users can select multiple - which defeats the purpose.'),
     L(7, 'Labels, Accessibility, and Checkboxes',
       'The <label> tag connects descriptive text to an input using the for attribute, which must match the input id. This makes forms accessible to screen readers and lets users click the label to focus the input. Checkboxes use type="checkbox".',
       '<label for="email">Email:</label>\n<input type="email" id="email" name="email">\n\n<input type="checkbox" id="agree" name="agree">\n<label for="agree">I agree</label>',
-      'The for attribute on <label> must match the id attribute on <input> — not the name. This is crucial for accessibility.'),
+      'The for attribute on <label> must match the id attribute on <input> - not the name. This is crucial for accessibility.'),
 
     # Level 8: Semantic HTML
     L(8, 'What is Semantic HTML?',
       'Semantic tags describe the meaning of content, not just how it looks. Key semantic tags include: <header> for site headers, <nav> for navigation links, <main> for primary content, <aside> for sidebars, and <footer> for page footers. They help search engines and screen readers understand your page structure.',
       '<header>Site Header</header>\n<nav>Navigation Links</nav>\n<main>Main Content</main>\n<aside>Sidebar Content</aside>\n<footer>Site Footer</footer>',
-      'Using semantic tags improves SEO and accessibility. <nav> is the correct tag for navigation — not <navigation> or <menu>.'),
+      'Using semantic tags improves SEO and accessibility. <nav> is the correct tag for navigation - not <navigation> or <menu>.'),
     L(8, 'Article, Section, and Page Structure',
       'Use <article> for self-contained content that could stand alone (like a blog post or news story). Use <section> to group related content together. The <aside> tag is specifically for sidebar content that is tangentially related to the main content.',
       '<article>\n  <h2>How to Learn HTML</h2>\n  <p>Start with the basics...</p>\n</article>\n\n<section>\n  <h2>Features</h2>\n  <p>Our product offers...</p>\n</section>',
@@ -101,24 +101,24 @@ HTML_LESSONS = [
     L(9, 'Modern Input Types',
       'HTML5 added input types with built-in validation: type="email" validates email format, type="date" shows a date picker, type="color" shows a color picker, and type="range" creates a slider. The required attribute prevents form submission until the field is filled.',
       '<input type="email" required>\n<input type="date" name="birthday">\n<input type="color" value="#ff0000">\n<input type="range" min="0" max="100" value="50">',
-      'The required attribute ensures a field must be filled. A range input value should always be between its min and max — a value of 150 with max="100" is invalid.'),
+      'The required attribute ensures a field must be filled. A range input value should always be between its min and max - a value of 150 with max="100" is invalid.'),
     L(9, 'Placeholder and Autofocus',
       'The placeholder attribute shows hint text inside an input that disappears when the user starts typing. The autofocus attribute automatically moves the cursor to that input when the page loads. These improve user experience but are not substitutes for labels.',
       '<input type="text" placeholder="Search...">\n<input type="text" autofocus>\n<input type="text" placeholder="Enter name" required>',
-      'Placeholder text is NOT a replacement for <label> — screen readers may not read it. Always pair inputs with proper labels.'),
+      'Placeholder text is NOT a replacement for <label> - screen readers may not read it. Always pair inputs with proper labels.'),
 
     # Level 10: Multimedia
     L(10, 'Video and Audio Elements',
       'HTML5 lets you embed video and audio directly using <video> and <audio> tags. The controls attribute adds play/pause buttons. The loop attribute makes media repeat, and autoplay starts playing automatically when the page loads.',
       '<video src="movie.mp4" controls width="640">\n  Your browser does not support video.\n</video>\n\n<audio src="song.mp3" controls></audio>',
-      'The controls attribute is essential — without it, users cannot play or pause the media. The text between tags is a fallback for unsupported browsers.'),
+      'The controls attribute is essential - without it, users cannot play or pause the media. The text between tags is a fallback for unsupported browsers.'),
     L(10, 'Source Elements and Formats',
       'Use multiple <source> tags inside <video> or <audio> to provide different file formats. The browser picks the first format it supports. MP4 is the most widely supported video format.',
       '<video controls>\n  <source src="movie.mp4" type="video/mp4">\n  <source src="movie.webm" type="video/webm">\n</video>',
       'MP4 works in almost all browsers. The autoplay attribute starts playback immediately, and loop makes it repeat continuously.'),
 
     # Level 11: Canvas and SVG
-    L(11, 'SVG — Scalable Vector Graphics',
+    L(11, 'SVG - Scalable Vector Graphics',
       'SVG stands for Scalable Vector Graphics. Unlike pixel-based images, SVGs never get blurry when zoomed because they are drawn with math. Common shapes include <circle> (with cx, cy, r attributes) and <rect> (with x, y, width, height attributes).',
       '<svg width="100" height="100">\n  <circle cx="50" cy="50" r="40"\n    fill="blue" stroke="black" />\n  <rect x="10" y="10" width="30"\n    height="30" fill="red" />\n</svg>',
       'SVG shapes: <circle> uses cx/cy (center) and r (radius). <rect> uses x/y (position) and width/height. SVGs can be styled with CSS.'),
@@ -131,7 +131,7 @@ HTML_LESSONS = [
     L(12, 'Meta Tags',
       'Meta tags go inside <head> and provide information about your page to browsers and search engines. The charset meta sets character encoding, the description meta helps SEO, and the viewport meta is essential for mobile-friendly design. Use the name attribute to specify the type of metadata.',
       '<head>\n  <meta charset="UTF-8">\n  <meta name="description"\n    content="Learn HTML basics">\n  <meta name="viewport"\n    content="width=device-width,\n    initial-scale=1">\n</head>',
-      'Meta description uses name="description" with a content attribute — writing <meta description="..."> is wrong. The viewport meta is essential for mobile.'),
+      'Meta description uses name="description" with a content attribute - writing <meta description="..."> is wrong. The viewport meta is essential for mobile.'),
     L(12, 'SEO Best Practices',
       'Good SEO starts with proper HTML: one <h1> per page, a descriptive <title> tag, meta descriptions, and the lang attribute on <html> to specify the page language. The lang attribute helps both search engines and accessibility tools understand your content.',
       '<html lang="en">\n<head>\n  <title>Learn HTML - Free Tutorial</title>\n  <meta name="description"\n    content="A beginner guide to HTML.">\n</head>',
@@ -151,11 +151,11 @@ HTML_LESSONS = [
     L(14, 'Datalist and Form Validation',
       'The <datalist> element provides autocomplete suggestions for an input. Unlike <select>, users can still type freely. The pattern attribute validates input using regular expressions, and the accept attribute on file inputs limits allowed file types.',
       '<input list="langs" placeholder="Language">\n<datalist id="langs">\n  <option value="JavaScript">\n  <option value="Python">\n</datalist>\n\n<input type="number" min="1" max="100">',
-      '<datalist> provides suggestions but allows free text input — unlike <select> which limits choices. The min and max attributes set valid ranges for number inputs.'),
+      '<datalist> provides suggestions but allows free text input - unlike <select> which limits choices. The min and max attributes set valid ranges for number inputs.'),
     L(14, 'Fieldset, Legend, and Pattern',
       'Use <fieldset> to group related form fields and <legend> to label the group. A <fieldset> without a <legend> is considered incomplete. The pattern attribute uses regex to validate input format.',
       '<fieldset>\n  <legend>Contact Info</legend>\n  <input type="email" required\n    placeholder="Email">\n  <input type="tel"\n    pattern="[0-9]{10}"\n    placeholder="Phone">\n</fieldset>',
-      'Always include a <legend> inside <fieldset> — it is important for accessibility. The pattern attribute uses regular expressions to validate data format.'),
+      'Always include a <legend> inside <fieldset> - it is important for accessibility. The pattern attribute uses regular expressions to validate data format.'),
 
     # Level 15: HTML APIs and Advanced Features
     L(15, 'Browser APIs and Interactive Attributes',
@@ -163,9 +163,9 @@ HTML_LESSONS = [
       '<div contenteditable="true">\n  Click to edit this text\n</div>\n\n<div draggable="true">\n  Drag me around\n</div>',
       'localStorage stores up to 5MB of data per domain and persists even after the browser is closed. contenteditable and draggable both take "true" as their value.'),
     L(15, 'Template and Details Elements',
-      'The <template> tag holds HTML content that is not rendered until JavaScript activates it — it is hidden by default. The <details> element creates a native collapsible section with <summary>, requiring no CSS or JavaScript to work.',
+      'The <template> tag holds HTML content that is not rendered until JavaScript activates it - it is hidden by default. The <details> element creates a native collapsible section with <summary>, requiring no CSS or JavaScript to work.',
       '<details>\n  <summary>Click to expand</summary>\n  <p>Hidden content here!</p>\n</details>\n\n<template id="card">\n  <div class="card">\n    <h3>Title</h3>\n  </div>\n</template>',
-      '<details> is interactive by default — no JavaScript needed. <template> holds content that is NOT rendered until used by JavaScript.'),
+      '<details> is interactive by default - no JavaScript needed. <template> holds content that is NOT rendered until used by JavaScript.'),
 ]
 
 

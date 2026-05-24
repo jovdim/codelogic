@@ -242,7 +242,7 @@ def main():
             convert(md, docx)
         except PermissionError:
             skipped.append(str(rel))
-            print(f"  SKIPPED (file in use — close it in Word): {rel}")
+            print(f"  SKIPPED (file in use - close it in Word): {rel}")
     print("Done.")
     if skipped:
         print(f"\n{len(skipped)} file(s) skipped. Close them in Word and rerun.")

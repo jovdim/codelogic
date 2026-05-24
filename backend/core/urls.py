@@ -1,16 +1,100 @@
 """
 URL configuration for CodeLogic API.
 """
+import os
+import pathlib
+import subprocess
+import tempfile
 from datetime import timedelta
 
 from django.contrib import admin
+from django.contrib.admin.views.decorators import staff_member_required
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.http import HttpResponse
 from django.shortcuts import render
+from django.template.loader import render_to_string
 from django.db.models import Count
 from django.db.models.functions import TruncDate
 from django.utils import timezone
+
+
+# ---------------------------------------------------------------------------
+# HTML -> PDF rendering (Chrome subprocess primary, WeasyPrint fallback)
+# Mirrors the strategy used by the certificate-PDF view in game/views.py.
+# Chrome's `--no-pdf-header-footer` produces a clean PDF without the
+# browser's date/page-number/URL strips, so the admin doesn't have to
+# remember to uncheck "Headers and footers" in the print dialog.
+# ---------------------------------------------------------------------------
+
+_CHROME_CANDIDATES = [
+    # DigitalOcean App Platform (bin/post_compile installs Chrome here).
+    os.path.expanduser('~/.local/chrome/chrome'),
+    # Windows
+    r'C:\Program Files\Google\Chrome\Application\chrome.exe',
+    r'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe',
+    os.path.expanduser(r'~\AppData\Local\Google\Chrome\Application\chrome.exe'),
+    # Linux
+    '/usr/bin/google-chrome',
+    '/usr/bin/google-chrome-stable',
+    '/usr/bin/chromium',
+    '/usr/bin/chromium-browser',
+    '/snap/bin/chromium',
+    # macOS
+    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+    '/Applications/Chromium.app/Contents/MacOS/Chromium',
+]
+
+
+def _find_chrome():
+    for c in _CHROME_CANDIDATES:
+        if c and os.path.exists(c):
+            return c
+    return None
+
+
+def _render_with_chrome(chrome_path, html_str):
+    """Run headless Chrome to render HTML -> PDF. Raises on failure."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp = pathlib.Path(tmpdir)
+        html_file = tmp / 'report.html'
+        pdf_file = tmp / 'report.pdf'
+        html_file.write_text(html_str, encoding='utf-8')
+        cmd = [
+            chrome_path,
+            '--headless=new',
+            '--disable-gpu',
+            '--no-sandbox',
+            '--disable-dev-shm-usage',
+            '--no-pdf-header-footer',
+            f'--print-to-pdf={pdf_file}',
+            html_file.as_uri(),
+        ]
+        result = subprocess.run(cmd, capture_output=True, timeout=30)
+        if result.returncode != 0 or not pdf_file.exists() or pdf_file.stat().st_size == 0:
+            err = result.stderr.decode('utf-8', errors='replace')[:300]
+            raise RuntimeError(f'chrome failed: {err}')
+        return pdf_file.read_bytes()
+
+
+def _html_to_pdf_bytes(html_str):
+    """Render HTML to PDF bytes. Returns None if no engine is available
+    (caller should fall back to serving HTML in that case)."""
+    chrome = _find_chrome()
+    if chrome is not None:
+        try:
+            return _render_with_chrome(chrome, html_str)
+        except Exception:  # noqa: BLE001 - fall through to WeasyPrint
+            pass
+    try:
+        from weasyprint import HTML  # type: ignore[import-not-found]
+    except ImportError:
+        return None
+    try:
+        return HTML(string=html_str).write_pdf()
+    except Exception:  # noqa: BLE001
+        return None
 
 CHART_HEIGHT_PX = 160  # matches .cl-chart height in dashboard.html
 
@@ -92,6 +176,191 @@ def admin_dashboard(request, extra_context=None):
     }
     return render(request, 'admin/dashboard.html', context)
 
+# ---------------------------------------------------------------------------
+# Daily quiz report (teacher's printable PDF)
+# ---------------------------------------------------------------------------
+
+def _quiz_attempt_status(attempt):
+    """Map a QuizAttempt to a human-readable status + a class tag for the PDF."""
+    if not attempt.completed:
+        return ('Not Finished', 'in-progress')
+    if attempt.passed:
+        return ('Passed', 'passed')
+    return ('Failed', 'failed')
+
+
+def _format_duration(started_at, completed_at):
+    """Return a short 'how long the quiz took' string, e.g. '5m 12s' or '1h 03m'.
+    Returns an em-dash if either timestamp is missing (i.e. quiz never finished)."""
+    if not started_at or not completed_at:
+        return '—'
+    secs = max(0, int((completed_at - started_at).total_seconds()))
+    if secs >= 3600:
+        return f'{secs // 3600}h {(secs % 3600) // 60:02d}m'
+    if secs >= 60:
+        return f'{secs // 60}m {secs % 60:02d}s'
+    return f'{secs}s'
+
+
+def _build_quiz_report_rows(attempts):
+    """Convert a queryset of QuizAttempt rows into the dict shape the report
+    template expects. Times are converted to the project TIME_ZONE here so
+    the template doesn't have to know about timezones."""
+    rows = []
+    for a in attempts:
+        status_label, status_class = _quiz_attempt_status(a)
+        started_local = timezone.localtime(a.started_at) if a.started_at else None
+        completed_local = timezone.localtime(a.completed_at) if a.completed_at else None
+        rows.append({
+            'student_name': a.user.get_display_name() if a.user else '—',
+            'student_email': a.user.email if a.user else '—',
+            'topic': a.topic.name if a.topic else '—',
+            'category': a.topic.category.name if a.topic and a.topic.category else '—',
+            'level': a.level,
+            'started_at': started_local.strftime('%b %d, %I:%M %p') if started_local else '—',
+            'completed_at': completed_local.strftime('%b %d, %I:%M %p') if completed_local else '—',
+            'duration': _format_duration(a.started_at, a.completed_at),
+            'score': f'{a.score}/{a.total_questions}' if a.completed else '—',
+            'status_label': status_label,
+            'status_class': status_class,
+        })
+    return rows
+
+
+def _render_quiz_report_response(request, context, filename_slug):
+    """Render the shared report template; return as PDF using the local
+    Chrome subprocess (primary) or WeasyPrint (fallback). If neither engine
+    is available, serve the HTML so the admin still sees the report and can
+    use the browser's Save-as-PDF as a last resort."""
+    html = render_to_string('admin/reports/quiz_report_today.html', context)
+    pdf_bytes = _html_to_pdf_bytes(html)
+    if pdf_bytes is None:
+        return HttpResponse(html)
+    response = HttpResponse(pdf_bytes, content_type='application/pdf')
+    # `inline` so the PDF previews in the browser (with the browser's built-in
+    # PDF viewer); the admin can still hit "Save" to keep a copy. Switch to
+    # `attachment` if you'd rather force a direct download.
+    response['Content-Disposition'] = f'inline; filename="{filename_slug}.pdf"'
+    return response
+
+
+@staff_member_required
+def daily_quiz_report_pdf(request):
+    """All-students quiz report across the last N days (Asia/Manila TZ).
+
+    Default is `days=1` (today only) to keep the original behavior. Teachers
+    can pass `?days=7` or any custom value to get a wider window.
+    """
+    from game.models import QuizAttempt
+    from datetime import timedelta as _td
+
+    try:
+        days = int(request.GET.get('days', 1))
+    except (TypeError, ValueError):
+        days = 1
+    days = max(1, min(days, 365))
+
+    today_local = timezone.localdate()
+    start_date = today_local - _td(days=days - 1)  # days=1 -> just today
+
+    attempts = (
+        QuizAttempt.objects
+        # Only completed attempts — teachers don't care about students who
+        # opened a quiz and walked away. Counts and rows both exclude these.
+        .filter(started_at__date__gte=start_date, completed=True)
+        .select_related('user', 'topic', 'topic__category')
+        .order_by('-started_at')
+    )
+    rows = _build_quiz_report_rows(attempts)
+
+    if days == 1:
+        title = 'Daily Quiz Report'
+        subtitle = f'For {today_local.strftime("%B %d, %Y")}'
+        slug = f'quiz-report-{today_local.isoformat()}'
+    else:
+        title = 'Quiz Activity Report'
+        subtitle = (
+            f'{start_date.strftime("%B %d")} to {today_local.strftime("%B %d, %Y")} '
+            f'({days} days)'
+        )
+        slug = f'quiz-report-{days}d-{today_local.isoformat()}'
+
+    context = {
+        'report_title': title,
+        'report_subtitle': subtitle,
+        'show_student_column': True,
+        'generated_at': timezone.localtime(timezone.now()).strftime('%I:%M %p'),
+        'rows': rows,
+        'total_count': len(rows),
+        'passed_count': sum(1 for r in rows if r['status_class'] == 'passed'),
+        'failed_count': sum(1 for r in rows if r['status_class'] == 'failed'),
+    }
+    return _render_quiz_report_response(request, context, slug)
+
+
+@staff_member_required
+def user_quiz_report_pdf(request, user_id):
+    """Per-user quiz report for the last N days (default 7). Used by teachers
+    to review a single student's recent activity.
+
+    Query params:
+      - days: number of past days to include (1-365, default 7). 1 means today only.
+    """
+    from accounts.models import User
+    from game.models import QuizAttempt
+    from django.shortcuts import get_object_or_404
+    from datetime import timedelta as _td
+
+    user = get_object_or_404(User, pk=user_id)
+
+    # Clamp `days` to a sensible range.
+    try:
+        days = int(request.GET.get('days', 7))
+    except (TypeError, ValueError):
+        days = 7
+    days = max(1, min(days, 365))
+
+    today_local = timezone.localdate()
+    start_date = today_local - _td(days=days - 1)  # days=1 -> just today
+
+    attempts = (
+        QuizAttempt.objects
+        .filter(user=user, started_at__date__gte=start_date, completed=True)
+        .select_related('user', 'topic', 'topic__category')
+        .order_by('-started_at')
+    )
+    rows = _build_quiz_report_rows(attempts)
+
+    if days == 1:
+        subtitle = f'For {today_local.strftime("%B %d, %Y")}'
+    else:
+        subtitle = (
+            f'{start_date.strftime("%B %d")} to {today_local.strftime("%B %d, %Y")} '
+            f'({days} days)'
+        )
+
+    context = {
+        'report_title': f'Quiz Report - {user.get_display_name()}',
+        'report_subtitle': subtitle,
+        'report_user': {
+            'name': user.get_display_name(),
+            'email': user.email,
+            'username': user.username,
+        },
+        # Hide the redundant Student column when the whole report is one user.
+        'show_student_column': False,
+        'generated_at': timezone.localtime(timezone.now()).strftime('%I:%M %p'),
+        'rows': rows,
+        'total_count': len(rows),
+        'passed_count': sum(1 for r in rows if r['status_class'] == 'passed'),
+        'failed_count': sum(1 for r in rows if r['status_class'] == 'failed'),
+    }
+    slug = user.username or str(user.pk)
+    return _render_quiz_report_response(
+        request, context, f'quiz-report-{slug}-{days}d-{today_local.isoformat()}',
+    )
+
+
 # Customize admin site
 admin.site.site_header = 'CodeLogic Admin'
 admin.site.site_title = 'CodeLogic Admin'
@@ -105,6 +374,8 @@ admin.site.index = admin_dashboard
 
 urlpatterns = [
     path('admin/dashboard/', admin.site.admin_view(admin_dashboard), name='admin-dashboard'),
+    path('admin/reports/today/', daily_quiz_report_pdf, name='admin-quiz-report-today'),
+    path('admin/reports/user/<uuid:user_id>/', user_quiz_report_pdf, name='admin-user-quiz-report'),
     path('admin/', admin.site.urls),
     path('api/auth/', include('accounts.urls')),
     path('api/game/', include('game.urls')),

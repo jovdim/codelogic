@@ -151,7 +151,7 @@ class QuestionSerializer(serializers.ModelSerializer):
 
     Security note: for typed-answer types (fill-blank, output) we
     deliberately do NOT include `correct_text_answer` or `accepted_answers`
-    in the payload — the client must submit answers and let the server
+    in the payload - the client must submit answers and let the server
     judge correctness. For multiple-choice we keep `correct_answer` for
     backwards-compat (client-side instant feedback), and for find-error
     `highlight_line` doubles as the answer; revisit if cheating becomes

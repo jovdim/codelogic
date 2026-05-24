@@ -4,13 +4,13 @@
 
 When you open any page, this is the layout:
 
-1. `src/app/layout.tsx` — the root shell. Sets up fonts, wraps everything in the `AuthProvider` (so the site knows who's logged in), and adds a global click sound.
+1. `src/app/layout.tsx` - the root shell. Sets up fonts, wraps everything in the `AuthProvider` (so the site knows who's logged in), and adds a global click sound.
 2. The page component runs inside that.
 
 Pages are either:
 
-- **Public** (landing, login, register, leaderboard) — wrapped with `<Navbar>`
-- **Private** (dashboard, play, settings, certificates) — wrapped with `<Sidebar>` and `<ProtectedRoute>`
+- **Public** (landing, login, register, leaderboard) - wrapped with `<Navbar>`
+- **Private** (dashboard, play, settings, certificates) - wrapped with `<Sidebar>` and `<ProtectedRoute>`
 
 ## Who's Logged In?
 
@@ -26,8 +26,8 @@ When the site loads, it looks for an access token in localStorage. If found, it 
 
 Two small components control access:
 
-- `<ProtectedRoute>` — if not logged in, sends you to `/login`.
-- `<PublicRoute>` — if already logged in, sends you to `/dashboard` (used on login and register).
+- `<ProtectedRoute>` - if not logged in, sends you to `/login`.
+- `<PublicRoute>` - if already logged in, sends you to `/dashboard` (used on login and register).
 
 ## Talking to the Server
 
@@ -38,8 +38,8 @@ All server calls go through **Axios** in `src/lib/api.ts`. Every request automat
 3. If the refresh also fails, it sends the user to `/login`.
 
 Two grouped objects are exported:
-- `authAPI` — register, login, profile, password stuff.
-- `gameAPI` — categories, topics, quiz, leaderboard, resources.
+- `authAPI` - register, login, profile, password stuff.
+- `gameAPI` - categories, topics, quiz, leaderboard, resources.
 
 ## Cache
 
@@ -49,21 +49,21 @@ Two grouped objects are exported:
 
 Two custom hooks:
 
-- `useBackgroundMusic()` — plays the loop. Shared across pages (singleton audio).
-- `useSoundEffects()` — plays the right/wrong/click sounds for the quiz.
+- `useBackgroundMusic()` - plays the loop. Shared across pages (singleton audio).
+- `useSoundEffects()` - plays the right/wrong/click sounds for the quiz.
 
 See [Music and Sound](./audio-system.md).
 
 ## Styling
 
-- **Tailwind CSS 4** — used for most classes.
-- **Design tokens** — main colors, borders, gradients are defined as CSS variables in `src/app/globals.css`. Use `var(--primary)` etc. to stay consistent.
-- **Fonts** — Geist (body), Geist Mono (code), Space Grotesk (display titles), all loaded by Next.js.
+- **Tailwind CSS 4** - used for most classes.
+- **Design tokens** - main colors, borders, gradients are defined as CSS variables in `src/app/globals.css`. Use `var(--primary)` etc. to stay consistent.
+- **Fonts** - Geist (body), Geist Mono (code), Space Grotesk (display titles), all loaded by Next.js.
 
 ## Icons
 
-- **Lucide React** — general icons (hearts, arrows, stars).
-- **React Icons** — language logos (JavaScript, HTML, Python, etc.) via `react-icons/di`.
+- **Lucide React** - general icons (hearts, arrows, stars).
+- **React Icons** - language logos (JavaScript, HTML, Python, etc.) via `react-icons/di`.
 
 ## Types
 

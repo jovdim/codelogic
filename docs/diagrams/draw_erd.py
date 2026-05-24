@@ -1,4 +1,4 @@
-"""ERD for CodeLogic — plain tables, crow's-foot cardinality, orthogonal routing."""
+"""ERD for CodeLogic - plain tables, crow's-foot cardinality, orthogonal routing."""
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 

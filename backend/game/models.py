@@ -105,7 +105,7 @@ class Question(models.Model):
     correct_answer = models.PositiveIntegerField(default=0)
     correct_text_answer = models.TextField(
         blank=True,
-        help_text='For "Fill in the Blank" and "What is the Output" — the canonical text the user must type.',
+        help_text='For "Fill in the Blank" and "What is the Output" - the canonical text the user must type.',
     )
     accepted_answers = models.JSONField(
         default=list, blank=True,
@@ -114,7 +114,7 @@ class Question(models.Model):
     explanation = models.TextField(blank=True)
     highlight_line = models.PositiveIntegerField(
         null=True, blank=True,
-        help_text='For "Find the Error" — the 1-based line number containing the bug. This is also the correct answer the user must click.',
+        help_text='For "Find the Error" - the 1-based line number containing the bug. This is also the correct answer the user must click.',
     )
     xp_reward = models.PositiveIntegerField(default=10)
     order = models.PositiveIntegerField(default=0)
@@ -130,7 +130,7 @@ class Question(models.Model):
     @staticmethod
     def _normalize_text(value):
         """Normalize for comparison: ONLY strip outer whitespace.
-        Matching is case-sensitive and preserves internal whitespace —
+        Matching is case-sensitive and preserves internal whitespace -
         `body` ≠ `BODY`, `console.log` ≠ `console . log`. If the admin
         wants to accept casing variants, they add them to accepted_answers.
         """
@@ -143,7 +143,7 @@ class Question(models.Model):
         """Canonical text answer for typed-type questions.
 
         Falls back to options[correct_answer] when correct_text_answer is empty
-        — this keeps legacy seeded data (which only set options + correct_answer
+        - this keeps legacy seeded data (which only set options + correct_answer
         index) working as typed-answer questions without a backfill.
         """
         if self.correct_text_answer:
@@ -167,17 +167,17 @@ class Question(models.Model):
 
     @property
     def is_single_line_code(self):
-        """find-error with one-line code can't be 'click the buggy line' — falls back to MC."""
+        """find-error with one-line code can't be 'click the buggy line' - falls back to MC."""
         return bool(self.code_snippet) and '\n' not in self.code_snippet.strip()
 
     # Patterns where the "answer" is a display label (e.g. '[, ]' meaning
     # 'open with [ and close with ]'). These questions have two blanks in the
-    # code and can't be answered by typing a single string — force MC.
+    # code and can't be answered by typing a single string - force MC.
     _DISPLAY_LABEL_PATTERN = re.compile(r'^[\[\(\{\<],\s*[\]\)\}\>]$')
 
     @property
     def effective_question_type(self):
-        """The question type to render and grade against — after applying
+        """The question type to render and grade against - after applying
         compatibility fallbacks for legacy / structurally-incompatible data.
 
         Forces 'multiple-choice' when:

@@ -38,8 +38,8 @@ The user types their email and password. The server checks:
 
 If all yes, the server sends back two tokens:
 
-- **Access token** — works for 60 minutes. Used on every request.
-- **Refresh token** — works for 7 days. Used to get a new access token when the old one expires.
+- **Access token** - works for 60 minutes. Used on every request.
+- **Refresh token** - works for 7 days. Used to get a new access token when the old one expires.
 
 The website saves both in the browser's local storage.
 
@@ -63,7 +63,7 @@ The refresh token is sent to the server and marked as "no longer valid". Both to
 3. They click the link. The page shows a "new password" form.
 4. They set the new password. The link becomes useless after that.
 
-Note: if the email isn't registered, the server still shows a success message. This is on purpose — it stops attackers from figuring out who has an account.
+Note: if the email isn't registered, the server still shows a success message. This is on purpose - it stops attackers from figuring out who has an account.
 
 ## Change Password (while logged in)
 
@@ -71,7 +71,7 @@ In Settings → Password. The user types their current password plus their new o
 
 ## Delete Account
 
-In Settings → Account. The user types their password and the word `DELETE`. The account is marked inactive (soft delete) — the data isn't wiped, but they can no longer log in.
+In Settings → Account. The user types their password and the word `DELETE`. The account is marked inactive (soft delete) - the data isn't wiped, but they can no longer log in.
 
 ## Live Checks During Sign Up
 

@@ -8,8 +8,8 @@ You log in with the superuser account you made with `createsuperuser`.
 
 ## Home Pages
 
-- **`/admin/`** — The normal Django admin home.
-- **`/admin/dashboard/`** — A custom page that shows counts (users, topics, questions) and lists of recent items.
+- **`/admin/`** - The normal Django admin home.
+- **`/admin/dashboard/`** - A custom page that shows counts (users, topics, questions) and lists of recent items.
 
 ## Adding a Quiz (Step by Step)
 
@@ -17,13 +17,13 @@ You log in with the superuser account you made with `createsuperuser`.
 
 **Game → Categories → Add**
 
-- **Name** — like "Frontend"
-- **Slug** — auto-fills from the name (like `frontend`)
-- **Description** — a short sentence
-- **Icon** — upload an image
-- **Color** — a hex code (like `#7c3aed`)
-- **Order** — lower numbers show first
-- **Active** — uncheck to hide it
+- **Name** - like "Frontend"
+- **Slug** - auto-fills from the name (like `frontend`)
+- **Description** - a short sentence
+- **Icon** - upload an image
+- **Color** - a hex code (like `#7c3aed`)
+- **Order** - lower numbers show first
+- **Active** - uncheck to hide it
 
 ### 2. Create a Topic
 
@@ -32,30 +32,30 @@ You log in with the superuser account you made with `createsuperuser`.
 - Pick the category
 - Name, slug, description
 - Upload an icon (or leave blank to use the category's)
-- **Total levels** — default 15
+- **Total levels** - default 15
 
 A **certificate** for this topic gets created automatically.
 
 Inside the topic edit page, you'll see:
 
-- **Lessons** section — add lesson slides right here.
-- **Existing Questions** — a list with links to edit each one.
-- **Add Question** button — pre-fills the topic field.
+- **Lessons** section - add lesson slides right here.
+- **Existing Questions** - a list with links to edit each one.
+- **Add Question** button - pre-fills the topic field.
 
 ### 3. Add Questions
 
 **Game → Questions → Add**
 
-- **Topic** — which topic?
-- **Level** — 1 to 15
-- **Question type** — multiple-choice, find-error, fill-blank, output
-- **Question text** — the prompt
-- **Code snippet** (optional) — code shown below the question
-- **Highlight line** (for find-error) — which line has the bug
-- **Options** — type a JSON list: `["A", "B", "C", "D"]`
-- **Correct answer** — the index (0, 1, 2, or 3)
-- **Explanation** — shown after answering
-- **XP reward** — default 10
+- **Topic** - which topic?
+- **Level** - 1 to 15
+- **Question type** - multiple-choice, find-error, fill-blank, output
+- **Question text** - the prompt
+- **Code snippet** (optional) - code shown below the question
+- **Highlight line** (for find-error) - which line has the bug
+- **Options** - type a JSON list: `["A", "B", "C", "D"]`
+- **Correct answer** - the index (0, 1, 2, or 3)
+- **Explanation** - shown after answering
+- **XP reward** - default 10
 
 Bulk actions: Activate, Deactivate, Duplicate, ±10 XP.
 
@@ -64,10 +64,10 @@ Bulk actions: Activate, Deactivate, Duplicate, ±10 XP.
 **Game → Lessons → Add**
 
 - Topic, level, title
-- **Content** — the main teaching text
+- **Content** - the main teaching text
 - **Code example** (optional)
 - **Tip** (optional)
-- **Order** — what order within this level
+- **Order** - what order within this level
 
 ## Managing Users
 
@@ -88,13 +88,13 @@ You can also edit a user's XP, hearts, and streak directly.
 
 **Game → Certificates**
 
-You **cannot add** these — they're auto-created with topics. You **can edit**:
+You **cannot add** these - they're auto-created with topics. You **can edit**:
 
 - Title
 - Description
 - Icon
 
-**Game → User certificates** — list of awarded certificates (read-only).
+**Game → User certificates** - list of awarded certificates (read-only).
 
 ## Learning Resources (PDFs)
 
@@ -114,11 +114,11 @@ You **cannot add** these — they're auto-created with topics. You **can edit**:
 Only one row. You edit it. Can't add more.
 
 Sections:
-- **Site Branding** — name, tagline, description, contact email
-- **Game Mechanics** — max hearts, regen time, XP values
-- **Level System** — XP per level
-- **Social Links** — GitHub, Twitter, Discord, LinkedIn
-- **Feature Toggles** — maintenance mode, registration on/off, etc.
+- **Site Branding** - name, tagline, description, contact email
+- **Game Mechanics** - max hearts, regen time, XP values
+- **Level System** - XP per level
+- **Social Links** - GitHub, Twitter, Discord, LinkedIn
+- **Feature Toggles** - maintenance mode, registration on/off, etc.
 
 ## Announcements
 

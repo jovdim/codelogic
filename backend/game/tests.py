@@ -31,7 +31,7 @@ User = get_user_model()
 # ---------------------------------------------------------------------------
 
 class CalculateStarsTest(APITestCase):
-    """Threshold table — locks the 90/70/50 rule in place."""
+    """Threshold table - locks the 90/70/50 rule in place."""
 
     def test_zero_total_returns_zero(self):
         self.assertEqual(QuizAttempt.calculate_stars(0, 0), 0)
@@ -183,7 +183,7 @@ class SubmitAnswerTests(QuizApiTestBase):
         self.assertEqual(response.status_code, 404)
 
     def test_re_submitting_same_question_does_not_overwrite(self):
-        # First answer wins — guards against the user changing their mind after
+        # First answer wins - guards against the user changing their mind after
         # the explanation appears.
         data = self.start_quiz()
         attempt_id = data['attempt_id']
@@ -198,7 +198,7 @@ class SubmitAnswerTests(QuizApiTestBase):
 
 
 # ---------------------------------------------------------------------------
-# SubmitAnswerView — typed-answer (fill-blank, output) & find-error click
+# SubmitAnswerView - typed-answer (fill-blank, output) & find-error click
 # ---------------------------------------------------------------------------
 
 class TypedAnswerSubmitTests(APITestCase):
@@ -276,7 +276,7 @@ class TypedAnswerSubmitTests(APITestCase):
         self.assertFalse(r.data['correct'])
 
     def test_fill_blank_outer_whitespace_trimmed(self):
-        # Only outer whitespace is stripped — internal stays as-is.
+        # Only outer whitespace is stripped - internal stays as-is.
         r = self._submit(self.q_fill, answer_text='  body  ')
         self.assertTrue(r.data['correct'])
 
@@ -419,7 +419,7 @@ class CheckTextAnswerTests(APITestCase):
         self.assertTrue(self.q.check_text_answer('  five  '))
 
     def test_internal_whitespace_matters(self):
-        # 'f i v e' should NOT match 'five' — internal whitespace preserved.
+        # 'f i v e' should NOT match 'five' - internal whitespace preserved.
         self.assertFalse(self.q.check_text_answer('f i v e'))
 
     def test_variant_exact_case(self):
@@ -540,7 +540,7 @@ class CompleteQuizTests(QuizApiTestBase):
         )
 
     def test_progress_not_double_counted_on_retry(self):
-        # Play level 1 perfectly — first pass.
+        # Play level 1 perfectly - first pass.
         data = self.start_quiz()
         self._answer_n_correct(data, 10)
         self.complete(data['attempt_id'])
@@ -549,7 +549,7 @@ class CompleteQuizTests(QuizApiTestBase):
         self.assertEqual(progress.total_questions_answered, 10)
         self.assertEqual(progress.correct_answers, 10)
 
-        # Replay level 1 — should NOT inflate the lifetime counters.
+        # Replay level 1 - should NOT inflate the lifetime counters.
         data2 = self.start_quiz()
         self._answer_n_correct(data2, 8)  # different score this time
         self.complete(data2['attempt_id'])

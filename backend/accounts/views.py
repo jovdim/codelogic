@@ -767,7 +767,7 @@ class LoginFaceVerifyView(APIView):
 
         data = photo.read()
         user = request.user
-        # Append a new history row — this is the new source of truth.
+        # Append a new history row - this is the new source of truth.
         LoginFaceSnapshot.objects.create(user=user, photo=data)
         # Mirror to the legacy "latest" fields for backward compatibility.
         user.last_login_face_photo = data

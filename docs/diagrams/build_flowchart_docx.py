@@ -1,4 +1,4 @@
-"""Build CodeLogic_Flowchart.docx — flowchart only."""
+"""Build CodeLogic_Flowchart.docx - flowchart only."""
 from pathlib import Path
 from docx import Document
 from docx.shared import Inches, Pt, RGBColor

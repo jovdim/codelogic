@@ -325,7 +325,7 @@ class SubmitAnswerView(APIView):
             if 0 <= question.correct_answer < len(opts):
                 correct_answer_display = opts[question.correct_answer]
 
-        # Record the answer (idempotent on retry — first answer wins).
+        # Record the answer (idempotent on retry - first answer wins).
         UserAnswer.objects.get_or_create(
             attempt=attempt,
             question=question,
@@ -411,7 +411,7 @@ class QuestionTimeoutView(APIView):
 class CompleteQuizView(APIView):
     """Complete a quiz and record results.
 
-    Score and stars are recomputed from the persisted UserAnswer rows — the
+    Score and stars are recomputed from the persisted UserAnswer rows - the
     client-supplied ``score`` field is ignored, so a tampered request cannot
     inflate stars or XP.
     """
@@ -577,7 +577,12 @@ class UserDailyStatsView(APIView):
     def get(self, request):
         user = request.user
         today = timezone.now().date()
-        
+
+        # Has the user ever started a quiz? Drives the Start-vs-Continue
+        # Playing button on the dashboard. We use .exists() so this is one
+        # cheap SQL EXISTS query, not a count.
+        has_quiz_attempts = QuizAttempt.objects.filter(user=user).exists()
+
         # Get today's quiz attempts
         today_attempts = QuizAttempt.objects.filter(
             user=user,
@@ -658,6 +663,7 @@ class UserDailyStatsView(APIView):
         hours_until_reset = int((midnight - now).total_seconds() / 3600)
         
         return Response({
+            'has_quiz_attempts': has_quiz_attempts,
             'quizzes_completed_today': quizzes_completed_today,
             'perfect_scores_today': perfect_scores_today,
             'best_streak_today': best_streak_today,

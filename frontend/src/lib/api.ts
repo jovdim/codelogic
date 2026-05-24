@@ -45,7 +45,7 @@ async function refreshAccessToken(): Promise<string> {
   localStorage.setItem("access_token", access);
   // Django SimpleJWT is configured with ROTATE_REFRESH_TOKENS + BLACKLIST_AFTER_ROTATION,
   // so every refresh returns a NEW refresh token and invalidates the old one.
-  // We must persist the new one — otherwise the next refresh hits a blacklisted
+  // We must persist the new one - otherwise the next refresh hits a blacklisted
   // token and the user gets auto-logged-out.
   if (newRefresh) {
     localStorage.setItem("refresh_token", newRefresh);
