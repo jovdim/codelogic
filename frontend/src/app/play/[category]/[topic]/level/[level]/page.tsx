@@ -769,21 +769,67 @@ export default function LevelQuizPage() {
               // Type-along bookkeeping for this lesson. All derivations are
               // pure-functional on `lesson.code_example` + `lessonTyped`, so
               // they recompute on every keystroke without extra state.
-              const refLines = lesson.code_example ? lesson.code_example.split("\n") : [];
-              const typedLines = lessonTyped.split("\n");
-              const normalize = (s: string) => s.replace(/\s+$/, ""); // trim trailing ws only
-              const matchedAt = (idx: number): boolean => {
-                if (idx >= refLines.length) return false;
-                const t = typedLines[idx] ?? "";
-                return normalize(t) === normalize(refLines[idx]);
-              };
-              const matchedCount = refLines.reduce(
-                (acc, _, i) => acc + (matchedAt(i) ? 1 : 0),
-                0,
-              );
-              const typingRequired = refLines.length > 0;
-              const typingComplete = typingRequired && matchedCount === refLines.length;
+              //
+              // Matching rules (deliberately forgiving on whitespace so the
+              // student isn't punished for indentation choices):
+              //   - case-sensitive (so `<BODY>` does NOT match `<body>`)
+              //   - leading + trailing whitespace stripped per line
+              //   - internal runs of whitespace collapsed to a single space
+              //     (so "Hello  World" still matches "Hello World")
+              //   - blank lines ignored entirely (on both sides)
+              //   - "\r" stripped so Windows line endings on the DB side
+              //     don't silently fail vs Unix line endings in the browser.
+              //
+              // `refLines` stays FULL for display (line numbers + blank rows
+              // visible). Matching uses `nonBlankRef` / `nonBlankTyped` so
+              // blank lines never affect correctness.
+              const canon = (s: string) =>
+                s.replace(/\r/g, '').trim().replace(/\s+/g, ' ');
+
+              const refLines = (lesson.code_example || '').replace(/\r/g, '').split('\n');
+              // Trim trailing blank lines from refLines so a stray "\n" at
+              // the end of the example doesn't show as an empty row.
+              while (refLines.length > 0 && refLines[refLines.length - 1].trim() === '') {
+                refLines.pop();
+              }
+              const typedLines = lessonTyped.replace(/\r/g, '').split('\n');
+
+              const nonBlankRef = refLines.filter((l) => l.trim() !== '');
+              const nonBlankTyped = typedLines.filter((l) => l.trim() !== '');
+
+              // For each non-blank reference line, has the student typed
+              // the matching content (in order)?
+              const nonBlankMatch: boolean[] = nonBlankRef.map((rline, i) => {
+                const t = nonBlankTyped[i];
+                return t !== undefined && canon(t) === canon(rline);
+              });
+
+              // Map every DISPLAY ref line → matched? Blank lines count as
+              // matched (nothing to type for them) so they don't drag down
+              // the visible green-check progression.
+              let _nbIdx = 0;
+              const displayMatched: boolean[] = refLines.map((rline) => {
+                if (rline.trim() === '') return true;
+                const m = nonBlankMatch[_nbIdx];
+                _nbIdx += 1;
+                return m;
+              });
+
+              const matchedAt = (i: number): boolean => !!displayMatched[i];
+
+              const totalNonBlank = nonBlankRef.length;
+              const matchedNonBlank = nonBlankMatch.filter(Boolean).length;
+              const typingRequired = totalNonBlank > 0;
+              // Reject extra non-blank lines past the end of the reference,
+              // so a student can't append garbage and still get marked done.
+              const noExtras = nonBlankTyped.length === totalNonBlank;
+              const typingComplete =
+                typingRequired && matchedNonBlank === totalNonBlank && noExtras;
               const continueDisabled = typingRequired && !typingComplete;
+
+              // Used by the small header chip "X / Y lines".
+              const matchedCount = matchedNonBlank;
+              const totalLines = totalNonBlank;
 
               return (
                 <>
@@ -802,7 +848,7 @@ export default function LevelQuizPage() {
                         </div>
                         <div className="flex items-center gap-2 px-3 py-1 bg-[#0f0f1a] rounded border border-[#2d2d44]">
                           <span className="text-xs text-gray-400 font-medium">
-                            {matchedCount} / {refLines.length} lines
+                            {matchedCount} / {totalLines} lines
                           </span>
                         </div>
                         <div className="w-12" />

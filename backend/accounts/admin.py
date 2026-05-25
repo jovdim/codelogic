@@ -126,11 +126,21 @@ class UserAdmin(BaseUserAdmin):
         rows that only exist from before the history table was added.
         """
         import base64
+        from django.db import OperationalError, ProgrammingError
 
-        snapshots = list(
-            obj.login_face_snapshots.only('photo', 'captured_at')[:60]
-        )
-        total = obj.login_face_snapshots.count()
+        # Defensive: if the login_face_snapshots table doesn't exist yet
+        # (e.g. someone deployed before running `manage.py migrate`), we
+        # still want the User edit page to load instead of throwing 500.
+        try:
+            snapshots = list(
+                obj.login_face_snapshots.only('photo', 'captured_at')[:60]
+            )
+            total = obj.login_face_snapshots.count()
+        except (OperationalError, ProgrammingError):
+            return format_html(
+                '<em style="color:#f87171">Login snapshot table is missing — '
+                'run <code>python manage.py migrate</code> on the server.</em>'
+            )
 
         # Backwards-compat: if no history rows yet but the user has the
         # legacy single snapshot, show that one.
