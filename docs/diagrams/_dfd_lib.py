@@ -28,15 +28,38 @@ from PIL import Image, ImageDraw, ImageFont
 
 
 # --- Layout constants (shared across every Level 2 figure) -----------------
-W = 1700                # canvas width
-TOP_MARGIN = 110        # space above the first row (title bar lives here)
-BOTTOM_MARGIN = 60
-ROW_HEIGHT = 340        # vertical pitch between two process boxes
+# The PNG no longer has its own title block. The docx page heading is the
+# only place the parent process name appears, so this canvas is pure
+# diagram content surrounded by just a small breathing margin.
+W = 1700
+TOP_MARGIN = 30
+BOTTOM_MARGIN = 30
 
-COL_ENT = 200           # x-center of the entity column
-COL_PROC = 820          # x-center of the process column
-COL_DS = 1500           # x-center of the data-store column
-PROC_LW = 140           # half-width of the process box
+# Vertical pitch between two stacked entities or two stacked data stores
+# within the SAME process row. Larger pitch = more whitespace between
+# each request/response label pair, so a row with 4 stores doesn't feel
+# crammed. The row auto-heights off this number, so increasing it makes
+# tall rows even taller (which is what we want - rows with many
+# arrows should be visibly tall, not squeezed).
+STACK_PITCH = 130
+
+# Table styling. The diagram is enclosed in ONE outer rectangle and the
+# sub-process rows are separated by thin horizontal divider lines drawn
+# between adjacent rows - same look as the SOFTNET-style Level 2
+# reference (a single bounded table with row dividers, not floating
+# per-row cells).
+TABLE_INSET = 30          # left/right inset from canvas edge
+TABLE_BORDER_COLOR = "black"
+TABLE_BORDER_WIDTH = 2
+ROW_DIVIDER_COLOR = "black"
+ROW_DIVIDER_WIDTH = 1
+ROW_VERTICAL_PADDING = 50  # whitespace above + below content inside a row
+ROW_MIN_HEIGHT = 260       # never collapse below the process box + padding
+
+COL_ENT = 200
+COL_PROC = 820
+COL_DS = 1500
+PROC_LW = 140
 PROC_LEFT = COL_PROC - PROC_LW
 PROC_RIGHT = COL_PROC + PROC_LW
 
@@ -44,10 +67,10 @@ PROC_RIGHT = COL_PROC + PROC_LW
 def _load_fonts():
     try:
         return (
-            ImageFont.truetype("arial.ttf", 17),
-            ImageFont.truetype("arial.ttf", 14),
-            ImageFont.truetype("arialbd.ttf", 19),
-            ImageFont.truetype("arialbd.ttf", 26),
+            ImageFont.truetype("arial.ttf", 17),       # process / box body
+            ImageFont.truetype("arial.ttf", 14),       # flow labels
+            ImageFont.truetype("arialbd.ttf", 19),     # store D-tag + proc number
+            ImageFont.truetype("arialbd.ttf", 26),     # (unused, kept for compat)
         )
     except Exception:
         d = ImageFont.load_default()
@@ -66,17 +89,70 @@ def _rect_box(draw, cx, cy, text, font, w=160, h=46):
     return dict(cx=cx, cy=cy, w=w, h=h)
 
 
-def _process_box(draw, cx, cy, num, lines, font, font_bold, w=280, h=160):
-    draw.rectangle((cx - w/2, cy - h/2, cx + w/2, cy + h/2),
+PROC_BOX_W = 280
+PROC_BOX_MIN_H = 160
+
+
+def _process_box(draw, cx, cy, num, lines, font, font_bold,
+                 w=PROC_BOX_W, h=PROC_BOX_MIN_H):
+    """Two-row process box, like a table cell with a header:
+
+      ┌──────────────┐
+      │     3.2      │     <- number section (header)
+      ├──────────────┤
+      │  Validate    │     <- process name section
+      │  & Score     │
+      │   Answer     │
+      └──────────────┘
+
+    Height grows when the row stacks many data stores or entities so that
+    every store-side / entity-side arrow starts from inside this box, not
+    floating in empty space above or below it.
+    """
+    left, right = cx - w/2, cx + w/2
+    top, bottom = cy - h/2, cy + h/2
+
+    # Outer box
+    draw.rectangle((left, top, right, bottom),
                    outline="black", width=2, fill="white")
+
+    # Header section height + divider position (header takes the top
+    # 44 px so the process number sits in its own clearly demarcated
+    # slot regardless of total box height).
+    header_h = 44
+    div_y = top + header_h
+
+    # Number, vertically centered in the header section.
     tw = _textw(draw, num, font_bold)
-    draw.text((cx - tw/2, cy - h/2 + 14), num, fill="black", font=font_bold)
+    num_y = top + (header_h - 19) / 2
+    draw.text((cx - tw/2, num_y), num, fill="black", font=font_bold)
+
+    # Divider line between the number and the process name.
+    draw.line((left, div_y, right, div_y), fill="black", width=2)
+
+    # Process name, vertically centered in the body section.
     line_h = 24
-    start_y = cy - (len(lines) * line_h) / 2 + 8
+    body_top = div_y
+    body_h = bottom - body_top
+    body_text_h = len(lines) * line_h
+    start_y = body_top + (body_h - body_text_h) / 2
     for i, line in enumerate(lines):
         tw = _textw(draw, line, font)
         draw.text((cx - tw/2, start_y + i*line_h), line, fill="black", font=font)
+
     return dict(cx=cx, cy=cy, w=w, h=h)
+
+
+def _process_box_height(n_max: int) -> int:
+    """How tall the process box must be so the arrows to the topmost
+    and bottommost stacked store/entity start INSIDE the box, not in
+    empty space above/below it."""
+    if n_max <= 1:
+        return PROC_BOX_MIN_H
+    content_span = (n_max - 1) * STACK_PITCH
+    # +30 = 10 px arrow offset from row center + 20 px breathing room
+    # inside the box so the arrow doesn't sit on the box's outline.
+    return max(PROC_BOX_MIN_H, content_span + 30)
 
 
 def _data_store(draw, cx, cy, label, name, font, font_bold, w=230, h=46):
@@ -91,7 +167,10 @@ def _data_store(draw, cx, cy, label, name, font, font_bold, w=230, h=46):
     return dict(cx=cx, cy=cy, w=w, h=h)
 
 
-def _arrowhead(draw, x1, y1, x2, y2, size=8):
+def _arrowhead(draw, x1, y1, x2, y2, size=12):
+    """Filled triangle arrowhead with tip at (x2,y2). Larger than the
+    default 8 px so the head reads clearly when Word shrinks the image
+    to ~7 inches wide on the page."""
     angle = math.atan2(y2 - y1, x2 - x1)
     p1 = (x2 - size*math.cos(angle - math.pi/7),
           y2 - size*math.sin(angle - math.pi/7))
@@ -105,9 +184,22 @@ def _flow(draw, x1, y1, x2, y2, label, font_lbl, label_above=True):
     above or below the line. Two parallel arrows (a request/response pair)
     should pass label_above=True for the top arrow and label_above=False
     for the bottom arrow so the labels stay outside the sandwich and the
-    reader can tell which label belongs to which arrow."""
-    draw.line((x1, y1, x2, y2), fill="black", width=2)
-    _arrowhead(draw, x1, y1, x2, y2)
+    reader can tell which label belongs to which arrow.
+
+    The line is extended 2 px past the endpoint so the arrowhead and the
+    target box border visually overlap - otherwise the antialiased pixel
+    rounding at the box edge can make the arrow look detached."""
+    # Tiny overshoot in the line's travel direction so the arrowhead
+    # sits flush against (and slightly overlaps) the target box border.
+    dx = x2 - x1
+    dy = y2 - y1
+    length = max(1.0, math.hypot(dx, dy))
+    overshoot = 2.0
+    ox = dx / length * overshoot
+    oy = dy / length * overshoot
+    draw.line((x1, y1, x2 + ox, y2 + oy), fill="black", width=2)
+    _arrowhead(draw, x1, y1, x2 + ox, y2 + oy)
+
     mx = (x1 + x2) / 2
     tw = _textw(draw, label, font_lbl)
     label_y = (y1 - 18) if label_above else (y1 + 6)
@@ -125,8 +217,12 @@ def _draw_row(draw, y_center, proc_num, proc_lines, entities, stores,
               data store sits to the RIGHT of the process. `from_label=None`
               suppresses the return arrow (one-way write).
     """
+    # Process box auto-heights so every arrow starts inside it, even
+    # when many stores or entities are stacked in this row.
+    n_max = max(len(entities), len(stores), 1)
+    proc_h = _process_box_height(n_max)
     _process_box(draw, COL_PROC, y_center, proc_num, proc_lines,
-                 font, font_bold)
+                 font, font_bold, h=proc_h)
 
     n_ent = len(entities)
     if n_ent == 0:
@@ -134,9 +230,9 @@ def _draw_row(draw, y_center, proc_num, proc_lines, entities, stores,
     elif n_ent == 1:
         ent_ys = [y_center]
     else:
-        span = 75 * (n_ent - 1)
+        span = STACK_PITCH * (n_ent - 1)
         top = y_center - span / 2
-        ent_ys = [top + i * 75 for i in range(n_ent)]
+        ent_ys = [top + i * STACK_PITCH for i in range(n_ent)]
 
     for i, (name, out_lbl, in_lbl) in enumerate(entities):
         ey = ent_ys[i]
@@ -157,9 +253,9 @@ def _draw_row(draw, y_center, proc_num, proc_lines, entities, stores,
     elif n_ds == 1:
         ds_ys = [y_center]
     else:
-        span = 75 * (n_ds - 1)
+        span = STACK_PITCH * (n_ds - 1)
         top = y_center - span / 2
-        ds_ys = [top + i * 75 for i in range(n_ds)]
+        ds_ys = [top + i * STACK_PITCH for i in range(n_ds)]
 
     for i, ds_item in enumerate(stores):
         d_label, d_name, to_lbl, from_lbl = ds_item
@@ -177,42 +273,81 @@ def _draw_row(draw, y_center, proc_num, proc_lines, entities, stores,
                   font_lbl, label_above=False)
 
 
+def _row_height(row: dict) -> int:
+    """Row height auto-fits the taller of (a) the stacked entities/stores
+    plus their label whitespace, or (b) the now-taller process box that
+    must enclose every arrow's start point."""
+    n_max = max(
+        len(row.get("entities", [])),
+        len(row.get("stores", [])),
+        1,
+    )
+    # Span needed by the stacked items + their label space.
+    content_span = (n_max - 1) * STACK_PITCH + 80
+    # Span needed by the auto-sized process box.
+    proc_span = _process_box_height(n_max)
+    return max(
+        ROW_MIN_HEIGHT,
+        content_span + ROW_VERTICAL_PADDING * 2,
+        proc_span + ROW_VERTICAL_PADDING * 2,
+    )
+
+
 def render_dfd(out_path: Path, title: tuple, rows: list):
     """Render a Level 2 DFD figure to PNG.
 
-    title: (parent_num, parent_name) - e.g. ("1.0", "User & Auth Management").
-           Drawn as a centered title across the top of the figure.
-    rows:  list of {proc_num, proc_lines, entities, stores} dicts.
-    """
-    font, font_lbl, font_bold, font_title = _load_fonts()
+    `title` is accepted for backward compatibility but no longer drawn.
+    The parent-process title is rendered by the docx builder as a page
+    heading so each diagram does not waste vertical space repeating it.
 
-    # Height scales with the number of sub-process rows so the layout
-    # stays uncluttered regardless of how many sub-processes a parent
-    # process has.
-    h = TOP_MARGIN + ROW_HEIGHT * len(rows) + BOTTOM_MARGIN
-    img = Image.new("RGB", (W, h), "white")
+    Layout: each sub-process is rendered as its own row inside a thin
+    table-cell-style frame, the way the SOFTNET-style Level 2 reference
+    paper does it. Row height auto-fits content so request/response
+    arrows never overflow into the next row.
+
+    rows: list of {proc_num, proc_lines, entities, stores} dicts.
+    """
+    font, font_lbl, font_bold, _unused = _load_fonts()
+
+    row_heights = [_row_height(r) for r in rows]
+    total_h = TOP_MARGIN + sum(row_heights) + BOTTOM_MARGIN
+
+    img = Image.new("RGB", (W, total_h), "white")
     draw = ImageDraw.Draw(img)
 
-    parent_num, parent_name = title
-    title_text = f"Process {parent_num} - {parent_name}"
-    subtitle_text = "Level 2 DFD (Decomposition)"
-    tw = _textw(draw, title_text, font_title)
-    draw.text((W/2 - tw/2, 22), title_text, fill="black", font=font_title)
-    tw = _textw(draw, subtitle_text, font_lbl)
-    draw.text((W/2 - tw/2, 64), subtitle_text, fill="#555555", font=font_lbl)
-    draw.line((80, 95, W - 80, 95), fill="#999999", width=1)
+    # One outer table frame around the whole diagram. Row dividers go
+    # INSIDE this frame - drawn between adjacent rows only, not at the
+    # top of the first row or the bottom of the last row.
+    table_top = TOP_MARGIN
+    table_bottom = TOP_MARGIN + sum(row_heights)
+    table_left = TABLE_INSET
+    table_right = W - TABLE_INSET
+    draw.rectangle(
+        (table_left, table_top, table_right, table_bottom),
+        outline=TABLE_BORDER_COLOR, width=TABLE_BORDER_WIDTH, fill=None,
+    )
 
-    # First row sits ROW_HEIGHT/2 below the top margin so every row is
-    # vertically centered in its own track.
-    y0 = TOP_MARGIN + ROW_HEIGHT / 2
+    y = TOP_MARGIN
     for i, row in enumerate(rows):
+        h = row_heights[i]
+        # Render the row content first so the divider line sits cleanly
+        # underneath without being overdrawn by entity / store boxes.
         _draw_row(
-            draw, y0 + i * ROW_HEIGHT,
+            draw, y + h / 2,
             row["proc_num"], row["proc_lines"],
             row.get("entities", []),
             row.get("stores", []),
             font, font_lbl, font_bold,
         )
+        y += h
+        # Thin horizontal divider between this row and the next - skip
+        # after the last row so we don't double-draw on top of the outer
+        # frame's bottom edge.
+        if i < len(rows) - 1:
+            draw.line(
+                (table_left, y, table_right, y),
+                fill=ROW_DIVIDER_COLOR, width=ROW_DIVIDER_WIDTH,
+            )
 
     img.save(out_path)
     return out_path

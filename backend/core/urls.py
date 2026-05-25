@@ -365,6 +365,10 @@ def user_quiz_report_pdf(request, user_id):
 admin.site.site_header = 'CodeLogic Admin'
 admin.site.site_title = 'CodeLogic Admin'
 admin.site.index_title = 'Welcome to CodeLogic Administration'
+# Remove the "View site" link from the top-right user-tools bar. The default
+# Django target ('/') is a backend-only deployment and 404s, which confused
+# admins. The frontend lives on a separate Vercel domain anyway.
+admin.site.site_url = None
 
 # Replace the default app/model index at /admin/ with the dashboard. The
 # URL stays at /admin/ (no 302 redirect) and the page content is the

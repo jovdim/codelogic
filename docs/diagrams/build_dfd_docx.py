@@ -108,13 +108,15 @@ def _page_break():
     r.add_break(WD_BREAK.PAGE)
 
 
-# Page-area budgets. A US Letter page minus 0.5" margins leaves 7.5" x 10"
-# of usable space. Headings + caption together take ~1.4", so the image
-# itself gets the remainder. Landscape pages flip the dimensions.
+# Page-area budgets. US Letter at 0.5" margins gives 7.5" x 10" usable.
+# Two headings (18 pt + 13 pt with paragraph spacing) plus the figure
+# caption end up taking close to 2.2 inches in practice (not the 1.4 in
+# I previously estimated), so we have to leave that much room or the
+# bottom of the image gets pushed past the page break.
 PORTRAIT_MAX_W = 7.5
-PORTRAIT_MAX_H = 8.6     # 10.0 usable - ~1.4 for two headings + caption
+PORTRAIT_MAX_H = 8.4     # 10.0 usable - ~1.6 for single heading + caption
 LANDSCAPE_MAX_W = 10.0
-LANDSCAPE_MAX_H = 6.1    # 7.5 usable - ~1.4 for heading + caption
+LANDSCAPE_MAX_H = 5.9    # 7.5 usable - ~1.6 for heading + caption
 
 # ---------------------------------------------------------------------------
 # Figure 1: Level 0 (context diagram) - landscape
@@ -208,9 +210,11 @@ LEVEL2_FIGURES = [
 
 for i, (filename, parent_label, caption) in enumerate(LEVEL2_FIGURES, start=3):
     _page_break()
-    _heading("CodeLogic: Data Flow Diagram - Level 2", size_pt=18,
+    # Single combined heading instead of two stacked headings - frees up
+    # ~0.5" of vertical page space so the diagram can render larger
+    # without the bottom getting clipped at the page break.
+    _heading(f"Level 2 DFD - {parent_label}", size_pt=16,
              keep_with_next=True)
-    _heading(parent_label, size_pt=13, keep_with_next=True)
     _figure(HERE / filename, i, caption,
             max_w_in=PORTRAIT_MAX_W, max_h_in=PORTRAIT_MAX_H)
 
