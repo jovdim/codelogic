@@ -147,7 +147,7 @@ class UserAdmin(BaseUserAdmin):
         if not snapshots and obj.last_login_face_photo:
             b64 = base64.b64encode(bytes(obj.last_login_face_photo)).decode('ascii')
             captured = (
-                timezone.localtime(obj.last_login_face_captured_at).strftime('%Y-%m-%d %H:%M:%S')
+                timezone.localtime(obj.last_login_face_captured_at).strftime('%b %d, %Y %I:%M:%S %p')
                 if obj.last_login_face_captured_at else 'unknown'
             )
             return format_html(
@@ -165,10 +165,24 @@ class UserAdmin(BaseUserAdmin):
                 '<em style="color:#9ca3af">No login face snapshots recorded yet.</em>'
             )
 
+        def _ago(dt):
+            """Render a short, human relative time like '5m ago' / '2h ago'."""
+            secs = int((timezone.now() - dt).total_seconds())
+            if secs < 0:  # clock skew between request server and snapshot server
+                return 'in the future?'
+            if secs < 60:
+                return f'{secs}s ago'
+            if secs < 3600:
+                return f'{secs // 60}m ago'
+            if secs < 86400:
+                return f'{secs // 3600}h ago'
+            return f'{secs // 86400}d ago'
+
         tiles = []
         for i, snap in enumerate(snapshots, start=1):
             b64 = base64.b64encode(bytes(snap.photo)).decode('ascii')
-            when = timezone.localtime(snap.captured_at).strftime('%Y-%m-%d %H:%M:%S')
+            when = timezone.localtime(snap.captured_at).strftime('%b %d, %Y %I:%M:%S %p')
+            ago = _ago(snap.captured_at)
             # Latest snapshot gets a "Latest" pill to make scanning easier.
             latest_pill = (
                 '<span style="display:inline-block;padding:1px 6px;border-radius:999px;'
@@ -183,8 +197,9 @@ class UserAdmin(BaseUserAdmin):
                 '<div style="font-size:11px;color:#cbd5e1;margin-top:6px;display:flex;align-items:center">'
                 '#{}{}</div>'
                 '<div style="font-size:10px;color:#9ca3af;margin-top:2px;font-family:Consolas,monospace">{}</div>'
+                '<div style="font-size:10px;color:#a78bfa;margin-top:1px;font-weight:600">{}</div>'
                 '</div>',
-                b64, total - i + 1, format_html(latest_pill), when,
+                b64, total - i + 1, format_html(latest_pill), when, ago,
             ))
 
         from django.utils.safestring import mark_safe

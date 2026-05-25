@@ -315,23 +315,14 @@ def render_dfd(out_path: Path, title: tuple, rows: list):
     img = Image.new("RGB", (W, total_h), "white")
     draw = ImageDraw.Draw(img)
 
-    # One outer table frame around the whole diagram. Row dividers go
-    # INSIDE this frame - drawn between adjacent rows only, not at the
-    # top of the first row or the bottom of the last row.
-    table_top = TOP_MARGIN
-    table_bottom = TOP_MARGIN + sum(row_heights)
-    table_left = TABLE_INSET
-    table_right = W - TABLE_INSET
-    draw.rectangle(
-        (table_left, table_top, table_right, table_bottom),
-        outline=TABLE_BORDER_COLOR, width=TABLE_BORDER_WIDTH, fill=None,
-    )
+    # No outer frame around the whole diagram - the row dividers alone
+    # are enough to visually separate the sub-processes.
+    row_left = TABLE_INSET
+    row_right = W - TABLE_INSET
 
     y = TOP_MARGIN
     for i, row in enumerate(rows):
         h = row_heights[i]
-        # Render the row content first so the divider line sits cleanly
-        # underneath without being overdrawn by entity / store boxes.
         _draw_row(
             draw, y + h / 2,
             row["proc_num"], row["proc_lines"],
@@ -340,12 +331,10 @@ def render_dfd(out_path: Path, title: tuple, rows: list):
             font, font_lbl, font_bold,
         )
         y += h
-        # Thin horizontal divider between this row and the next - skip
-        # after the last row so we don't double-draw on top of the outer
-        # frame's bottom edge.
+        # Thin horizontal divider between this row and the next.
         if i < len(rows) - 1:
             draw.line(
-                (table_left, y, table_right, y),
+                (row_left, y, row_right, y),
                 fill=ROW_DIVIDER_COLOR, width=ROW_DIVIDER_WIDTH,
             )
 

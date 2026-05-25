@@ -12,13 +12,12 @@ OUT = HERE.parent / "CodeLogic_DFD_v3.docx"
 doc = Document()
 
 # ---------------------------------------------------------------------------
-# First section: landscape, for the wide Level 0 context diagram.
+# Whole document is portrait. The Level 0 context diagram (aspect 0.65)
+# fits comfortably at 7.5" wide x 4.88" tall, so no landscape page break
+# is needed.
 # ---------------------------------------------------------------------------
 s = doc.sections[0]
-nw, nh = s.page_height, s.page_width
-s.orientation = WD_ORIENT.LANDSCAPE
-s.page_width = nw
-s.page_height = nh
+s.orientation = WD_ORIENT.PORTRAIT
 s.left_margin = Inches(0.5)
 s.right_margin = Inches(0.5)
 s.top_margin = Inches(0.5)
@@ -82,10 +81,10 @@ def _figure(image_path: Path, fig_num: int, caption: str,
     fr = cap.add_run(f"Figure {fig_num}. ")
     fr.bold = True
     fr.italic = True
-    fr.font.size = Pt(11)
+    fr.font.size = Pt(10)
     cr = cap.add_run(caption)
     cr.italic = True
-    cr.font.size = Pt(11)
+    cr.font.size = Pt(10)
 
 
 def _portrait_section():
@@ -119,31 +118,28 @@ LANDSCAPE_MAX_W = 10.0
 LANDSCAPE_MAX_H = 5.9    # 7.5 usable - ~1.6 for heading + caption
 
 # ---------------------------------------------------------------------------
-# Figure 1: Level 0 (context diagram) - landscape
+# Figure 1: Level 0 (context diagram)
 # ---------------------------------------------------------------------------
 _heading("CodeLogic: Data Flow Diagram - Level 0", keep_with_next=True)
 _figure(
     HERE / "03_dfd_level0.png",
     1,
-    "Level 0 Data Flow Diagram (Context Diagram) of the CodeLogic "
-    "Quiz Platform showing the four external entities (Guest, Student, "
-    "Admin, Email Service, PDF Service) and the high-level data flows "
-    "into and out of the system.",
-    max_w_in=LANDSCAPE_MAX_W, max_h_in=LANDSCAPE_MAX_H,
+    "Level 0 (Context) DFD of the CodeLogic Quiz Platform, showing the "
+    "system as a single process with its five external entities and the "
+    "main data flows between them.",
+    max_w_in=PORTRAIT_MAX_W, max_h_in=PORTRAIT_MAX_H,
 )
 
 # ---------------------------------------------------------------------------
-# Figure 2: Level 1 (system decomposition) - portrait
+# Figure 2: Level 1 (system decomposition)
 # ---------------------------------------------------------------------------
-_portrait_section()
+_page_break()
 _heading("CodeLogic: Data Flow Diagram - Level 1", keep_with_next=True)
 _figure(
     HERE / "04_dfd_level1.png",
     2,
-    "Level 1 Data Flow Diagram showing the six top-level processes of "
-    "the CodeLogic platform (User & Auth Management, Content Catalog, "
-    "Quiz Engine, Progress & Gamification, Certificate Management, and "
-    "Learning Resources) and their primary data stores.",
+    "Level 1 DFD breaking the system into its six main processes and "
+    "the data stores each one uses.",
     max_w_in=PORTRAIT_MAX_W, max_h_in=PORTRAIT_MAX_H,
 )
 
@@ -156,55 +152,43 @@ LEVEL2_FIGURES = [
     (
         "04_dfd_level2_1_auth.png",
         "Process 1.0 - User & Auth Management",
-        "Level 2 decomposition of Process 1.0 (User & Auth Management). "
-        "Shows the nine sub-processes that handle registration, email "
-        "verification, login with lockout, account unlock, password reset, "
-        "logout, profile / avatar / password updates, and the post-login "
-        "face-snapshot capture.",
+        "Level 2 DFD of Process 1.0, showing the sub-processes for "
+        "sign up, email verification, login with lockout, password "
+        "reset, logout, profile updates, and login-face capture.",
     ),
     (
         "04_dfd_level2_2_content.png",
         "Process 2.0 - Content Catalog",
-        "Level 2 decomposition of Process 2.0 (Content Catalog). Shows "
-        "how guests and students browse categories, category details, and "
-        "topic details (with per-user progress), and how admins manage "
-        "categories, topics, questions, and lessons through the Django "
-        "admin interface.",
+        "Level 2 DFD of Process 2.0, showing how guests and students "
+        "browse categories and topics, and how admins manage the "
+        "course content.",
     ),
     (
         "04_dfd_level2_3_quiz.png",
         "Process 3.0 - Quiz Engine",
-        "Level 2 decomposition of Process 3.0 (Quiz Engine). Shows the "
-        "four sub-processes of the gameplay loop: starting an attempt "
-        "(serving questions + lessons), validating and scoring each "
-        "answer, handling the 30-second per-question timeout, and "
-        "completing the quiz (final scoring + stars + XP).",
+        "Level 2 DFD of Process 3.0, showing the four steps of one "
+        "quiz: start the attempt, score each answer, handle the "
+        "30-second timeout, and complete the quiz.",
     ),
     (
         "04_dfd_level2_4_progress.png",
         "Process 4.0 - Progress & Gamification",
-        "Level 2 decomposition of Process 4.0 (Progress & Gamification). "
-        "Shows how hearts regenerate over time, how XP is awarded with "
-        "bonuses, how the daily streak is recomputed, how per-topic "
-        "progress is bumped, and the three read-only dashboards (user "
-        "stats, daily stats / challenges, and leaderboard).",
+        "Level 2 DFD of Process 4.0, showing how hearts regenerate, "
+        "how XP and streaks are updated after a quiz, and the read-only "
+        "stats and leaderboard screens.",
     ),
     (
         "04_dfd_level2_5_certificates.png",
         "Process 5.0 - Certificate Management",
-        "Level 2 decomposition of Process 5.0 (Certificate Management). "
-        "Shows how a student's earned certificates are listed, how the "
-        "certificate HTML is assembled, how it is rendered to PDF by "
-        "either headless Chrome or WeasyPrint, and how admins can preview "
-        "any user's certificate from the admin panel.",
+        "Level 2 DFD of Process 5.0, showing how earned certificates "
+        "are listed, built as HTML, rendered to PDF, and previewed by "
+        "admins.",
     ),
     (
         "04_dfd_level2_6_resources.png",
         "Process 6.0 - Learning Resources",
-        "Level 2 decomposition of Process 6.0 (Learning Resources). Shows "
-        "how guests and students browse, search, and filter the resource "
-        "library, how a resource detail view increments its view counter, "
-        "and how admins upload, edit, and remove resources.",
+        "Level 2 DFD of Process 6.0, showing how students search and "
+        "view learning resources and how admins upload and edit them.",
     ),
 ]
 

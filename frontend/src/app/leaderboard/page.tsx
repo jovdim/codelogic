@@ -239,14 +239,19 @@ export default function LeaderboardPage() {
                 )}
               </div>
 
-              {/* Full Leaderboard Table */}
+              {/* Full Leaderboard Table. The inner list is capped at ~900px
+                  with internal scroll so the page doesn't keep growing as the
+                  user base grows. The podium above stays pinned. */}
               <ScrollReveal animation="fade-up" delay={100}>
                 <div className="pixel-box overflow-hidden">
-                  <div className="px-6 py-4 border-b border-[#2d2d44]">
+                  <div className="px-6 py-4 border-b border-[#2d2d44] flex items-center justify-between">
                     <h2 className="text-lg font-bold text-white">Rankings</h2>
+                    <span className="text-xs text-gray-500">
+                      {leaderboard.length} player{leaderboard.length === 1 ? "" : "s"}
+                    </span>
                   </div>
 
-                  <div className="divide-y divide-[#2d2d44]">
+                  <div className="divide-y divide-[#2d2d44] max-h-225 overflow-y-auto cl-leaderboard-scroll">
                     {leaderboard.map((player, index) => (
                       <div
                         key={player.rank}
