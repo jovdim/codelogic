@@ -37,6 +37,7 @@ interface TopicData {
   icon: string | null;
   accentColor: string;
   totalLevels: number;
+  languageVersion?: string;
   certificateTitle?: string;
   certificateDescription?: string;
 }
@@ -198,6 +199,11 @@ const topicLevelTitles: { [key: string]: string[] } = {
   ],
 };
 
+// Re-exported from the standalone helper module so the existing call
+// sites in this file keep working without changes.
+import { getLevelTier } from "@/lib/levelTier";
+export { getLevelTier };
+
 // Generate level data
 const generateLevels = (
   topicId: string,
@@ -253,6 +259,7 @@ export default function TopicLevelPage() {
     icon: null,
     accentColor: "#a855f7",
     totalLevels: 15,
+    languageVersion: undefined,
     certificateTitle: undefined,
     certificateDescription: undefined,
   });
@@ -293,6 +300,7 @@ export default function TopicLevelPage() {
           icon: data.icon || null,
           accentColor: data.category_color || "#a855f7",
           totalLevels: data.total_levels || 15,
+          languageVersion: data.language_version || undefined,
           certificateTitle: data.certificate_title,
           certificateDescription: data.certificate_description,
         });
@@ -480,9 +488,23 @@ export default function TopicLevelPage() {
                     )}
                   </div>
                   <div>
-                    <h1 className="text-lg font-bold text-white">
-                      {topic.name}
-                    </h1>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h1 className="text-lg font-bold text-white">
+                        {topic.name}
+                      </h1>
+                      {topic.languageVersion && (
+                        <span
+                          className="px-2 py-0.5 text-[10px] font-bold tracking-wider rounded border"
+                          style={{
+                            color: topic.accentColor,
+                            background: `${topic.accentColor}20`,
+                            borderColor: `${topic.accentColor}55`,
+                          }}
+                        >
+                          {topic.languageVersion}
+                        </span>
+                      )}
+                    </div>
                     <p className="text-xs text-green-500">
                       {isAllCompleted
                         ? "All levels completed!"
@@ -655,6 +677,21 @@ export default function TopicLevelPage() {
                                 level.level
                               )}
                             </div>
+
+                            {/* Difficulty tier */}
+                            {(() => {
+                              const tier = getLevelTier(level.level, topic.totalLevels);
+                              return (
+                                <p
+                                  className="text-[9px] font-bold uppercase tracking-wider text-center"
+                                  style={{
+                                    color: level.isLocked ? "#4b5563" : tier.color,
+                                  }}
+                                >
+                                  {tier.label}
+                                </p>
+                              );
+                            })()}
 
                             {/* Title */}
                             <p
@@ -844,7 +881,22 @@ export default function TopicLevelPage() {
                         <h2 className="text-xl font-bold text-white">
                           Level {level.level}
                         </h2>
-                        <p className="text-gray-400 text-sm">{level.title}</p>
+                        {(() => {
+                          const tier = getLevelTier(level.level, topic.totalLevels);
+                          return (
+                            <div
+                              className="inline-flex items-center gap-1.5 px-3 py-1 mt-1 rounded-full text-xs font-bold border"
+                              style={{
+                                color: tier.color,
+                                background: tier.bg,
+                                borderColor: tier.border,
+                              }}
+                            >
+                              {tier.label}
+                            </div>
+                          );
+                        })()}
+                        <p className="text-gray-400 text-sm mt-2">{level.title}</p>
                         {level.isCompleted && (
                           <div className="flex justify-center gap-1 mt-2">
                             {[1, 2, 3].map((star) => (

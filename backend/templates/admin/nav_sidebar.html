@@ -13,5 +13,13 @@
     </a>
   </div>
 
+  {# Reports quick-link - dedicated page for quiz activity PDFs. #}
+  <div class="module" id="codelogic-reports-row">
+    <a href="{% url 'admin-reports' %}" id="codelogic-reports-link"
+       {% if request.path == '/admin/reports/' %}aria-current="page"{% endif %}>
+      Reports
+    </a>
+  </div>
+
   {% include 'admin/app_list.html' with app_list=available_apps show_changelinks=False %}
 </nav>

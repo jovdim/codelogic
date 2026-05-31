@@ -1,0 +1,105 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}Reports | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <style>
+    .cl-reports-wrap { max-width: 1100px; margin: 0 auto; padding: 4px 2px 32px; }
+    .cl-reports-h1 { color:#fff; font-size:22px; font-weight:700; letter-spacing:0.4px;
+                     margin: 0 0 4px 0; }
+    .cl-reports-sub { color:#9ca3af; font-size:13px; margin-bottom: 24px; }
+
+    .cl-report-card {
+      background: #1a1a2e; border: 1px solid #2d2d44; border-radius: 12px;
+      padding: 22px 24px; margin-bottom: 22px;
+    }
+    .cl-report-card h2 {
+      color:#fff; font-size:15px; font-weight:700; margin:0 0 4px 0;
+      letter-spacing:0.3px;
+    }
+    .cl-report-card p { color:#9ca3af; font-size:12px; margin:0 0 16px 0; }
+
+    .cl-report-row {
+      display: flex; align-items:center; gap:10px; flex-wrap: wrap;
+    }
+    .cl-report-row label { color:#cbd5e1; font-size:12px; }
+    .cl-report-row input[type="number"],
+    .cl-report-row select {
+      background:#0f0f1a; color:#fff; border:1px solid #2d2d44;
+      border-radius:6px; padding:7px 10px; font-size:13px;
+    }
+    .cl-report-row select { min-width: 280px; }
+    .cl-report-row button {
+      background:#7c3aed; color:#fff; border:0; border-radius:6px;
+      padding:8px 16px; font-weight:700; font-size:13px; cursor:pointer;
+      box-shadow: 0 3px 0 0 #5b21b6;
+    }
+    .cl-report-row button:hover { background:#6d28d9; }
+    .cl-quick {
+      display:inline-flex; gap:12px; align-items:center; margin-left: 8px;
+      color:#3d3d5c;
+    }
+    .cl-quick a {
+      color:#a78bfa; font-size:12px; text-decoration:none; font-weight:600;
+      padding: 4px 8px; border-radius:4px;
+    }
+    .cl-quick a:hover { background: rgba(167,139,250,0.12); }
+  </style>
+{% endblock %}
+
+{% block content %}
+<div class="cl-reports-wrap">
+  <h1 class="cl-reports-h1">Reports</h1>
+  <p class="cl-reports-sub">Printable quiz-activity PDFs. Pick a date range and download.</p>
+
+  <div class="cl-report-card">
+    <h2>All Students - Quiz Activity</h2>
+    <p>Every student's completed quiz attempts over the last N days.</p>
+    <form method="get" action="{% url 'admin-quiz-report-today' %}" target="_blank" class="cl-report-row">
+      <label for="cl-all-days">Last</label>
+      <input id="cl-all-days" type="number" name="days" min="1" max="365" value="1">
+      <span style="color:#cbd5e1;font-size:12px">days</span>
+      <button type="submit">Download PDF</button>
+      <span class="cl-quick">
+        |
+        <a href="{% url 'admin-quiz-report-today' %}?days=1"  target="_blank">Today</a>
+        <a href="{% url 'admin-quiz-report-today' %}?days=7"  target="_blank">7 days</a>
+        <a href="{% url 'admin-quiz-report-today' %}?days=30" target="_blank">30 days</a>
+      </span>
+    </form>
+  </div>
+
+  <div class="cl-report-card">
+    <h2>Per Student - Quiz Activity</h2>
+    <p>One student's completed quiz attempts over the last N days.</p>
+    <form id="cl-per-student-form" class="cl-report-row" onsubmit="return clOpenPerStudent(event)">
+      <label for="cl-student">Student</label>
+      <select id="cl-student" required>
+        <option value="">Choose student…</option>
+        {% for s in students %}
+          <option value="{{ s.id }}">{{ s.get_display_name }} ({{ s.email }})</option>
+        {% endfor %}
+      </select>
+      <label for="cl-per-days">Last</label>
+      <input id="cl-per-days" type="number" min="1" max="365" value="7">
+      <span style="color:#cbd5e1;font-size:12px">days</span>
+      <button type="submit">Download PDF</button>
+    </form>
+  </div>
+</div>
+
+<script>
+  function clOpenPerStudent(e) {
+    e.preventDefault();
+    var id = document.getElementById('cl-student').value;
+    var days = document.getElementById('cl-per-days').value || '7';
+    if (!id) return false;
+    // Build the per-user report URL. The route is /admin/reports/user/<uuid>/
+    var url = '/admin/reports/user/' + encodeURIComponent(id) + '/?days=' + encodeURIComponent(days);
+    window.open(url, '_blank');
+    return false;
+  }
+</script>
+{% endblock %}

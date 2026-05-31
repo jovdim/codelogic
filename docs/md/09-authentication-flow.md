@@ -10,7 +10,7 @@ Someone fills the register form on the site. The info goes to the server. The se
 2. Checks that the username isn't already used.
 3. Checks that the password is strong enough.
 4. Checks that the two password fields match.
-5. Creates the user account (with a random avatar 1–5).
+5. Creates the user account (with a random avatar 1-5).
 6. Sends an email with a confirmation link.
 
 The user can't log in yet. They need to click the link first.

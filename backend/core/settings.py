@@ -188,9 +188,14 @@ REST_FRAMEWORK = {
 }
 
 # Simple JWT settings
+# Access TTL bumped from 60min -> 24h and refresh from 7d -> 30d after
+# client reported users getting kicked out unexpectedly. The frontend
+# already rotates refresh tokens (api.ts response interceptor), so the
+# 24h access window mostly means a fresh login lasts a full day even
+# if the rotation interceptor were to ever miss a beat.
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=24),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
     'UPDATE_LAST_LOGIN': True,
@@ -224,13 +229,26 @@ CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_TRUSTED_ORIGINS', _DEFAULT_CORS_ORIGINS).
 
 
 # Email settings
-EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
 EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
 EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
 EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True') == 'True'
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
-DEFAULT_FROM_EMAIL = os.getenv('EMAIL_HOST_USER', 'noreply@codelogic.com')
+# Auto-pick the backend: if Gmail SMTP creds are present, send for real;
+# otherwise fall back to the console backend so dev still works. Client
+# was hitting "no email arrives" because prod env was missing EMAIL_BACKEND
+# and the previous default was `console`, which silently swallowed the send.
+_default_email_backend = (
+    'django.core.mail.backends.smtp.EmailBackend'
+    if EMAIL_HOST_USER and EMAIL_HOST_PASSWORD
+    else 'django.core.mail.backends.console.EmailBackend'
+)
+EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', _default_email_backend)
+# Gmail rejects messages where FROM doesn't match the authenticated
+# account; keep both in sync (DEFAULT_FROM_EMAIL falls back to the
+# authenticated SMTP user).
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER or 'noreply@codelogic.com')
+EMAIL_TIMEOUT = int(os.getenv('EMAIL_TIMEOUT', 20))
 
 # Frontend URL for email links
 FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000')

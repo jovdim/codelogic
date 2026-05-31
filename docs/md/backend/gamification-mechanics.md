@@ -24,9 +24,9 @@ level = 1 + (total_xp ÷ 500)
 ```
 
 So:
-- 0–499 XP → Level 1
-- 500–999 XP → Level 2
-- 1000–1499 XP → Level 3
+- 0-499 XP → Level 1
+- 500-999 XP → Level 2
+- 1000-1499 XP → Level 3
 - ...and so on.
 
 The level updates automatically whenever XP changes.
@@ -61,8 +61,8 @@ After passing a level, you get 1, 2, or 3 stars:
 | Score | Stars |
 |---|---|
 | 100% | ⭐⭐⭐ |
-| 80%–99% | ⭐⭐ |
-| 50%–79% | ⭐ |
+| 80%-99% | ⭐⭐ |
+| 50%-79% | ⭐ |
 | Below 50% | Fail (no stars, no level unlock) |
 
 If you play a level again, you keep the best stars.

@@ -342,14 +342,14 @@ class TopicAdmin(admin.ModelAdmin):
             'description': 'Upload icon (SVG, PNG, etc.) - if not set, uses category icon'
         }),
         ('Settings', {
-            'fields': ('total_levels', 'order'),
-            'description': 'Number of levels and display order'
+            'fields': ('total_levels', 'language_version', 'order'),
+            'description': 'Number of levels, language/spec version label (e.g. "HTML5", "CSS3", "Python 3.12"), and display order',
         }),
         ('Status', {
             'fields': ('is_active',)
         }),
     )
-    
+
     def icon_preview(self, obj):
         if obj.icon_file:
             return format_html('<img src="{}" width="24" height="24" style="object-fit: contain;" />', obj.icon_file.url)

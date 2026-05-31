@@ -139,7 +139,7 @@
     padding-top: 10px;
   }
   /* "Print" button only appears when this template is served as raw HTML
-     (i.e. no PDF engine is available at all — rare). Normally the endpoint
+     (i.e. no PDF engine is available at all - rare). Normally the endpoint
      returns a PDF directly. */
   .print-bar {
     margin-bottom: 12px;
@@ -216,7 +216,7 @@
         <td>L{{ r.level }}</td>
         <td>
           <div>{{ r.started_at }}</div>
-          {% if r.completed_at and r.completed_at != '—' %}
+          {% if r.completed_at and r.completed_at != '-' %}
             <div style="color:#9ca3af;font-size:8.5px">to {{ r.completed_at }}</div>
           {% endif %}
         </td>

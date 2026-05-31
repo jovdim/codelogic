@@ -178,13 +178,17 @@ class RegisterView(APIView):
         if serializer.is_valid():
             user = serializer.save()
             
-            # Create and send verification token
+            # Create and send verification token. Log loudly on failure
+            # so prod email-config bugs (wrong SMTP creds, etc.) are
+            # debuggable from the logs instead of silently disappearing.
+            import logging
+            logger = logging.getLogger(__name__)
             token = EmailVerificationToken.create_token(user)
             try:
                 send_verification_email(user, token)
+                logger.info(f"Verification email sent to {user.email}")
             except Exception as e:
-                # Log the error but don't fail registration
-                print(f"Failed to send verification email: {e}")
+                logger.exception(f"Verification email FAILED to {user.email}: {e}")
             
             return Response({
                 'message': 'Registration successful. Please check your email to verify your account.',
@@ -279,11 +283,17 @@ class ResendVerificationView(APIView):
                 }, status=status.HTTP_200_OK)
 
             # Create new token and send email
+            import logging
+            logger = logging.getLogger(__name__)
             token = EmailVerificationToken.create_token(user)
             try:
                 send_verification_email(user, token)
+                logger.info(f"Resent verification email to {email}")
             except Exception as e:
-                print(f"Failed to send verification email: {e}")
+                logger.exception(f"Resend verification email FAILED to {email}: {e}")
+                return Response({
+                    'message': 'We hit a snag sending the verification email. Please try again in a moment.'
+                }, status=status.HTTP_502_BAD_GATEWAY)
 
             return Response({
                 'message': 'If an account with this email exists, a verification link has been sent.'
@@ -539,26 +549,41 @@ class ChangePasswordView(APIView):
 class PasswordResetRequestView(APIView):
     """Request password reset email."""
     permission_classes = [AllowAny]
-    
+
     def post(self, request):
+        import logging
+        logger = logging.getLogger(__name__)
+
         serializer = PasswordResetRequestSerializer(data=request.data)
         if serializer.is_valid():
             email = serializer.validated_data['email']
-            
+            send_failed = False
+
             try:
                 user = User.objects.get(email=email)
                 token = PasswordResetToken.create_token(user)
                 try:
                     send_password_reset_email(user, token)
+                    logger.info(f"Password reset email sent to {email}")
                 except Exception as e:
-                    print(f"Failed to send password reset email: {e}")
+                    # Don't swallow the failure silently any more - log loudly
+                    # AND surface a generic 502 so the frontend can show a
+                    # real error instead of a fake "success" that confuses
+                    # users when no email ever lands.
+                    logger.exception(f"Password reset email FAILED to {email}: {e}")
+                    send_failed = True
             except User.DoesNotExist:
                 pass  # Don't reveal if user exists
-            
+
+            if send_failed:
+                return Response({
+                    'message': 'We hit a snag sending the reset email. Please try again in a moment, or contact support if it keeps failing.'
+                }, status=status.HTTP_502_BAD_GATEWAY)
+
             return Response({
                 'message': 'If an account with this email exists, a password reset link has been sent.'
             }, status=status.HTTP_200_OK)
-        
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 

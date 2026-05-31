@@ -135,6 +135,17 @@ def _trend_series(qs, date_field, days=30):
 def admin_dashboard(request, extra_context=None):
     from accounts.models import User
     from game.models import Category, Topic, Question, LearningResource, Certificate, UserCertificate, QuizAttempt
+
+    # Unified-login routing: teachers go through /admin/login/ (same UI as
+    # superadmin) and then get bounced to their portal at /teacher/.
+    # Superusers skip the bounce so they can still see the dashboard.
+    if (
+        request.user.is_authenticated
+        and getattr(request.user, 'role', None) == User.ROLE_TEACHER
+        and not request.user.is_superuser
+    ):
+        from django.shortcuts import redirect
+        return redirect('teacher_portal')
     
     # Get categories with topics
     categories_with_topics = []
@@ -191,9 +202,9 @@ def _quiz_attempt_status(attempt):
 
 def _format_duration(started_at, completed_at):
     """Return a short 'how long the quiz took' string, e.g. '5m 12s' or '1h 03m'.
-    Returns an em-dash if either timestamp is missing (i.e. quiz never finished)."""
+    Returns a hyphen if either timestamp is missing (i.e. quiz never finished)."""
     if not started_at or not completed_at:
-        return '—'
+        return '-'
     secs = max(0, int((completed_at - started_at).total_seconds()))
     if secs >= 3600:
         return f'{secs // 3600}h {(secs % 3600) // 60:02d}m'
@@ -212,15 +223,15 @@ def _build_quiz_report_rows(attempts):
         started_local = timezone.localtime(a.started_at) if a.started_at else None
         completed_local = timezone.localtime(a.completed_at) if a.completed_at else None
         rows.append({
-            'student_name': a.user.get_display_name() if a.user else '—',
-            'student_email': a.user.email if a.user else '—',
-            'topic': a.topic.name if a.topic else '—',
-            'category': a.topic.category.name if a.topic and a.topic.category else '—',
+            'student_name': a.user.get_display_name() if a.user else '-',
+            'student_email': a.user.email if a.user else '-',
+            'topic': a.topic.name if a.topic else '-',
+            'category': a.topic.category.name if a.topic and a.topic.category else '-',
             'level': a.level,
-            'started_at': started_local.strftime('%b %d, %I:%M %p') if started_local else '—',
-            'completed_at': completed_local.strftime('%b %d, %I:%M %p') if completed_local else '—',
+            'started_at': started_local.strftime('%b %d, %I:%M %p') if started_local else '-',
+            'completed_at': completed_local.strftime('%b %d, %I:%M %p') if completed_local else '-',
             'duration': _format_duration(a.started_at, a.completed_at),
-            'score': f'{a.score}/{a.total_questions}' if a.completed else '—',
+            'score': f'{a.score}/{a.total_questions}' if a.completed else '-',
             'status_label': status_label,
             'status_class': status_class,
         })
@@ -245,6 +256,25 @@ def _render_quiz_report_response(request, context, filename_slug):
 
 
 @staff_member_required
+def admin_reports_index(request):
+    """Reports landing page at /admin/reports/. Consolidates the form widgets
+    that used to live on the admin dashboard + each user's change page so
+    the admin sidebar has one dedicated entry point for reports."""
+    from accounts.models import User
+    students = (
+        User.objects
+        .filter(is_email_verified=True, is_staff=False, is_superuser=False)
+        .order_by('username')
+    )
+    context = {
+        **admin.site.each_context(request),
+        'title': 'Reports',
+        'students': students,
+    }
+    return render(request, 'admin/reports/index.html', context)
+
+
+@staff_member_required
 def daily_quiz_report_pdf(request):
     """All-students quiz report across the last N days (Asia/Manila TZ).
 
@@ -265,7 +295,7 @@ def daily_quiz_report_pdf(request):
 
     attempts = (
         QuizAttempt.objects
-        # Only completed attempts — teachers don't care about students who
+        # Only completed attempts - teachers don't care about students who
         # opened a quiz and walked away. Counts and rows both exclude these.
         .filter(started_at__date__gte=start_date, completed=True)
         .select_related('user', 'topic', 'topic__category')
@@ -378,9 +408,11 @@ admin.site.index = admin_dashboard
 
 urlpatterns = [
     path('admin/dashboard/', admin.site.admin_view(admin_dashboard), name='admin-dashboard'),
+    path('admin/reports/', admin_reports_index, name='admin-reports'),
     path('admin/reports/today/', daily_quiz_report_pdf, name='admin-quiz-report-today'),
     path('admin/reports/user/<uuid:user_id>/', user_quiz_report_pdf, name='admin-user-quiz-report'),
     path('admin/', admin.site.urls),
+    path('teacher/', include('accounts.teacher_urls')),
     path('api/auth/', include('accounts.urls')),
     path('api/game/', include('game.urls')),
 ]

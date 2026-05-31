@@ -1,0 +1,77 @@
+{% extends 'teachers/base.html' %}
+{% block title %}Reports{% endblock %}
+{% block content %}
+
+<div class="tp-card">
+  <div class="tp-row" style="justify-content:space-between">
+    <a href="{% url 'teacher_portal' %}" style="color:#a78bfa">&larr; Back to students</a>
+  </div>
+  <h1 style="color:#fff;font-size:22px;font-weight:800;margin:8px 0 4px 0">Reports</h1>
+  <p style="color:#9ca3af;font-size:13px;margin:0">Printable quiz-activity PDFs for your students.</p>
+</div>
+
+<div class="tp-card">
+  <h2 style="color:#fff;font-size:14px;font-weight:700;margin:0 0 4px 0;letter-spacing:0.4px;text-transform:uppercase">
+    All my students
+  </h2>
+  <p style="color:#9ca3af;font-size:12px;margin:0 0 14px 0">
+    Every completed quiz attempt across the students assigned to you, over the last N days.
+  </p>
+  <form method="get" action="{% url 'teacher_quiz_report_all' %}" target="_blank" class="tp-row">
+    <div>
+      <label for="all-days">Last</label>
+      <input id="all-days" name="days" type="number" min="1" max="365" value="1" class="tp-input" style="width:90px">
+    </div>
+    <span style="color:#cbd5e1;font-size:12px;align-self:flex-end;padding-bottom:9px">days</span>
+    <div style="align-self:flex-end">
+      <button type="submit" class="tp-btn">Download PDF</button>
+    </div>
+    <div style="align-self:flex-end;color:#3d3d5c;padding-bottom:8px">|</div>
+    <div style="align-self:flex-end;padding-bottom:6px">
+      <a href="{% url 'teacher_quiz_report_all' %}?days=1"  target="_blank" style="color:#a78bfa;font-size:12px;text-decoration:none;margin-right:8px">Today</a>
+      <a href="{% url 'teacher_quiz_report_all' %}?days=7"  target="_blank" style="color:#a78bfa;font-size:12px;text-decoration:none;margin-right:8px">7 days</a>
+      <a href="{% url 'teacher_quiz_report_all' %}?days=30" target="_blank" style="color:#a78bfa;font-size:12px;text-decoration:none">30 days</a>
+    </div>
+  </form>
+</div>
+
+<div class="tp-card">
+  <h2 style="color:#fff;font-size:14px;font-weight:700;margin:0 0 4px 0;letter-spacing:0.4px;text-transform:uppercase">
+    Per student
+  </h2>
+  <p style="color:#9ca3af;font-size:12px;margin:0 0 14px 0">
+    One student's completed quiz attempts over the last N days.
+  </p>
+  <form id="ts-per-form" class="tp-row" onsubmit="return tsOpenPerStudent(event)">
+    <div>
+      <label for="ts-student">Student</label>
+      <select id="ts-student" required class="tp-select" style="min-width:280px">
+        <option value="">Choose student...</option>
+        {% for s in students %}
+          <option value="{{ s.id }}">{{ s.get_display_name }} ({{ s.email }})</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="ts-days">Last</label>
+      <input id="ts-days" type="number" min="1" max="365" value="7" class="tp-input" style="width:90px">
+    </div>
+    <span style="color:#cbd5e1;font-size:12px;align-self:flex-end;padding-bottom:9px">days</span>
+    <div style="align-self:flex-end">
+      <button type="submit" class="tp-btn">Download PDF</button>
+    </div>
+  </form>
+</div>
+
+<script>
+  function tsOpenPerStudent(e) {
+    e.preventDefault();
+    var id = document.getElementById('ts-student').value;
+    var days = document.getElementById('ts-days').value || '7';
+    if (!id) return false;
+    var url = '/teacher/reports/student/' + encodeURIComponent(id) + '/?days=' + encodeURIComponent(days);
+    window.open(url, '_blank');
+    return false;
+  }
+</script>
+{% endblock %}

@@ -25,7 +25,7 @@ Every page on the site, what it does, and who can see it.
 | `/dashboard` | `app/dashboard/page.tsx` | Personal home. XP, hearts, streak, daily challenges, recent activity, topic list. |
 | `/play` | `app/play/page.tsx` | Shows all categories. |
 | `/play/[category]` | `app/play/[category]/page.tsx` | Topics in a category. |
-| `/play/[category]/[topic]` | `app/play/[category]/[topic]/page.tsx` | Topic detail + level map (1–15). |
+| `/play/[category]/[topic]` | `app/play/[category]/[topic]/page.tsx` | Topic detail + level map (1-15). |
 | `/play/[category]/[topic]/level/[level]` | `.../level/[level]/page.tsx` | The actual quiz. Lessons → questions → result. |
 | `/certificates` | `app/certificates/page.tsx` | Your earned certificates. Clicking one opens a printable version. |
 | `/settings` | `app/settings/page.tsx` | Three tabs: Profile, Password, Account. |

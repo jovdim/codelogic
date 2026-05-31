@@ -1,7 +1,52 @@
 {% extends "admin/base_site.html" %}
-{% load static %}
+{% load static i18n %}
 
 {% block extrastyle %}
     {{ block.super }}
     <link rel="stylesheet" href="{% static 'admin/codelogic-admin.css' %}">
+{% endblock %}
+
+{% block extrahead %}
+    {{ block.super }}
+    {% comment %}
+      Force Django admin dark mode regardless of OS / browser setting.
+      Django's theme.js runs on window.load, reads localStorage.theme,
+      and writes the data-theme attr. We pre-seed localStorage to 'dark'
+      so theme.js pins it for us, AND set the attribute inline so the
+      first paint is already dark (no light-mode flash).
+    {% endcomment %}
+    <script>
+      (function () {
+        try { localStorage.setItem('theme', 'dark'); } catch (e) {}
+        document.documentElement.dataset.theme = 'dark';
+      })();
+    </script>
+    <script src="{% static 'admin/codelogic-admin-actions.js' %}" defer></script>
+{% endblock %}
+
+{% block welcome-msg %}
+    {% if user.is_authenticated and user.is_staff %}
+        {% translate 'Welcome,' %} <strong>Admin</strong>.
+    {% endif %}
+{% endblock %}
+
+{% block userlinks %}
+    {% if user.has_usable_password %}
+        <a href="{% url 'admin:password_change' %}" title="{% translate 'Change password' %}">{% translate 'Change password' %}</a> /
+    {% endif %}
+    <form id="logout-form" method="post" action="{% url 'admin:logout' %}" style="display:inline">
+        {% csrf_token %}
+        <button type="submit"
+                class="cl-logout-icon"
+                title="{% translate 'Log out' %}"
+                aria-label="{% translate 'Log out' %}">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                 fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+        </button>
+    </form>
 {% endblock %}

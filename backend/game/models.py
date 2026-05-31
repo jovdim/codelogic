@@ -67,12 +67,16 @@ class Topic(models.Model):
     order = models.PositiveIntegerField(default=0)
     total_levels = models.PositiveIntegerField(default=15)
     is_active = models.BooleanField(default=True)
-    
+    language_version = models.CharField(
+        max_length=40, blank=True, default='',
+        help_text='Optional language/spec version label shown to students, e.g. "HTML5", "CSS3", "Python 3.12", "C11", ".NET 8". Leave blank to hide.',
+    )
+
     class Meta:
         db_table = 'topics'
         ordering = ['order', 'name']
         unique_together = ['category', 'slug']
-    
+
     def __str__(self):
         return f"{self.category.name} - {self.name}"
     

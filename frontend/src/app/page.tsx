@@ -450,8 +450,7 @@ function HeroQuiz({
             >
               <div className="flex items-center gap-3">
                 <span
-                  className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold"
-                  style={{ background: "rgba(255,255,255,0.05)" }}
+                  className="w-9 h-9 rounded-lg flex items-center justify-center text-base font-extrabold shrink-0 border-2 border-purple-500/40 bg-purple-500/20 text-purple-300"
                 >
                   {String.fromCharCode(65 + i)}
                 </span>

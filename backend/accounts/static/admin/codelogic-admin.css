@@ -8,6 +8,25 @@
  * Mirrors the frontend palette from frontend/src/app/globals.css.
  * ============================================================ */
 
+/* ---- FORCE DARK MODE ALWAYS ----
+   Even when the OS / browser is set to light mode. base_site.html
+   pins html[data-theme="dark"] inline; this block + the explicit
+   color-scheme covers any caches / stale tabs and stops the
+   built-in theme toggle from sneaking back to "auto" / "light". */
+html {
+  color-scheme: dark !important;
+}
+html:not([data-theme]),
+html[data-theme="auto"],
+html[data-theme="light"] {
+  /* Re-pin to dark if Django flipped us elsewhere. */
+  color-scheme: dark !important;
+}
+/* Hide the theme toggle in the header so users can't flip it back. */
+button.theme-toggle {
+  display: none !important;
+}
+
 /* ---- HEADER BAR ---- */
 #header {
   background: #1a1a2e !important;
@@ -365,4 +384,48 @@ body.no-sidebar #nav-sidebar {
 /* ---- USER TOOLS (top-right link to dashboard, logout) ---- */
 #user-tools strong {
   color: #a78bfa !important;
+}
+
+/* Icon-only logout button (replaces the "Log out" text link). */
+#user-tools .cl-logout-icon,
+#logout-form .cl-logout-icon {
+  background: transparent !important;
+  border: 1px solid rgba(167, 139, 250, 0.4) !important;
+  color: #e2e2f0 !important;
+  width: 32px !important;
+  height: 32px !important;
+  padding: 0 !important;
+  margin: 0 0 0 8px !important;
+  border-radius: 8px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  vertical-align: middle !important;
+  cursor: pointer !important;
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease !important;
+  box-shadow: none !important;
+  font-size: 0 !important; /* hide any leftover text node */
+}
+
+#user-tools .cl-logout-icon:hover,
+#logout-form .cl-logout-icon:hover {
+  background: rgba(124, 58, 237, 0.25) !important;
+  border-color: #a78bfa !important;
+  color: #fff !important;
+}
+
+#user-tools .cl-logout-icon svg,
+#logout-form .cl-logout-icon svg {
+  display: block;
+}
+
+/* Form wrapper around the icon was rendered inline so it doesn't push
+   onto its own line. Kill the underline Django sometimes adds to
+   buttons in #user-tools via the generic <a> styling. */
+#user-tools form#logout-form {
+  display: inline-block !important;
+  border: 0 !important;
+}
+#user-tools form#logout-form button {
+  border-bottom: 0 !important;
 }

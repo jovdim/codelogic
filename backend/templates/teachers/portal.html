@@ -1,0 +1,103 @@
+{% extends 'teachers/base.html' %}
+{% block title %}My Students{% endblock %}
+{% block content %}
+<div class="tp-card">
+  <div class="tp-row" style="justify-content:space-between">
+    <div>
+      <h1 style="color:#fff;font-size:20px;font-weight:800;margin:0">My Students</h1>
+      <p style="color:#9ca3af;font-size:12px;margin:4px 0 0 0">
+        {{ total_count }} student{{ total_count|pluralize }} assigned to you
+      </p>
+    </div>
+    <a href="{% url 'teacher_student_new' %}" class="tp-btn" style="text-decoration:none;display:inline-block">
+      + Add Student
+    </a>
+  </div>
+</div>
+
+<div class="tp-card">
+  <form method="get" class="tp-row">
+    <div>
+      <label for="q">Search</label>
+      <input id="q" name="q" type="search" class="tp-input" value="{{ q }}" placeholder="Name, email, username">
+    </div>
+    <div>
+      <label for="year">Year</label>
+      <select id="year" name="year" class="tp-select">
+        <option value="">Any</option>
+        {% for value, label in year_choices %}
+          <option value="{{ value }}" {% if year == value|stringformat:"s" %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="section">Section</label>
+      <input id="section" name="section" type="text" class="tp-input" value="{{ section }}" placeholder="A">
+    </div>
+    <div style="align-self:flex-end">
+      <button type="submit" class="tp-btn">Filter</button>
+      <a href="{% url 'teacher_portal' %}" class="tp-btn alt" style="text-decoration:none">Clear</a>
+    </div>
+  </form>
+</div>
+
+<div class="tp-card" style="padding: 0; overflow: hidden;">
+  <table class="tp-table">
+    <thead>
+      <tr>
+        <th>Student</th>
+        <th>Username</th>
+        <th>Year</th>
+        <th>Section</th>
+        <th>Department</th>
+        <th>XP</th>
+        <th>Status</th>
+        <th style="text-align:right">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in students %}
+      <tr>
+        <td>
+          <a href="{% url 'teacher_student_detail' s.id %}" style="text-decoration:none">
+            <strong style="color:#fff">{{ s.get_display_name }}</strong>
+            <div style="color:#94a3b8;font-size:11px;margin-top:2px">{{ s.email }}</div>
+          </a>
+        </td>
+        <td>@{{ s.username }}</td>
+        <td>{{ s.get_year_level_display|default:"-" }}</td>
+        <td>{{ s.section|default:"-" }}</td>
+        <td>{{ s.department|default:"-" }}</td>
+        <td>{{ s.xp }}</td>
+        <td>
+          {% if s.is_active %}
+            <span class="tp-pill ok">Active</span>
+          {% else %}
+            <span class="tp-pill bad">Disabled</span>
+          {% endif %}
+        </td>
+        <td style="text-align:right;white-space:nowrap">
+          <a href="{% url 'teacher_student_detail' s.id %}" class="tp-btn" style="text-decoration:none;font-size:11px;padding:6px 10px">View</a>
+          <a href="{% url 'teacher_student_edit' s.id %}" class="tp-btn alt" style="text-decoration:none;font-size:11px;padding:6px 10px">Edit</a>
+          <form method="post" action="{% url 'teacher_student_reset_password' s.id %}" style="display:inline">
+            {% csrf_token %}
+            <button type="submit" class="tp-btn warn" style="font-size:11px;padding:6px 10px">Reset PW</button>
+          </form>
+          <form method="post" action="{% url 'teacher_student_delete' s.id %}" style="display:inline"
+                onsubmit="return confirm('Delete {{ s.email|escapejs }}? This cannot be undone.');">
+            {% csrf_token %}
+            <button type="submit" class="tp-btn danger" style="font-size:11px;padding:6px 10px">Delete</button>
+          </form>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="8" style="text-align:center;padding:30px;color:#9ca3af">
+          No students assigned to you yet. Click "Add Student" to create one.
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -56,16 +56,66 @@ class User(AbstractBaseUser, PermissionsMixin):
     """
     Custom User model with email authentication and gamification fields.
     """
+    ROLE_STUDENT = 'student'
+    ROLE_TEACHER = 'teacher'
+    ROLE_ADMIN = 'admin'
+    ROLE_CHOICES = [
+        (ROLE_STUDENT, 'Student'),
+        (ROLE_TEACHER, 'Teacher'),
+        (ROLE_ADMIN, 'Admin'),
+    ]
+
+    # Suggested department list; admin can still type a custom value because
+    # we leave `choices` off and the form is a free-text input. The list is
+    # only used as a typing/UI hint elsewhere.
+    DEPARTMENT_SUGGESTIONS = ['IT', 'Computer Engineering']
+
+    YEAR_LEVEL_CHOICES = [
+        (1, '1st Year'),
+        (2, '2nd Year'),
+        (3, '3rd Year'),
+        (4, '4th Year'),
+    ]
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     email = models.EmailField(unique=True, max_length=255)
     username = models.CharField(unique=True, max_length=50)
-    
+
     # Profile fields
     display_name = models.CharField(max_length=100, blank=True)
     last_display_name_change = models.DateTimeField(null=True, blank=True)
     avatar = models.PositiveIntegerField(default=1, choices=[(i, f'Avatar {i}') for i in range(1, 6)])  # 1-5 preset avatars
     bio = models.TextField(max_length=500, blank=True)
-    
+
+    # Role + assignment
+    # Students play the game; teachers manage their assigned students via
+    # the /teacher/ portal; admins use Django admin. Computed superuser is
+    # always treated as admin regardless of `role`.
+    role = models.CharField(max_length=16, choices=ROLE_CHOICES, default=ROLE_STUDENT)
+    department = models.CharField(
+        max_length=80, blank=True, default='',
+        help_text='Department label (e.g. "IT", "Computer Engineering"). Free text - use anything that matches your school.',
+    )
+    year_level = models.PositiveSmallIntegerField(
+        null=True, blank=True, choices=YEAR_LEVEL_CHOICES,
+        help_text='Year level for students (1-4). Optional for teachers/admin.',
+    )
+    section = models.CharField(
+        max_length=20, blank=True, default='',
+        help_text='Section label (e.g. "A", "1B", "Block 3"). Optional for teachers/admin.',
+    )
+    # Students -> teachers M2M. A student may have multiple subject teachers;
+    # a teacher sees ONLY students in this set on their portal. Superadmins
+    # see everyone via Django admin so they don't need to populate this.
+    teachers = models.ManyToManyField(
+        'self',
+        symmetrical=False,
+        related_name='students',
+        blank=True,
+        limit_choices_to={'role': 'teacher'},
+        help_text='For students: the teachers who can manage this student.',
+    )
+
     # Account status
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)

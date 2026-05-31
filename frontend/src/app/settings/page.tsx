@@ -24,12 +24,9 @@ import {
 } from "lucide-react";
 import { AxiosError } from "axios";
 
-type Tab = "profile" | "password" | "account";
-
 export default function SettingsPage() {
   const { user, updateUser, logout } = useAuth();
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<Tab>("profile");
 
   if (!user) return null;
 
@@ -37,58 +34,18 @@ export default function SettingsPage() {
     <ProtectedRoute>
       <Sidebar>
         <div className="min-h-screen pb-8">
-          <div className="max-w-4xl mx-auto px-4 py-8">
-            <h1 className="text-2xl font-bold text-white mb-6">Settings</h1>
-            <div className="flex flex-col md:flex-row gap-6 md:gap-8">
-              {/* Settings Tabs */}
-              <div className="w-full md:w-48 shrink-0">
-                <nav className="flex md:flex-col gap-2 md:space-y-1 overflow-x-auto pb-2 md:pb-0">
-                  <button
-                    onClick={() => setActiveTab("profile")}
-                    className={`flex items-center gap-3 px-4 py-3 text-left transition-colors whitespace-nowrap ${
-                      activeTab === "profile"
-                        ? "bg-purple-500/20 text-purple-400 border-l-2 border-purple-500"
-                        : "text-gray-400 hover:text-white hover:bg-white/5"
-                    }`}
-                  >
-                    <User className="w-5 h-5" />
-                    Profile
-                  </button>
-                  <button
-                    onClick={() => setActiveTab("password")}
-                    className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
-                      activeTab === "password"
-                        ? "bg-purple-500/20 text-purple-400 border-l-2 border-purple-500"
-                        : "text-gray-400 hover:text-white hover:bg-white/5"
-                    }`}
-                  >
-                    <Lock className="w-5 h-5" />
-                    Password
-                  </button>
-                  <button
-                    onClick={() => setActiveTab("account")}
-                    className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
-                      activeTab === "account"
-                        ? "bg-red-500/20 text-red-400 border-l-2 border-red-500"
-                        : "text-gray-400 hover:text-white hover:bg-white/5"
-                    }`}
-                  >
-                    <Trash2 className="w-5 h-5" />
-                    Account
-                  </button>
-                </nav>
-              </div>
+          <div className="max-w-5xl mx-auto px-4 py-8 space-y-6">
+            <h1 className="text-2xl font-bold text-white">Settings</h1>
 
-              {/* Content */}
-              <div className="flex-1">
-                {activeTab === "profile" && (
-                  <ProfileSettings user={user} updateUser={updateUser} />
-                )}
-                {activeTab === "password" && <PasswordSettings />}
-                {activeTab === "account" && (
-                  <AccountSettings logout={logout} router={router} />
-                )}
-              </div>
+            {/* All three sections (Profile, Password, Account) share one
+                card so the page reads as a single Settings surface, with
+                thin dividers between them. */}
+            <div className="pixel-box p-6">
+              <ProfileSettings user={user} updateUser={updateUser} />
+              <div className="border-t border-[#2d2d44] my-8" />
+              <PasswordSettings />
+              <div className="border-t border-[#2d2d44] my-8" />
+              <AccountSettings logout={logout} router={router} />
             </div>
           </div>
         </div>
@@ -163,7 +120,7 @@ function ProfileSettings({ user, updateUser }: ProfileSettingsProps) {
   };
 
   return (
-    <div className="pixel-box p-6">
+    <div>
       <h2 className="text-xl font-bold text-white mb-6">Profile Settings</h2>
 
       {/* Account Info */}
@@ -454,7 +411,7 @@ function PasswordSettings() {
   };
 
   return (
-    <div className="pixel-box p-6">
+    <div>
       <h2 className="text-xl font-bold text-white mb-6">Change Password</h2>
 
       {message && (
@@ -646,8 +603,8 @@ function AccountSettings({ logout, router }: AccountSettingsProps) {
   };
 
   return (
-    <div className="pixel-box p-6 border-red-500/30">
-      <h2 className="text-xl font-bold text-white mb-2">Danger Zone</h2>
+    <div>
+      <h2 className="text-xl font-bold text-red-400 mb-2">Danger Zone</h2>
       <p className="text-gray-400 mb-6">
         Once you delete your account, there is no going back. Please be certain.
       </p>

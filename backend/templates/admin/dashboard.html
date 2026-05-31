@@ -267,29 +267,6 @@
 
 </div>
 
-<!-- Reports -->
-<div class="pixel-box" style="padding: 18px 22px; margin-bottom: 30px; display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
-  <div style="flex: 1 1 260px; min-width: 240px;">
-    <div style="font-size: 14px; font-weight: 700; color: #fff; letter-spacing: 0.4px;">Quiz Activity Report</div>
-    <div style="font-size: 12px; color: #9ca3af; margin-top: 2px;">Printable report of every student's quiz attempts over the last N days.</div>
-  </div>
-  <form method="get" action="{% url 'admin-quiz-report-today' %}" target="_blank"
-        style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-    <label for="cl-dash-report-days" style="color:#cbd5e1;font-size:12px">Last</label>
-    <input id="cl-dash-report-days" type="number" name="days" min="1" max="365" value="1"
-           style="width:70px;background:#0f0f1a;color:#fff;border:1px solid #2d2d44;border-radius:6px;padding:6px 8px;font-size:13px">
-    <span style="color:#cbd5e1;font-size:12px">days</span>
-    <button type="submit"
-            style="background:#7c3aed;color:#fff;border:0;border-radius:6px;padding:8px 14px;font-weight:700;font-size:12px;cursor:pointer;box-shadow:0 3px 0 0 #5b21b6">
-      Download Report
-    </button>
-    <span style="color:#3d3d5c">|</span>
-    <a href="{% url 'admin-quiz-report-today' %}?days=1"  target="_blank" style="color:#a78bfa;font-size:12px;text-decoration:none">Today</a>
-    <a href="{% url 'admin-quiz-report-today' %}?days=7"  target="_blank" style="color:#a78bfa;font-size:12px;text-decoration:none">7 days</a>
-    <a href="{% url 'admin-quiz-report-today' %}?days=30" target="_blank" style="color:#a78bfa;font-size:12px;text-decoration:none">30 days</a>
-  </form>
-</div>
-
 <!-- Stats Grid -->
 <div
   style="

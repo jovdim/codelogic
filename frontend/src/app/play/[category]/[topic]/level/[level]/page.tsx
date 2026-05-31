@@ -853,7 +853,19 @@ export default function LevelQuizPage() {
                         </div>
                         <div className="w-12" />
                       </div>
-                      <div className="bg-[#0f0f1a] p-4 font-mono text-sm overflow-x-auto">
+                      <div
+                        className="bg-[#0f0f1a] p-4 font-mono text-sm overflow-x-auto select-none"
+                        onCopy={(e) => e.preventDefault()}
+                        onCut={(e) => e.preventDefault()}
+                        onContextMenu={(e) => e.preventDefault()}
+                        onDragStart={(e) => e.preventDefault()}
+                        style={{
+                          WebkitUserSelect: "none",
+                          MozUserSelect: "none",
+                          msUserSelect: "none",
+                          userSelect: "none",
+                        }}
+                      >
                         {refLines.map((line, idx) => {
                           const ok = matchedAt(idx);
                           return (
@@ -1150,12 +1162,14 @@ export default function LevelQuizPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <span
-                          className={`w-7 h-7 flex items-center justify-center rounded text-sm font-bold ${
+                          className={`w-9 h-9 flex items-center justify-center rounded-lg text-base font-extrabold shrink-0 border-2 ${
                             showCorrect || showCorrectReveal
-                              ? "bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-200"
+                              ? "bg-green-500 text-white border-green-400 dark:bg-green-500 dark:text-white dark:border-green-400"
                               : showWrong
-                                ? "bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-200"
-                                : "bg-gray-100 text-gray-800 dark:bg-[#0f0f1a] dark:text-gray-400"
+                                ? "bg-red-500 text-white border-red-400 dark:bg-red-500 dark:text-white dark:border-red-400"
+                                : isSelected
+                                  ? "bg-purple-500 text-white border-purple-400 dark:bg-purple-500 dark:text-white dark:border-purple-400"
+                                  : "bg-purple-500/20 text-purple-300 border-purple-500/40 dark:bg-purple-500/20 dark:text-purple-300 dark:border-purple-500/40"
                           }`}
                         >
                           {String.fromCharCode(65 + index)}

@@ -38,7 +38,7 @@ A short code for resetting passwords. Lasts 1 hour.
 | `POST /api/auth/token/refresh/` | Get a new access token using the refresh token. |
 | `GET /api/auth/profile/` | See your profile. Also refills hearts. |
 | `PATCH /api/auth/profile/` | Change your display name or bio. |
-| `PATCH /api/auth/avatar/` | Change your avatar (1–5). |
+| `PATCH /api/auth/avatar/` | Change your avatar (1-5). |
 | `POST /api/auth/password/change/` | Change your password. |
 | `POST /api/auth/password/reset/` | Request a password reset email. |
 | `GET /api/auth/password/reset/validate/` | Check if a reset token is still valid. |

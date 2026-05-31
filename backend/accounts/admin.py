@@ -45,8 +45,8 @@ class UserAdmin(BaseUserAdmin):
     # pagination / bulk-actions all keep working - we only override how
     # individual rows render.
     change_list_template = 'admin/accounts/user/change_list.html'
-    list_display = ['email', 'username', 'display_name', 'level_badge', 'xp', 'hearts_display', 'streak_display', 'is_email_verified', 'active_badge', 'date_joined']
-    list_filter = ['is_email_verified', 'is_active', 'is_staff', 'level', 'date_joined']
+    list_display = ['email', 'username', 'display_name', 'role_badge', 'year_level', 'section', 'department', 'level_badge', 'xp', 'is_email_verified', 'active_badge']
+    list_filter = ['role', 'department', 'year_level', 'section', 'is_email_verified', 'is_active', 'is_staff', 'date_joined']
     search_fields = ['email', 'username', 'display_name']
     ordering = ['-date_joined']
     list_per_page = 50
@@ -59,6 +59,14 @@ class UserAdmin(BaseUserAdmin):
         ('Profile', {
             'fields': ('display_name', 'bio', 'avatar'),
             'description': 'Avatar is a number 1-5 for preset avatars'
+        }),
+        ('Role & assignment', {
+            'fields': ('role', 'department', 'year_level', 'section', 'teachers'),
+            'description': (
+                'Role drives where the user can log in: student plays the game, '
+                'teacher uses /teacher/, admin uses Django admin. '
+                'Teachers see only the students assigned to them via the "teachers" field on the student.'
+            ),
         }),
         ('Gamification', {
             'fields': (
@@ -92,7 +100,15 @@ class UserAdmin(BaseUserAdmin):
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('email', 'username', 'password1', 'password2'),
+            'fields': (
+                'email', 'username', 'password1', 'password2',
+                'role', 'department', 'year_level', 'section',
+            ),
+            'description': (
+                'Pick a role: <strong>Student</strong> plays the game; '
+                '<strong>Teacher</strong> uses the same admin login but is '
+                'redirected to /teacher/ to manage their students.'
+            ),
         }),
     )
 
@@ -110,6 +126,13 @@ class UserAdmin(BaseUserAdmin):
         # checkbox alone so admins keep full control.
         if not change:
             obj.is_email_verified = True
+        # Teachers log in through /admin/login/ (unified UI). The admin
+        # login form requires is_staff=True, so flip it on automatically
+        # for teacher accounts. They still can't open Django admin model
+        # pages (no model-level perms) - and our admin_dashboard view
+        # immediately redirects them to /teacher/ anyway.
+        if obj.role == User.ROLE_TEACHER and not obj.is_superuser:
+            obj.is_staff = True
         super().save_model(request, obj, form, change)
 
     def quiz_history(self, obj):
@@ -138,7 +161,7 @@ class UserAdmin(BaseUserAdmin):
             total = obj.login_face_snapshots.count()
         except (OperationalError, ProgrammingError):
             return format_html(
-                '<em style="color:#f87171">Login snapshot table is missing — '
+                '<em style="color:#f87171">Login snapshot table is missing - '
                 'run <code>python manage.py migrate</code> on the server.</em>'
             )
 
@@ -218,6 +241,26 @@ class UserAdmin(BaseUserAdmin):
             grid_inner, footer,
         )
     login_face_display.short_description = 'Login face snapshots (newest first)'
+
+    def role_badge(self, obj):
+        """Pill version of the role field, easier to scan in the user list."""
+        role = obj.role or 'student'
+        if obj.is_superuser:
+            role = 'admin'
+        colors = {
+            'student': '#3b82f6',
+            'teacher': '#10b981',
+            'admin': '#f59e0b',
+        }
+        color = colors.get(role, '#6b7280')
+        return format_html(
+            '<span style="background:{};color:white;padding:2px 10px;'
+            'border-radius:12px;font-weight:600;font-size:11px;'
+            'text-transform:uppercase;letter-spacing:0.4px">{}</span>',
+            color, role,
+        )
+    role_badge.short_description = 'Role'
+    role_badge.admin_order_field = 'role'
 
     def level_badge(self, obj):
         colors = {

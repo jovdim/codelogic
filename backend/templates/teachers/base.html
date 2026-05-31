@@ -1,0 +1,117 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{% block title %}Teacher Portal{% endblock %} | CodeLogic</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: #0f0f1a; color: #e2e2f0; min-height: 100vh;
+    }
+    a { color: #a78bfa; text-decoration: none; }
+    a:hover { color: #c4b5fd; }
+    .tp-shell { max-width: 1200px; margin: 0 auto; padding: 24px 20px 64px; }
+    header.tp-bar {
+      background: #1a1a2e; border-bottom: 2px solid #7c3aed; padding: 14px 24px;
+      display: flex; align-items: center; gap: 16px;
+    }
+    header.tp-bar .brand { font-size: 18px; font-weight: 700; color: #fff; letter-spacing: 0.3px; }
+    header.tp-bar .who { margin-left: auto; color: #cbd5e1; font-size: 13px; }
+    header.tp-bar .logout {
+      background: transparent;
+      border: 1px solid rgba(167, 139, 250, 0.4);
+      color: #e2e2f0;
+      width: 36px; height: 36px;
+      padding: 0;
+      border-radius: 8px;
+      display: inline-flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      transition: background-color .12s ease, border-color .12s ease, color .12s ease;
+    }
+    header.tp-bar .logout:hover {
+      background: rgba(124, 58, 237, 0.25);
+      border-color: #a78bfa;
+      color: #fff;
+    }
+    header.tp-bar .logout svg { display: block; }
+    .tp-card {
+      background: #1a1a2e; border: 1px solid #2d2d44; border-radius: 12px;
+      padding: 18px 22px; margin-bottom: 18px;
+    }
+    .tp-msg {
+      padding: 10px 14px; border-radius: 8px; margin-bottom: 12px;
+      font-size: 13px; font-weight: 600;
+    }
+    .tp-msg.success { background: rgba(16,185,129,0.15); color: #6ee7b7; border: 1px solid rgba(16,185,129,0.4); }
+    .tp-msg.warning { background: rgba(245,158,11,0.15); color: #fcd34d; border: 1px solid rgba(245,158,11,0.4); }
+    .tp-msg.error   { background: rgba(239,68,68,0.15);  color: #fca5a5; border: 1px solid rgba(239,68,68,0.4); }
+    .tp-btn {
+      background: #7c3aed; color: #fff; border: 0; border-radius: 6px;
+      padding: 8px 14px; cursor: pointer; font-weight: 600; font-size: 13px;
+    }
+    .tp-btn.alt { background: #475569; }
+    .tp-btn.danger { background: #ef4444; }
+    .tp-btn.warn { background: #f59e0b; }
+    .tp-input, .tp-select {
+      background: #0f0f1a; color: #fff; border: 1px solid #2d2d44;
+      padding: 8px 12px; border-radius: 6px; font-size: 13px;
+    }
+    .tp-input:focus, .tp-select:focus { outline: 2px solid #7c3aed; }
+    label { display: block; color: #cbd5e1; font-size: 12px; font-weight: 600; margin-bottom: 4px; }
+    table.tp-table { width: 100%; border-collapse: collapse; }
+    table.tp-table th {
+      text-align: left; padding: 10px 12px; font-size: 11px; text-transform: uppercase;
+      letter-spacing: 0.4px; color: #94a3b8; border-bottom: 1px solid #2d2d44;
+    }
+    table.tp-table td {
+      padding: 12px; border-bottom: 1px solid #1f1f33; font-size: 13px; color: #e2e2f0;
+    }
+    table.tp-table tr:hover td { background: rgba(124,58,237,0.05); }
+    .tp-pill {
+      display: inline-block; padding: 2px 8px; border-radius: 999px;
+      font-size: 10px; font-weight: 700; letter-spacing: 0.4px;
+    }
+    .tp-pill.ok   { background: rgba(16,185,129,0.15);  color: #6ee7b7; }
+    .tp-pill.bad  { background: rgba(239,68,68,0.15);   color: #fca5a5; }
+    .tp-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  </style>
+</head>
+<body>
+  {% if request.user.is_authenticated and request.user.role == 'teacher' or request.user.is_superuser %}
+    <header class="tp-bar">
+      <a href="{% url 'teacher_portal' %}" class="brand" style="text-decoration:none;color:#fff">CodeLogic Teacher Portal</a>
+      <nav style="display:flex;gap:14px;margin-left:24px">
+        <a href="{% url 'teacher_portal' %}" style="color:#cbd5e1;font-size:13px;font-weight:600">Students</a>
+        <a href="{% url 'teacher_reports' %}" style="color:#cbd5e1;font-size:13px;font-weight:600">Reports</a>
+      </nav>
+      <div class="who">
+        Signed in as <strong>{{ request.user.get_display_name }}</strong>
+      </div>
+      <form method="post" action="{% url 'teacher_logout' %}" style="display:inline">
+        {% csrf_token %}
+        <button class="logout" type="submit" title="Logout" aria-label="Logout">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+               fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+            <polyline points="16 17 21 12 16 7"/>
+            <line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+        </button>
+      </form>
+    </header>
+  {% endif %}
+
+  <div class="tp-shell">
+    {% if messages %}
+      {% for message in messages %}
+        <div class="tp-msg {{ message.tags }}">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+    {% block content %}{% endblock %}
+  </div>
+</body>
+</html>

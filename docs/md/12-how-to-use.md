@@ -82,7 +82,7 @@ Click **Settings** in the sidebar to:
 
 - Change your display name (once every 3 days)
 - Change your bio
-- Pick a different avatar (1–5)
+- Pick a different avatar (1-5)
 - Change your password
 - Delete your account
 

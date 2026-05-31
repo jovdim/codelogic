@@ -26,6 +26,7 @@ import {
   Clock,
   Music,
   VolumeX,
+  LogIn,
 } from "lucide-react";
 import { useBackgroundMusic } from "@/hooks/useBackgroundMusic";
 
@@ -467,19 +468,20 @@ export default function Sidebar({ children }: SidebarProps) {
               </Link>
               <button
                 onClick={() => setShowLogoutConfirm(true)}
-                className={`flex items-center gap-3 px-3 py-3 transition-all duration-200 w-full
+                className={`flex items-center gap-3 px-3 py-3 transition-all duration-200 w-full cursor-pointer
                   ${isCollapsed ? "justify-center px-2" : ""}
                 `}
                 style={{ color: "var(--muted)" }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.color = "var(--danger)";
-                  e.currentTarget.style.background = "rgba(239, 68, 68, 0.1)";
+                  e.currentTarget.style.background = "rgba(239, 68, 68, 0.10)";
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.color = "var(--muted)";
                   e.currentTarget.style.background = "transparent";
                 }}
                 title={isCollapsed ? "Logout" : undefined}
+                aria-label="Logout"
               >
                 <LogOut className="w-5 h-5 shrink-0" />
                 {!isCollapsed && <span className="font-medium">Logout</span>}
@@ -489,13 +491,14 @@ export default function Sidebar({ children }: SidebarProps) {
             <>
               <Link
                 href="/login"
-                className={`flex items-center gap-3 px-3 py-3 hover:text-white hover:bg-white/5 transition-all duration-200
+                className={`flex items-center gap-3 px-3 py-3 hover:bg-white/5 transition-all duration-200
                   ${isCollapsed ? "justify-center px-2" : ""}
                 `}
-                style={{ color: "var(--muted)" }}
+                style={{ color: "var(--primary-light)" }}
                 title={isCollapsed ? "Login" : undefined}
+                aria-label="Login"
               >
-                <Gamepad2 className="w-5 h-5 shrink-0" />
+                <LogIn className="w-5 h-5 shrink-0" />
                 {!isCollapsed && <span className="font-medium">Login</span>}
               </Link>
             </>
@@ -615,10 +618,16 @@ export default function Sidebar({ children }: SidebarProps) {
           ) : (
             <Link
               href="/login"
-              className="text-sm font-medium"
-              style={{ color: "var(--primary-light)" }}
+              className="flex items-center justify-center w-9 h-9 rounded-lg"
+              style={{
+                color: "var(--primary-light)",
+                border: "1px solid rgba(124, 58, 237, 0.35)",
+                background: "rgba(124, 58, 237, 0.12)",
+              }}
+              title="Login"
+              aria-label="Login"
             >
-              Login
+              <LogIn className="w-5 h-5" />
             </Link>
           )}
         </header>

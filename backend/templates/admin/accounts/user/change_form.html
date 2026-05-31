@@ -264,31 +264,6 @@
       </div>
     </div>
 
-    {% comment %}
-      Per-user quiz report. Pick a number of days, click Download.
-      Defaults to 7 days; teachers can also pick 1 (today) or 30.
-    {% endcomment %}
-    <div style="background:#1a1a2e;border:1px solid #2d2d44;border-radius:10px;padding:14px 18px;margin-bottom:22px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
-      <div style="flex:1 1 220px;min-width:220px">
-        <div style="color:#ffffff;font-weight:700;font-size:13px">Download Quiz Report</div>
-        <div style="color:#9ca3af;font-size:11px;margin-top:2px">Printable report of this student's quiz activity over the last N days.</div>
-      </div>
-      <form method="get" action="{% url 'admin-user-quiz-report' original.id %}" target="_blank"
-            style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-        <label for="cl-report-days" style="color:#cbd5e1;font-size:12px">Last</label>
-        <input id="cl-report-days" type="number" name="days" min="1" max="365" value="7"
-               style="width:70px;background:#0f0f1a;color:#fff;border:1px solid #2d2d44;border-radius:6px;padding:6px 8px;font-size:13px">
-        <span style="color:#cbd5e1;font-size:12px">days</span>
-        <button type="submit"
-                style="background:#7c3aed;color:#fff;border:0;border-radius:6px;padding:8px 14px;font-weight:700;font-size:12px;cursor:pointer;box-shadow:0 3px 0 0 #5b21b6">
-          Download Report
-        </button>
-        <span style="color:#3d3d5c">|</span>
-        <a href="{% url 'admin-user-quiz-report' original.id %}?days=1"  target="_blank" style="color:#a78bfa;font-size:12px;text-decoration:none">Today</a>
-        <a href="{% url 'admin-user-quiz-report' original.id %}?days=7"  target="_blank" style="color:#a78bfa;font-size:12px;text-decoration:none">7 days</a>
-        <a href="{% url 'admin-user-quiz-report' original.id %}?days=30" target="_blank" style="color:#a78bfa;font-size:12px;text-decoration:none">30 days</a>
-      </form>
-    </div>
     {% endwith %}
   {% else %}
     {{ block.super }}

@@ -1,0 +1,173 @@
+{% extends 'teachers/base.html' %}
+{% block title %}{{ mode|capfirst }} Student{% endblock %}
+{% block content %}
+
+<div class="tp-card">
+  <div class="tp-row" style="justify-content:space-between">
+    <a href="{% if mode == 'edit' %}{% url 'teacher_student_detail' student.id %}{% else %}{% url 'teacher_portal' %}{% endif %}"
+       style="color:#a78bfa">&larr; Back</a>
+    {% if mode == 'edit' %}
+    <div class="tp-row">
+      <form method="post" action="{% url 'teacher_student_reset_password' student.id %}" style="display:inline">
+        {% csrf_token %}
+        <button type="submit" class="tp-btn warn">Reset password</button>
+      </form>
+      <form method="post" action="{% url 'teacher_student_delete' student.id %}" style="display:inline"
+            onsubmit="return confirm('Delete {{ student.email|escapejs }}? This cannot be undone.');">
+        {% csrf_token %}
+        <button type="submit" class="tp-btn danger">Delete</button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+  <h1 style="color:#fff;font-size:20px;font-weight:800;margin:8px 0 4px 0">
+    {% if mode == 'new' %}Add New Student{% else %}Edit Student{% endif %}
+  </h1>
+  {% if mode == 'edit' %}
+    <div style="color:#94a3b8;font-size:13px">{{ student.email }}</div>
+  {% endif %}
+</div>
+
+{% if error %}<div class="tp-card"><div class="tp-msg error">{{ error }}</div></div>{% endif %}
+
+<form method="post">
+  {% csrf_token %}
+
+  {# ===== ACCOUNT ===== #}
+  <div class="tp-card">
+    <h2 style="color:#fff;font-size:14px;font-weight:700;margin:0 0 12px 0;letter-spacing:0.4px;text-transform:uppercase">Account</h2>
+
+    <div style="margin-bottom:14px">
+      <label for="email">Email</label>
+      <input id="email" name="email" type="email" required class="tp-input" style="width:100%"
+             value="{{ form.email }}" {% if mode == 'edit' %}readonly{% endif %}>
+    </div>
+
+    <div style="margin-bottom:14px">
+      <label for="username">Username</label>
+      <input id="username" name="username" type="text" required class="tp-input" style="width:100%"
+             value="{{ form.username }}" {% if mode == 'edit' %}readonly{% endif %}>
+    </div>
+
+    {% if mode == 'new' %}
+      <div style="margin-bottom:14px">
+        <label for="password">Initial password</label>
+        <input id="password" name="password" type="text" required class="tp-input" style="width:100%"
+               value="{{ form.password }}" placeholder="Tell the student to change it on first login">
+      </div>
+    {% endif %}
+  </div>
+
+  {# ===== PROFILE ===== #}
+  <div class="tp-card">
+    <h2 style="color:#fff;font-size:14px;font-weight:700;margin:0 0 12px 0;letter-spacing:0.4px;text-transform:uppercase">Profile</h2>
+
+    <div style="margin-bottom:14px">
+      <label for="display_name">Display name</label>
+      <input id="display_name" name="display_name" type="text" class="tp-input" style="width:100%"
+             value="{{ form.display_name }}">
+    </div>
+
+    {% if mode == 'edit' %}
+    <div style="margin-bottom:14px">
+      <label for="bio">Bio</label>
+      <textarea id="bio" name="bio" class="tp-input" style="width:100%;min-height:70px;font-family:inherit" rows="3">{{ form.bio }}</textarea>
+    </div>
+    {% endif %}
+
+    <div class="tp-row" style="margin-bottom:14px">
+      <div style="flex:1">
+        <label for="year_level">Year level</label>
+        <select id="year_level" name="year_level" class="tp-select" style="width:100%">
+          <option value="">-- Not set --</option>
+          {% for value, label in year_choices %}
+            <option value="{{ value }}" {% if form.year_level|stringformat:"s" == value|stringformat:"s" %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div style="flex:1">
+        <label for="section">Section</label>
+        <input id="section" name="section" type="text" class="tp-input" style="width:100%"
+               value="{{ form.section }}" placeholder="e.g. A">
+      </div>
+    </div>
+
+    <div style="margin-bottom:14px">
+      <label for="department">Department</label>
+      <input id="department" name="department" type="text" class="tp-input" style="width:100%"
+             value="{{ form.department }}" placeholder="IT / Computer Engineering / ...">
+    </div>
+  </div>
+
+  {% if mode == 'edit' %}
+  {# ===== GAMEPLAY ===== #}
+  <div class="tp-card">
+    <h2 style="color:#fff;font-size:14px;font-weight:700;margin:0 0 4px 0;letter-spacing:0.4px;text-transform:uppercase">Gameplay</h2>
+    <p style="color:#9ca3af;font-size:12px;margin:0 0 14px 0">Level is recomputed from XP automatically. Currently <strong style="color:#a78bfa">Lv. {{ form.level }}</strong>.</p>
+
+    <div class="tp-row" style="margin-bottom:14px">
+      <div style="flex:1">
+        <label for="xp">Total XP</label>
+        <input id="xp" name="xp" type="number" min="0" max="10000000" class="tp-input" style="width:100%"
+               value="{{ form.xp }}">
+      </div>
+    </div>
+
+    <div class="tp-row" style="margin-bottom:14px">
+      <div style="flex:1">
+        <label for="current_hearts">Current hearts</label>
+        <input id="current_hearts" name="current_hearts" type="number" min="0" max="999" class="tp-input" style="width:100%"
+               value="{{ form.current_hearts }}">
+      </div>
+      <div style="flex:1">
+        <label for="max_hearts">Max hearts</label>
+        <input id="max_hearts" name="max_hearts" type="number" min="1" max="999" class="tp-input" style="width:100%"
+               value="{{ form.max_hearts }}">
+      </div>
+    </div>
+
+    <div class="tp-row" style="margin-bottom:0">
+      <div style="flex:1">
+        <label for="current_streak">Current streak (days)</label>
+        <input id="current_streak" name="current_streak" type="number" min="0" max="10000" class="tp-input" style="width:100%"
+               value="{{ form.current_streak }}">
+      </div>
+      <div style="flex:1">
+        <label for="longest_streak">Longest streak (days)</label>
+        <input id="longest_streak" name="longest_streak" type="number" min="0" max="10000" class="tp-input" style="width:100%"
+               value="{{ form.longest_streak }}">
+      </div>
+    </div>
+  </div>
+
+  {# ===== STATUS ===== #}
+  <div class="tp-card">
+    <h2 style="color:#fff;font-size:14px;font-weight:700;margin:0 0 12px 0;letter-spacing:0.4px;text-transform:uppercase">Status</h2>
+
+    <div style="margin-bottom:10px">
+      <label style="font-weight:500;color:#e2e2f0;cursor:pointer">
+        <input type="checkbox" name="is_active" {% if form.is_active %}checked{% endif %}>
+        Account active
+        <span style="color:#94a3b8;font-size:11px;margin-left:6px">(uncheck to disable login)</span>
+      </label>
+    </div>
+    <div>
+      <label style="font-weight:500;color:#e2e2f0;cursor:pointer">
+        <input type="checkbox" name="is_email_verified" {% if form.is_email_verified %}checked{% endif %}>
+        Email verified
+        <span style="color:#94a3b8;font-size:11px;margin-left:6px">(unchecking forces re-verification)</span>
+      </label>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="tp-card">
+    <div class="tp-row">
+      <button type="submit" class="tp-btn">{% if mode == 'new' %}Create{% else %}Save changes{% endif %}</button>
+      <a href="{% if mode == 'edit' %}{% url 'teacher_student_detail' student.id %}{% else %}{% url 'teacher_portal' %}{% endif %}"
+         class="tp-btn alt" style="text-decoration:none">Cancel</a>
+    </div>
+  </div>
+</form>
+
+{% endblock %}

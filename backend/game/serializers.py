@@ -39,8 +39,8 @@ class TopicSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Topic
-        fields = ['id', 'name', 'slug', 'description', 'total_levels', 'category_slug', 'category_color', 'icon']
-    
+        fields = ['id', 'name', 'slug', 'description', 'total_levels', 'language_version', 'category_slug', 'category_color', 'icon']
+
     def get_icon(self, obj):
         request = self.context.get('request')
         # Use topic icon, or fallback to category icon
@@ -63,10 +63,10 @@ class TopicWithProgressSerializer(serializers.ModelSerializer):
     user_progress = serializers.SerializerMethodField()
     certificate_title = serializers.SerializerMethodField()
     certificate_description = serializers.SerializerMethodField()
-    
+
     class Meta:
         model = Topic
-        fields = ['id', 'name', 'slug', 'description', 'total_levels', 'category_slug', 'category_color', 'icon', 'user_progress', 'certificate_title', 'certificate_description']
+        fields = ['id', 'name', 'slug', 'description', 'total_levels', 'language_version', 'category_slug', 'category_color', 'icon', 'user_progress', 'certificate_title', 'certificate_description']
     
     def get_icon(self, obj):
         request = self.context.get('request')

@@ -8,7 +8,7 @@ User clicks **Play** in the sidebar.
 
 - They see all categories (Frontend, Backend, etc.).
 - They click a category and see its topics.
-- They click a topic and see the **level map** (levels 1–15).
+- They click a topic and see the **level map** (levels 1-15).
 
 Levels they've already finished show stars (1, 2, or 3). Future levels are locked until they pass the one before.
 

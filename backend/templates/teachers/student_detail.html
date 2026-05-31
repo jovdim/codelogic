@@ -1,0 +1,137 @@
+{% extends 'teachers/base.html' %}
+{% block title %}{{ student.get_display_name }}{% endblock %}
+{% block content %}
+
+<div class="tp-card">
+  <div class="tp-row" style="justify-content:space-between">
+    <a href="{% url 'teacher_portal' %}" style="color:#a78bfa">&larr; Back to students</a>
+    <div class="tp-row">
+      <a href="{% url 'teacher_student_quiz_report' student.id %}?days=7" target="_blank"
+         class="tp-btn alt" style="text-decoration:none">Print PDF (7d)</a>
+      <a href="{% url 'teacher_student_edit' student.id %}" class="tp-btn" style="text-decoration:none">Edit</a>
+      <form method="post" action="{% url 'teacher_student_reset_password' student.id %}" style="display:inline">
+        {% csrf_token %}
+        <button type="submit" class="tp-btn warn">Reset password</button>
+      </form>
+      <form method="post" action="{% url 'teacher_student_delete' student.id %}" style="display:inline"
+            onsubmit="return confirm('Delete {{ student.email|escapejs }}? This cannot be undone.');">
+        {% csrf_token %}
+        <button type="submit" class="tp-btn danger">Delete</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+{# ===== HERO: name, avatar, identity ===== #}
+<div class="tp-card" style="display:flex;gap:20px;align-items:center;flex-wrap:wrap">
+  <div style="width:80px;height:80px;border-radius:14px;background:#0f0f1a;
+              border:1px solid #2d2d44;display:flex;align-items:center;justify-content:center;
+              overflow:hidden">
+    <img src="/static/avatars/avatar-{{ student.avatar|default:1 }}.png"
+         alt="avatar" style="width:120%;object-fit:cover;object-position:top"
+         onerror="this.style.display='none'">
+  </div>
+  <div style="flex:1;min-width:240px">
+    <h1 style="color:#fff;font-size:22px;font-weight:800;margin:0">{{ student.get_display_name }}</h1>
+    <div style="color:#94a3b8;font-size:13px;margin-top:4px">{{ student.email }} &middot; @{{ student.username }}</div>
+    <div class="tp-row" style="margin-top:8px;gap:6px">
+      {% if student.is_active %}
+        <span class="tp-pill ok">Active</span>
+      {% else %}
+        <span class="tp-pill bad">Disabled</span>
+      {% endif %}
+      {% if student.is_email_verified %}
+        <span class="tp-pill ok">Email verified</span>
+      {% else %}
+        <span class="tp-pill bad">Unverified email</span>
+      {% endif %}
+      {% if student.get_year_level_display %}
+        <span style="background:rgba(124,58,237,0.20);color:#a78bfa;padding:2px 10px;border-radius:999px;font-size:11px;font-weight:600">
+          {{ student.get_year_level_display }}
+        </span>
+      {% endif %}
+      {% if student.section %}
+        <span style="background:rgba(167,139,250,0.10);color:#cbd5e1;padding:2px 10px;border-radius:999px;font-size:11px">
+          Section {{ student.section }}
+        </span>
+      {% endif %}
+      {% if student.department %}
+        <span style="background:rgba(167,139,250,0.10);color:#cbd5e1;padding:2px 10px;border-radius:999px;font-size:11px">
+          {{ student.department }}
+        </span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{# ===== GAMIFICATION ===== #}
+<div class="tp-card">
+  <h2 style="color:#fff;font-size:14px;font-weight:700;margin:0 0 12px 0;letter-spacing:0.4px;text-transform:uppercase">Gameplay</h2>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px">
+    <div style="background:#0f0f1a;border:1px solid #2d2d44;border-radius:10px;padding:12px">
+      <div style="color:#9ca3af;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;font-weight:600">Level</div>
+      <div style="color:#a78bfa;font-size:24px;font-weight:800;margin-top:4px">Lv. {{ student.level }}</div>
+    </div>
+    <div style="background:#0f0f1a;border:1px solid #2d2d44;border-radius:10px;padding:12px">
+      <div style="color:#9ca3af;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;font-weight:600">Total XP</div>
+      <div style="color:#fbbf24;font-size:24px;font-weight:800;margin-top:4px">{{ student.xp }}</div>
+    </div>
+    <div style="background:#0f0f1a;border:1px solid #2d2d44;border-radius:10px;padding:12px">
+      <div style="color:#9ca3af;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;font-weight:600">Hearts</div>
+      <div style="color:#ef4444;font-size:24px;font-weight:800;margin-top:4px">{{ student.current_hearts }}/{{ student.max_hearts }}</div>
+    </div>
+    <div style="background:#0f0f1a;border:1px solid #2d2d44;border-radius:10px;padding:12px">
+      <div style="color:#9ca3af;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;font-weight:600">Streak</div>
+      <div style="color:#10b981;font-size:24px;font-weight:800;margin-top:4px">{{ student.current_streak }}d</div>
+      <div style="color:#94a3b8;font-size:11px">best {{ student.longest_streak }}d</div>
+    </div>
+    <div style="background:#0f0f1a;border:1px solid #2d2d44;border-radius:10px;padding:12px">
+      <div style="color:#9ca3af;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;font-weight:600">Quizzes</div>
+      <div style="color:#fff;font-size:24px;font-weight:800;margin-top:4px">{{ completed_attempts }}</div>
+      <div style="color:#94a3b8;font-size:11px">
+        <span style="color:#10b981">{{ passed_attempts }} passed</span>
+        &middot;
+        <span style="color:#ef4444">{{ failed_attempts }} failed</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ===== ACTIVITY / TIMESTAMPS ===== #}
+<div class="tp-card">
+  <h2 style="color:#fff;font-size:14px;font-weight:700;margin:0 0 12px 0;letter-spacing:0.4px;text-transform:uppercase">Activity</h2>
+  <table style="width:100%;font-size:13px">
+    <tr>
+      <td style="color:#9ca3af;padding:6px 0;width:140px">Joined</td>
+      <td style="color:#e2e2f0">{{ student.date_joined|date:"M d, Y, g:i A" }}</td>
+    </tr>
+    <tr>
+      <td style="color:#9ca3af;padding:6px 0">Last active</td>
+      <td style="color:#e2e2f0">{{ student.last_active|date:"M d, Y, g:i A" }}</td>
+    </tr>
+    <tr>
+      <td style="color:#9ca3af;padding:6px 0">Last activity day</td>
+      <td style="color:#e2e2f0">{{ student.last_activity_date|default:"never" }}</td>
+    </tr>
+    <tr>
+      <td style="color:#9ca3af;padding:6px 0">Failed logins</td>
+      <td style="color:#e2e2f0">{{ student.failed_login_attempts }}</td>
+    </tr>
+  </table>
+</div>
+
+{# ===== LOGIN FACE SNAPSHOTS ===== #}
+<div class="tp-card">
+  <h2 style="color:#fff;font-size:14px;font-weight:700;margin:0 0 12px 0;letter-spacing:0.4px;text-transform:uppercase">Login Face History</h2>
+  <p style="color:#9ca3af;font-size:12px;margin:0 0 14px 0">Every face captured after this student signed in. Newest first.</p>
+  {{ login_face_html|safe }}
+</div>
+
+{# ===== QUIZ HISTORY ===== #}
+<div class="tp-card">
+  <h2 style="color:#fff;font-size:14px;font-weight:700;margin:0 0 12px 0;letter-spacing:0.4px;text-transform:uppercase">Quiz Attempts</h2>
+  <p style="color:#9ca3af;font-size:12px;margin:0 0 14px 0">Last 20 attempts. Same data the admin sees.</p>
+  {{ quiz_history_html|safe }}
+</div>
+
+{% endblock %}
