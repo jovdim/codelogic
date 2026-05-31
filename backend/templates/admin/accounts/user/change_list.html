@@ -170,6 +170,27 @@
     .cl-pill-disabled { background: rgba(239,68,68,0.15);  color: #f87171; border: 1px solid rgba(239,68,68,0.35); }
     .cl-pill-verified { background: rgba(124,58,237,0.15); color: #a78bfa; border: 1px solid rgba(124,58,237,0.35); }
     .cl-pill-unverified { background: rgba(245,158,11,0.15); color: #fbbf24; border: 1px solid rgba(245,158,11,0.35); }
+    /* Role pills - shown alongside Active/Verified on each user card */
+    .cl-pill-role-admin   { background: rgba(245,158,11,0.18); color: #fbbf24; border: 1px solid rgba(245,158,11,0.45); }
+    .cl-pill-role-teacher { background: rgba(16,185,129,0.18); color: #34d399; border: 1px solid rgba(16,185,129,0.45); }
+    .cl-pill-role-student { background: rgba(59,130,246,0.18); color: #60a5fa; border: 1px solid rgba(59,130,246,0.45); }
+
+    /* Selected-row highlight (set by codelogic-admin-actions.js when
+       the user clicks anywhere on a card to toggle selection). Mirrors
+       the same purple accent as the brand for an "active selection"
+       look without obscuring the data. */
+    .cl-user-card.cl-row-selected {
+      border-color: #7c3aed !important;
+      background: rgba(124,58,237,0.10) !important;
+      box-shadow: inset 4px 0 0 0 #7c3aed;
+    }
+    /* Make the bulk checkbox bigger + obvious so users see it even if
+       they prefer clicking it directly. */
+    .cl-card-checkbox {
+      width: 20px !important;
+      height: 20px !important;
+      flex: 0 0 20px !important;
+    }
 
     /* Join date */
     .cl-joined {
@@ -256,6 +277,13 @@
     </div>
 
     <div class="cl-status-pills">
+      {% if user_obj.is_superuser %}
+        <span class="cl-pill cl-pill-role-admin">Admin</span>
+      {% elif user_obj.role == 'teacher' %}
+        <span class="cl-pill cl-pill-role-teacher">Teacher</span>
+      {% else %}
+        <span class="cl-pill cl-pill-role-student">Student</span>
+      {% endif %}
       {% if user_obj.is_active %}
         <span class="cl-pill cl-pill-active">Active</span>
       {% else %}

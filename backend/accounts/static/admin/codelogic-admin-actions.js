@@ -92,23 +92,71 @@
       deleteBtn.style.cursor = n === 0 ? 'not-allowed' : 'pointer';
     }
 
+    // Walk a checkbox -> its visual row container so we can highlight
+    // the whole card / table row when selected. Tries the card-style
+    // user changelist first (.cl-user-card), then falls back to the
+    // standard Django table row.
+    function rowFor(cb) {
+      return cb.closest('.cl-user-card') || cb.closest('tr');
+    }
+
+    function syncRowHighlight() {
+      rowChecks.forEach(function (cb) {
+        var row = rowFor(cb);
+        if (!row) return;
+        if (cb.checked) {
+          row.classList.add('cl-row-selected');
+        } else {
+          row.classList.remove('cl-row-selected');
+        }
+      });
+    }
+
+    function refresh() {
+      updateCounter();
+      syncRowHighlight();
+    }
+
     rowChecks.forEach(function (cb) {
-      cb.addEventListener('change', updateCounter);
+      cb.addEventListener('change', refresh);
     });
-    updateCounter();
+
+    // Make the whole row/card clickable to toggle the checkbox. We
+    // ignore clicks on interactive children (links, buttons, inputs,
+    // selects, textareas) so admins can still click "Edit ->" without
+    // also toggling selection.
+    rowChecks.forEach(function (cb) {
+      var row = rowFor(cb);
+      if (!row || row.dataset.clClickWired === '1') return;
+      row.dataset.clClickWired = '1';
+      row.addEventListener('click', function (e) {
+        var t = e.target;
+        if (!t) return;
+        // Don't intercept clicks meant for the checkbox itself - the
+        // browser already toggles it.
+        if (t === cb) return;
+        // Skip if the user clicked an interactive element.
+        if (t.closest('a, button, input, select, textarea, label')) return;
+        cb.checked = !cb.checked;
+        refresh();
+      });
+      row.style.cursor = 'pointer';
+    });
+
+    refresh();
 
     selectAllBtn.addEventListener('click', function () {
       rowChecks.forEach(function (cb) { cb.checked = true; });
       var toggle = document.getElementById('action-toggle');
       if (toggle) toggle.checked = true;
-      updateCounter();
+      refresh();
     });
 
     clearBtn.addEventListener('click', function () {
       rowChecks.forEach(function (cb) { cb.checked = false; });
       var toggle = document.getElementById('action-toggle');
       if (toggle) toggle.checked = false;
-      updateCounter();
+      refresh();
     });
 
     deleteBtn.addEventListener('click', function () {
