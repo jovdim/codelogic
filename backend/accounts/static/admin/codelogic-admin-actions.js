@@ -22,8 +22,34 @@
     var rowChecks = changelistForm.querySelectorAll('.action-select');
     if (!rowChecks.length) return; // no rows / no action column
 
+    // Some of our custom changelist templates (e.g. accounts/user/change_list)
+    // override Django's `result_list` block to render a card grid, which
+    // also drops the default `<select name="action">` + Go button.
+    // Inject a hidden action select + submit button so the bulk toolbar
+    // still has a valid form path. delete_selected is Django's built-in
+    // bulk action - always available unless ModelAdmin.actions explicitly
+    // removes it.
     var actionSelect = changelistForm.querySelector('select[name="action"]');
-    if (!actionSelect) return; // model has no bulk actions
+    if (!actionSelect) {
+      actionSelect = document.createElement('select');
+      actionSelect.name = 'action';
+      actionSelect.style.display = 'none';
+      var opt = document.createElement('option');
+      opt.value = 'delete_selected';
+      opt.textContent = 'Delete selected';
+      actionSelect.appendChild(opt);
+      changelistForm.appendChild(actionSelect);
+    }
+    // Mirror: synthesize a Go button if missing (the JS reaches for it
+    // by name="index" to submit the action form).
+    if (!changelistForm.querySelector('button[name="index"]')) {
+      var goBtn = document.createElement('button');
+      goBtn.type = 'submit';
+      goBtn.name = 'index';
+      goBtn.value = '0';
+      goBtn.style.display = 'none';
+      changelistForm.appendChild(goBtn);
+    }
 
     // Only add the toolbar once.
     if (document.getElementById('cl-bulk-toolbar')) return;
