@@ -826,6 +826,19 @@ fieldset.module select.cl-form-hidden-select {
   vertical-align: middle;
 }
 
+/* When the dropdown is open, raise its containing .form-row above
+   sibling rows. Without this, the next form-row (e.g. Department)
+   paints OVER the popover because both rows have z-index auto and
+   later siblings win in document order. We use :has() which is
+   supported in every modern browser (Chrome 105+, Safari 15.4+,
+   Firefox 121+). The JS also sets `.cl-form-row-open` as a fallback
+   for any browser that ignores :has() so the fix is robust. */
+fieldset.module .form-row:has(.cl-form-dropdown.cl-form-open),
+fieldset.module .form-row.cl-form-row-open {
+  position: relative;
+  z-index: 50 !important;
+}
+
 .cl-form-trigger {
   display: inline-flex;
   align-items: center;

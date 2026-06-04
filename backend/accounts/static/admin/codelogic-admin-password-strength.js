@@ -27,12 +27,15 @@
     if (!passwordInput || passwordInput.dataset.clStrengthWired === '1') return;
     passwordInput.dataset.clStrengthWired = '1';
 
-    // Find the existing .helptext block for this field and swap its
-    // content with our checklist. The .helptext sits inside the same
-    // .form-row, after the input.
+    // Find the existing password-rules block for this field and swap
+    // its content with our checklist. Django renders this block as
+    // `<div class="help">...</div>` in the change_form/add_form context
+    // (older Django versions and some widgets use `.helptext`). Match
+    // either so the original block is REPLACED rather than left next
+    // to our checklist as a duplicate.
     var row = passwordInput.closest('.form-row');
     if (!row) return;
-    var helptext = row.querySelector('.helptext');
+    var helptext = row.querySelector('.help, .helptext');
 
     var container = document.createElement('div');
     container.className = 'cl-pwd-strength';
@@ -83,6 +86,13 @@
     } else {
       row.appendChild(container);
     }
+    // Defensive: if Django emitted MORE than one help node (some custom
+    // widgets stack a `.help` AND a `.helptext`), wipe the extras so the
+    // page doesn't show duplicate password-rules text above our list.
+    row.querySelectorAll('.help, .helptext').forEach(function (n) {
+      if (n === helptext) return;
+      n.remove();
+    });
 
     function evaluate() {
       var pwd = passwordInput.value || '';

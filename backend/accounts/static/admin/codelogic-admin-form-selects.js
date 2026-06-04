@@ -39,6 +39,10 @@
     openDropdown.classList.remove('cl-form-open');
     var trig = openDropdown.querySelector('.cl-form-trigger');
     if (trig) trig.setAttribute('aria-expanded', 'false');
+    // Restore z-index on the parent form-row (paired with the lift
+    // applied when we opened the menu - see trigger click handler).
+    var row = openDropdown.closest('.form-row');
+    if (row) row.classList.remove('cl-form-row-open');
     openDropdown = null;
   }
 
@@ -210,6 +214,12 @@
       if (!wasOpen) {
         wrap.classList.add('cl-form-open');
         trigger.setAttribute('aria-expanded', 'true');
+        // Lift the parent form-row so the popover paints OVER the
+        // next form-row (Department/etc) instead of being clipped.
+        // The CSS :has() selector handles this on modern browsers
+        // but we set an explicit class too for older browsers.
+        var row = wrap.closest('.form-row');
+        if (row) row.classList.add('cl-form-row-open');
         openDropdown = wrap;
         var current = menu.querySelector('.cl-form-option-selected')
           || menu.querySelector('.cl-form-option');
