@@ -1,0 +1,117 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls %}
+
+{% block title %}Bulk import users{% endblock %}
+
+{% block content %}
+<style>
+  .cl-csv-card {
+    background: #1a1a2e; border: 1px solid #2d2d44; border-radius: 12px;
+    padding: 20px 24px; max-width: 880px; margin: 0 auto 20px;
+    color: #e2e2f0;
+  }
+  .cl-csv-card h2 {
+    color: #fff; margin: 0 0 8px 0; font-size: 16px;
+    letter-spacing: 0.4px; text-transform: uppercase;
+  }
+  .cl-csv-card p { color: #9ca3af; font-size: 13px; line-height: 1.5; }
+  .cl-csv-card code, .cl-csv-card pre {
+    background: #0f0f1a; border: 1px solid #2d2d44; border-radius: 6px;
+    padding: 2px 6px; color: #a78bfa; font-family: Consolas, monospace;
+    font-size: 12px;
+  }
+  .cl-csv-card pre {
+    padding: 12px 14px; overflow-x: auto; color: #cbd5e1;
+    white-space: pre;
+  }
+  .cl-csv-card input[type="file"] {
+    background: #0f0f1a; color: #fff; border: 1px solid #2d2d44;
+    padding: 10px 14px; border-radius: 8px; font-size: 13px;
+  }
+  .cl-csv-card .upload-btn {
+    background: #7c3aed; color: #fff; border: 0; border-radius: 6px;
+    padding: 10px 18px; font-weight: 700; cursor: pointer; font-size: 13px;
+    box-shadow: 0 3px 0 0 #5b21b6;
+  }
+  .cl-report-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 12px; margin-bottom: 14px;
+  }
+  .cl-report-grid > div {
+    background: #0f0f1a; border: 1px solid #2d2d44; border-radius: 10px;
+    padding: 12px 14px; text-align: center;
+  }
+  .cl-report-grid .num { font-size: 24px; font-weight: 800; }
+  .cl-report-grid .lbl {
+    font-size: 11px; color: #94a3b8; text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+  .cl-report-list {
+    background: #0f0f1a; border: 1px solid #2d2d44; border-radius: 8px;
+    padding: 10px 14px; margin-bottom: 10px; font-size: 12px;
+    max-height: 280px; overflow-y: auto;
+    font-family: Consolas, monospace;
+  }
+  .cl-report-list .ok  { color: #6ee7b7; }
+  .cl-report-list .wn  { color: #fcd34d; }
+  .cl-report-list .er  { color: #fca5a5; }
+</style>
+
+<div class="cl-csv-card">
+  <h2>Bulk import users from CSV</h2>
+  <p>Upload a UTF-8 CSV with a header row. Required columns: <code>email</code>, <code>username</code>, <code>password</code>. Optional: <code>role</code> (student / teacher / admin, default <em>student</em>), <code>display_name</code>, <code>year_level</code> (1-4), <code>section</code>, <code>department</code>.</p>
+  <p>Existing emails or usernames are skipped (your existing users won't be overwritten). Imported users are auto-verified so they can log in right away. Teachers get <code>is_staff=True</code> automatically.</p>
+  <p><strong>Example:</strong></p>
+  <pre>email,username,password,role,year_level,section,department,display_name
+alice@school.edu,alice,Tr0ub4dor&3pix,student,1,A,IT,Alice Cruz
+bob@school.edu,bob,Tr0ub4dor&3pix,student,2,B,CE,Bob Reyes
+miss.cruz@school.edu,mcruz,Strongerp@ss12,teacher,,,IT,Ms. Cruz</pre>
+
+  <form method="post" enctype="multipart/form-data" style="display:flex;gap:12px;align-items:center;margin-top:18px;flex-wrap:wrap">
+    {% csrf_token %}
+    <input type="file" name="csv_file" accept=".csv,text/csv" required>
+    <button type="submit" class="upload-btn">Upload &amp; import</button>
+    <a href="{% url 'admin:accounts_user_changelist' %}" style="color:#a78bfa;font-size:13px">Back to user list</a>
+  </form>
+</div>
+
+{% if report %}
+<div class="cl-csv-card">
+  <h2>Import report</h2>
+  <div class="cl-report-grid">
+    <div>
+      <div class="num" style="color:#34d399">{{ report.created_count }}</div>
+      <div class="lbl">Created</div>
+    </div>
+    <div>
+      <div class="num" style="color:#fbbf24">{{ report.skipped_count }}</div>
+      <div class="lbl">Skipped</div>
+    </div>
+    <div>
+      <div class="num" style="color:#f87171">{{ report.error_count }}</div>
+      <div class="lbl">Errors</div>
+    </div>
+  </div>
+
+  {% if report.created %}
+    <div style="color:#9ca3af;font-size:11px;text-transform:uppercase;letter-spacing:0.4px;margin:14px 0 4px">Created</div>
+    <div class="cl-report-list">
+      {% for line in report.created %}<div class="ok">+ {{ line }}</div>{% endfor %}
+    </div>
+  {% endif %}
+  {% if report.skipped %}
+    <div style="color:#9ca3af;font-size:11px;text-transform:uppercase;letter-spacing:0.4px;margin:14px 0 4px">Skipped (already in DB)</div>
+    <div class="cl-report-list">
+      {% for line in report.skipped %}<div class="wn">! {{ line }}</div>{% endfor %}
+    </div>
+  {% endif %}
+  {% if report.errors %}
+    <div style="color:#9ca3af;font-size:11px;text-transform:uppercase;letter-spacing:0.4px;margin:14px 0 4px">Errors</div>
+    <div class="cl-report-list">
+      {% for line in report.errors %}<div class="er">x {{ line }}</div>{% endfor %}
+    </div>
+  {% endif %}
+</div>
+{% endif %}
+
+{% endblock %}

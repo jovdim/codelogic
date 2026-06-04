@@ -33,20 +33,32 @@
 </div>
 {% endblock %} {% block content %}
 <style>
+  /* === ADMIN REDESIGN PROTOTYPE (dashboard only) ===
+     Cleaner / softer than the pixel-box look used elsewhere. Slate
+     surfaces, soft shadows, no hard-corner pixel offsets. Purple stays
+     as the accent but gets muted. If you like it, we roll it out to
+     the rest of admin in a follow-up turn. */
   .pixel-box {
-    background: #1a1a2e;
-    border: 2px solid #2d2d44;
+    background: linear-gradient(180deg, #1e1e36 0%, #181830 100%);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 14px;
     box-shadow:
-      4px 4px 0 0 rgba(124, 58, 237, 0.3),
-      -1px -1px 0 0 rgba(255, 255, 255, 0.1) inset;
+      0 10px 24px rgba(0, 0, 0, 0.35),
+      0 1px 0 0 rgba(255, 255, 255, 0.04) inset;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
   }
   .pixel-box:hover {
-    border-color: #3d3d5c;
+    border-color: rgba(167, 139, 250, 0.35);
+    box-shadow:
+      0 14px 32px rgba(0, 0, 0, 0.45),
+      0 0 0 1px rgba(167, 139, 250, 0.25) inset;
+    transform: translateY(-1px);
   }
   .stat-number {
-    font-size: 28px;
-    font-weight: bold;
-    color: #a78bfa;
+    font-size: 30px;
+    font-weight: 800;
+    color: #c4b5fd;
+    letter-spacing: -0.4px;
   }
   .stat-label {
     color: #cbd5e1;

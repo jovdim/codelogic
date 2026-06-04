@@ -184,6 +184,10 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         'unlock_request': '5/hour',     # account-unlock email re-sends
         'verify_resend': '5/hour',      # signup-verification email re-sends
+        # Teacher portal mutations that send email or are easy to spam.
+        'teacher_reset': '10/hour',
+        # Bulk CSV upload (superuser-only; rate is mostly DoS protection).
+        'csv_import': '5/hour',
     },
 }
 

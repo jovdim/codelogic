@@ -255,7 +255,37 @@ def _render_quiz_report_response(request, context, filename_slug):
     return response
 
 
-@staff_member_required
+def _superuser_only(view):
+    """The admin reports routes used to be guarded by `staff_member_required`,
+    but UserAdmin.save_model auto-sets is_staff=True for every teacher
+    (so they can hit /admin/login/), which silently gave them access to
+    school-wide PDFs of every student's quiz activity.
+
+    Tighten the gate: only superusers see the report endpoints. Teachers
+    print PDFs via /teacher/reports/ which IS scoped to their assigned
+    students.
+    """
+    from functools import wraps
+    from django.http import HttpResponseForbidden
+    from django.shortcuts import redirect
+    from django.urls import reverse
+
+    @wraps(view)
+    def _wrapped(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect(reverse('admin:login') + f'?next={request.path}')
+        if not request.user.is_superuser:
+            return HttpResponseForbidden(
+                '<h1>403 Forbidden</h1>'
+                '<p>Admin reports are superuser-only. '
+                'Teachers can print reports for their own students at '
+                '<a href="/teacher/reports/">/teacher/reports/</a>.</p>'
+            )
+        return view(request, *args, **kwargs)
+    return _wrapped
+
+
+@_superuser_only
 def admin_reports_index(request):
     """Reports landing page at /admin/reports/. Consolidates the form widgets
     that used to live on the admin dashboard + each user's change page so
@@ -274,7 +304,7 @@ def admin_reports_index(request):
     return render(request, 'admin/reports/index.html', context)
 
 
-@staff_member_required
+@_superuser_only
 def daily_quiz_report_pdf(request):
     """All-students quiz report across the last N days (Asia/Manila TZ).
 
@@ -328,7 +358,7 @@ def daily_quiz_report_pdf(request):
     return _render_quiz_report_response(request, context, slug)
 
 
-@staff_member_required
+@_superuser_only
 def user_quiz_report_pdf(request, user_id):
     """Per-user quiz report for the last N days (default 7). Used by teachers
     to review a single student's recent activity.

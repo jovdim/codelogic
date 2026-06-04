@@ -30,7 +30,7 @@
 
 {% if error %}<div class="tp-card"><div class="tp-msg error">{{ error }}</div></div>{% endif %}
 
-<form method="post">
+<form method="post" enctype="multipart/form-data">
   {% csrf_token %}
 
   {# ===== ACCOUNT ===== #}
@@ -57,6 +57,92 @@
       </div>
     {% endif %}
   </div>
+
+  {# ===== REFERENCE / BASE PHOTO =====
+     Required at create time; optional replacement at edit time. Either
+     a regular file upload OR a live webcam snapshot (data URL written
+     into the hidden field by the inline script). #}
+  <div class="tp-card">
+    <h2 style="color:#fff;font-size:14px;font-weight:700;margin:0 0 4px 0;letter-spacing:0.4px;text-transform:uppercase">
+      Reference photo {% if mode == 'new' %}<span style="color:#fca5a5">*</span>{% endif %}
+    </h2>
+    <p style="color:#9ca3af;font-size:12px;margin:0 0 14px 0">
+      A clear face photo of this student. Used later to visually verify their identity by comparing against the auto-snapshots taken when they sign in.
+      {% if mode == 'edit' %}Leave both empty to keep the current photo.{% endif %}
+    </p>
+
+    {% if mode == 'edit' and student.base_face_photo %}
+    <div style="margin-bottom:14px;display:flex;gap:12px;align-items:center">
+      <img id="bp-current" alt="Current reference photo"
+           style="width:120px;height:120px;object-fit:cover;border-radius:10px;border:1px solid #2d2d44"
+           src="data:image/jpeg;base64,{{ student.base_face_photo_b64 }}">
+      <div style="color:#94a3b8;font-size:12px">
+        Current photo on file.<br>
+        Replace by uploading a new one or capturing fresh below.
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="tp-row" style="margin-bottom:14px;gap:10px">
+      <button type="button" class="tp-btn alt" onclick="bpShowUpload()">Upload a file</button>
+      <button type="button" class="tp-btn alt" onclick="bpShowCamera()">Use camera</button>
+    </div>
+
+    <div id="bp-upload" style="display:none">
+      <input id="base_face_photo" name="base_face_photo" type="file" accept="image/*"
+             class="tp-input" style="width:100%" onchange="bpPreviewUpload(event)">
+      <img id="bp-upload-preview" alt="" style="display:none;margin-top:10px;max-width:200px;border-radius:10px;border:1px solid #2d2d44">
+    </div>
+
+    <div id="bp-camera" style="display:none">
+      <div style="background:#0f0f1a;border:1px solid #2d2d44;border-radius:10px;padding:10px">
+        <video id="bp-video" autoplay playsinline muted style="width:100%;max-width:320px;border-radius:8px;background:#000;display:block"></video>
+        <canvas id="bp-canvas" style="display:none"></canvas>
+        <div class="tp-row" style="margin-top:8px">
+          <button type="button" class="tp-btn" onclick="bpCapture()">Take photo</button>
+          <button type="button" class="tp-btn alt" onclick="bpStopCamera()">Stop camera</button>
+        </div>
+        <img id="bp-camera-preview" alt="" style="display:none;margin-top:10px;max-width:200px;border-radius:10px;border:1px solid #2d2d44">
+      </div>
+    </div>
+
+    <input id="bp-dataurl" type="hidden" name="base_face_photo_dataurl">
+  </div>
+
+  <script>
+    function bpShowUpload(){ document.getElementById('bp-upload').style.display=''; document.getElementById('bp-camera').style.display='none'; bpStopCamera(); }
+    function bpShowCamera(){ document.getElementById('bp-upload').style.display='none'; document.getElementById('bp-camera').style.display=''; bpStartCamera(); }
+    let bpStream=null;
+    async function bpStartCamera(){
+      try{
+        bpStream = await navigator.mediaDevices.getUserMedia({video:{width:480,height:360,facingMode:'user'},audio:false});
+        document.getElementById('bp-video').srcObject = bpStream;
+      }catch(e){ alert('Camera unavailable: '+e.message); }
+    }
+    function bpStopCamera(){
+      if(bpStream){ bpStream.getTracks().forEach(t=>t.stop()); bpStream=null; }
+      const v=document.getElementById('bp-video'); if(v) v.srcObject=null;
+    }
+    function bpCapture(){
+      const v=document.getElementById('bp-video');
+      const c=document.getElementById('bp-canvas');
+      if(!v.videoWidth) return;
+      c.width=v.videoWidth; c.height=v.videoHeight;
+      c.getContext('2d').drawImage(v,0,0);
+      const url=c.toDataURL('image/jpeg',0.9);
+      document.getElementById('bp-dataurl').value=url;
+      const p=document.getElementById('bp-camera-preview'); p.src=url; p.style.display='';
+      // Clear any uploaded file - camera wins.
+      const fi=document.getElementById('base_face_photo'); if(fi) fi.value='';
+      document.getElementById('bp-upload-preview').style.display='none';
+    }
+    function bpPreviewUpload(e){
+      const f=e.target.files && e.target.files[0]; if(!f) return;
+      const r=new FileReader();
+      r.onload=()=>{ const p=document.getElementById('bp-upload-preview'); p.src=r.result; p.style.display=''; document.getElementById('bp-dataurl').value=''; };
+      r.readAsDataURL(f);
+    }
+  </script>
 
   {# ===== PROFILE ===== #}
   <div class="tp-card">
@@ -140,25 +226,13 @@
     </div>
   </div>
 
-  {# ===== STATUS ===== #}
-  <div class="tp-card">
-    <h2 style="color:#fff;font-size:14px;font-weight:700;margin:0 0 12px 0;letter-spacing:0.4px;text-transform:uppercase">Status</h2>
-
-    <div style="margin-bottom:10px">
-      <label style="font-weight:500;color:#e2e2f0;cursor:pointer">
-        <input type="checkbox" name="is_active" {% if form.is_active %}checked{% endif %}>
-        Account active
-        <span style="color:#94a3b8;font-size:11px;margin-left:6px">(uncheck to disable login)</span>
-      </label>
-    </div>
-    <div>
-      <label style="font-weight:500;color:#e2e2f0;cursor:pointer">
-        <input type="checkbox" name="is_email_verified" {% if form.is_email_verified %}checked{% endif %}>
-        Email verified
-        <span style="color:#94a3b8;font-size:11px;margin-left:6px">(unchecking forces re-verification)</span>
-      </label>
-    </div>
-  </div>
+  {# Status (active / email-verified) is no longer in this form. It now
+     lives on the detail page as action BUTTONS (Disable / Enable user,
+     Verify / Unverify) - same pattern the admin uses. Saves on this
+     page do NOT change status flags. Hidden inputs preserve the
+     current values so a save doesn't accidentally clobber them. #}
+  <input type="hidden" name="is_active" value="{% if form.is_active %}on{% endif %}">
+  <input type="hidden" name="is_email_verified" value="{% if form.is_email_verified %}on{% endif %}">
   {% endif %}
 
   <div class="tp-card">

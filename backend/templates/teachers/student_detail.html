@@ -9,6 +9,25 @@
       <a href="{% url 'teacher_student_quiz_report' student.id %}?days=7" target="_blank"
          class="tp-btn alt" style="text-decoration:none">Print PDF (7d)</a>
       <a href="{% url 'teacher_student_edit' student.id %}" class="tp-btn" style="text-decoration:none">Edit</a>
+
+      {# Action buttons mirror the admin's pattern: explicit POST to flip
+         status flags, clear color coding for the destructive direction. #}
+      <form method="post" action="{% url 'teacher_student_toggle_active' student.id %}" style="display:inline"
+            onsubmit="return confirm('{% if student.is_active %}Disable {{ student.email|escapejs }}? They will no longer be able to log in.{% else %}Re-enable {{ student.email|escapejs }} and let them log in again?{% endif %}');">
+        {% csrf_token %}
+        <button type="submit" class="tp-btn"
+                style="background:{% if student.is_active %}#ef4444{% else %}#22c55e{% endif %}">
+          {% if student.is_active %}Disable user{% else %}Enable user{% endif %}
+        </button>
+      </form>
+      <form method="post" action="{% url 'teacher_student_toggle_verified' student.id %}" style="display:inline"
+            onsubmit="return confirm('{% if student.is_email_verified %}Unverify {{ student.email|escapejs }}? They will need to verify by email before logging in.{% else %}Mark {{ student.email|escapejs }} as email-verified?{% endif %}');">
+        {% csrf_token %}
+        <button type="submit" class="tp-btn"
+                style="background:{% if student.is_email_verified %}#f59e0b{% else %}#7c3aed{% endif %}">
+          {% if student.is_email_verified %}Unverify{% else %}Verify{% endif %}
+        </button>
+      </form>
       <form method="post" action="{% url 'teacher_student_reset_password' student.id %}" style="display:inline">
         {% csrf_token %}
         <button type="submit" class="tp-btn warn">Reset password</button>
@@ -120,11 +139,33 @@
   </table>
 </div>
 
-{# ===== LOGIN FACE SNAPSHOTS ===== #}
+{# ===== REFERENCE PHOTO + LOGIN SNAPSHOTS (side-by-side verification) ===== #}
 <div class="tp-card">
-  <h2 style="color:#fff;font-size:14px;font-weight:700;margin:0 0 12px 0;letter-spacing:0.4px;text-transform:uppercase">Login Face History</h2>
-  <p style="color:#9ca3af;font-size:12px;margin:0 0 14px 0">Every face captured after this student signed in. Newest first.</p>
-  {{ login_face_html|safe }}
+  <h2 style="color:#fff;font-size:14px;font-weight:700;margin:0 0 4px 0;letter-spacing:0.4px;text-transform:uppercase">Identity Verification</h2>
+  <p style="color:#9ca3af;font-size:12px;margin:0 0 14px 0">
+    Compare the reference photo (left) against the auto-snapshots taken when this student signed in (right). If a snapshot doesn't look like the reference, that login was probably someone else.
+  </p>
+  <div style="display:grid;grid-template-columns:220px 1fr;gap:18px;align-items:start">
+    <div>
+      <div style="color:#9ca3af;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;margin-bottom:6px">Reference</div>
+      {% if student.base_face_photo_b64 %}
+        <img alt="Reference photo of {{ student.get_display_name|escape }}"
+             style="width:220px;height:220px;object-fit:cover;border-radius:12px;border:1px solid #2d2d44"
+             src="data:image/jpeg;base64,{{ student.base_face_photo_b64 }}">
+        {% if student.base_face_photo_at %}
+          <div style="color:#94a3b8;font-size:11px;margin-top:6px">Taken {{ student.base_face_photo_at|date:"M d, Y, g:i A" }}</div>
+        {% endif %}
+      {% else %}
+        <div style="width:220px;height:220px;border-radius:12px;border:1px dashed #2d2d44;display:flex;align-items:center;justify-content:center;color:#6b7280;font-size:12px;text-align:center;padding:10px">
+          No reference photo yet. <a href="{% url 'teacher_student_edit' student.id %}" style="color:#a78bfa">Add one</a>
+        </div>
+      {% endif %}
+    </div>
+    <div>
+      <div style="color:#9ca3af;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;margin-bottom:6px">Login captures (newest first)</div>
+      {{ login_face_html|safe }}
+    </div>
+  </div>
 </div>
 
 {# ===== QUIZ HISTORY ===== #}

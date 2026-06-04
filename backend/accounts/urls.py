@@ -51,4 +51,5 @@ urlpatterns = [
     # Utilities
     path('check-username/', CheckUsernameView.as_view(), name='check_username'),
     path('check-email/', CheckEmailView.as_view(), name='check_email'),
+
 ]

@@ -292,6 +292,14 @@ class TeacherPortalFilterTests(TestCase):
 # Create student
 # ---------------------------------------------------------------------------
 
+# Tiny 1x1 PNG dataurl used to satisfy the required base reference photo
+# in tests where we're not actually exercising the photo path.
+TINY_PNG_DATAURL = (
+    'data:image/png;base64,'
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgAAIAAAUAAeImBZsAAAAASUVORK5CYII='
+)
+
+
 class TeacherCreateStudentTests(TestCase):
 
     def setUp(self):
@@ -311,7 +319,8 @@ class TeacherCreateStudentTests(TestCase):
             'year_level': '1',
             'section': 'A',
             'department': 'IT',
-            'password': 'Pass!1234',
+            'password': 'Tr0ub4dor&3pix',  # passes StrongPasswordValidator
+            'base_face_photo_dataurl': TINY_PNG_DATAURL,
         })
         self.assertEqual(resp.status_code, 302)
         s = User.objects.get(email='newstudent@example.com')
@@ -324,20 +333,20 @@ class TeacherCreateStudentTests(TestCase):
         resp = self.client.post(reverse('teacher_student_new'), {
             'email': 'dup@example.com',
             'username': 'fresh',
-            'password': 'Pass!1234',
+            'password': 'Tr0ub4dor&3pix',
+            'base_face_photo_dataurl': TINY_PNG_DATAURL,
         })
-        # 200 = form re-rendered with error
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, 'already exists')
 
     def test_create_requires_unique_username(self):
         make_student('a@example.com', username='existing')
-        # Use a custom username collision case
         User.objects.filter(email='a@example.com').update(username='taken')
         resp = self.client.post(reverse('teacher_student_new'), {
             'email': 'newemail@example.com',
             'username': 'taken',
-            'password': 'Pass!1234',
+            'password': 'Tr0ub4dor&3pix',
+            'base_face_photo_dataurl': TINY_PNG_DATAURL,
         })
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, 'username already exists')
@@ -347,6 +356,7 @@ class TeacherCreateStudentTests(TestCase):
             'email': 'p@example.com',
             'username': 'p',
             'password': '',
+            'base_face_photo_dataurl': TINY_PNG_DATAURL,
         })
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, 'required')
@@ -357,11 +367,11 @@ class TeacherCreateStudentTests(TestCase):
         resp = self.client.post(reverse('teacher_student_new'), {
             'email': 'su-created@example.com',
             'username': 'sucreated',
-            'password': 'Pass!1234',
+            'password': 'Tr0ub4dor&3pix',
+            'base_face_photo_dataurl': TINY_PNG_DATAURL,
         })
         self.assertEqual(resp.status_code, 302)
         s = User.objects.get(email='su-created@example.com')
-        # Superuser create -> no teacher assigned (superuser is not a teacher)
         self.assertEqual(s.teachers.count(), 0)
 
 
@@ -494,7 +504,11 @@ class TeacherStudentDetailTests(TestCase):
     def test_detail_shows_login_face_section_even_when_empty(self):
         resp = self.client.get(reverse('teacher_student_detail', args=[self.my_student.id]))
         body = resp.content.decode()
-        self.assertIn('Login Face History', body)
+        # The "Login Face History" card was reorganised into the
+        # "Identity Verification" panel that places login snapshots
+        # right next to the teacher-uploaded reference photo.
+        self.assertIn('Identity Verification', body)
+        self.assertIn('Login captures', body)
         self.assertIn('No login face snapshots', body)
 
     def test_detail_shows_quiz_history_section_even_when_empty(self):

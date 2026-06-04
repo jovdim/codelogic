@@ -362,6 +362,109 @@ body.no-sidebar #nav-sidebar {
   display: none !important; /* keep nav clean; main link covers it */
 }
 
+/* ============================================================
+ * COMPACT FILTER BAR (replaces the right sidebar)
+ *
+ * codelogic-admin-filters.js converts every `list_filter`
+ * group from the default `#changelist-filter` sidebar into
+ * a `<select>` dropdown and mounts them in `#cl-filter-bar`.
+ * When that JS has run it adds `body.cl-filters-collapsed`,
+ * which lets us hide the sidebar entirely and reclaim the
+ * horizontal space.
+ * ============================================================ */
+body.cl-filters-collapsed #changelist-filter,
+body.cl-filters-collapsed #changelist-filter-extra {
+  display: none !important;
+}
+
+/* Without the sidebar, the changelist results area should
+   span the full width of its container. Django's default
+   stylesheet floats #changelist-filter and reserves room
+   for it via #changelist .results, so we undo that here. */
+body.cl-filters-collapsed #changelist {
+  display: block !important;
+}
+body.cl-filters-collapsed #changelist .results,
+body.cl-filters-collapsed #changelist #changelist-form {
+  margin-right: 0 !important;
+  width: 100% !important;
+}
+
+#cl-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+  margin: 0 0 14px 0;
+  padding: 10px 14px;
+  background: #1a1a2e;
+  border: 1px solid #2d2d44;
+  border-radius: 8px;
+  color: #cbd5e1;
+}
+
+#cl-filter-bar .cl-filter-dropdown {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 140px;
+}
+
+#cl-filter-bar .cl-filter-label {
+  color: #94a3b8;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+#cl-filter-bar .cl-filter-select {
+  background: #0f0f1a;
+  color: #e2e2f0;
+  border: 1px solid #2d2d44;
+  border-radius: 6px;
+  padding: 6px 28px 6px 10px;
+  font-size: 13px;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23a1a1b5' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 12px 12px;
+  cursor: pointer;
+  transition: border-color 0.12s ease;
+}
+
+#cl-filter-bar .cl-filter-select:hover {
+  border-color: #4a4a6b;
+}
+
+#cl-filter-bar .cl-filter-select:focus {
+  border-color: #7c3aed;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.25);
+}
+
+#cl-filter-bar #cl-filter-clear {
+  margin-left: auto;
+  align-self: center;
+  padding: 6px 12px;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: 6px;
+  color: #f87171 !important;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none !important;
+  transition: background-color 0.12s ease;
+}
+
+#cl-filter-bar #cl-filter-clear:hover {
+  background: rgba(239, 68, 68, 0.22);
+  color: #fca5a5 !important;
+}
+
 /* ---- TABLE HEADER (list view column headers) ---- */
 #changelist table thead th {
   background: #f1f1f1;

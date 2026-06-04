@@ -140,6 +140,74 @@ def teacher_required(view_func):
     return _wrapped
 
 
+def _clamp_year_level(raw):
+    """Year level field accepts only 1..4 (matches choices on the
+    model). Anything else falls back to None so a malicious POST can't
+    persist year_level=99 which then breaks the dashboard scoping
+    rule for that student forever."""
+    if not raw:
+        return None
+    try:
+        v = int(raw)
+    except (TypeError, ValueError):
+        return None
+    if v not in {1, 2, 3, 4}:
+        return None
+    return v
+
+
+def _extract_base_photo(request):
+    """Pull the student's reference / base face photo out of a teacher
+    portal form. Two paths supported:
+
+      1. <input type="file" name="base_face_photo"> uploaded image
+      2. <input type="hidden" name="base_face_photo_dataurl"> with a
+         "data:image/jpeg;base64,..." string captured from the webcam
+
+    Returns (bytes, error_msg). bytes is the raw JPEG / image payload
+    or None if neither path supplied a usable image. Size capped at
+    2 MB to keep BinaryField rows reasonable; a head-and-shoulders
+    portrait JPEG is well under that.
+    """
+    MAX_BYTES = 2 * 1024 * 1024
+    upload = request.FILES.get('base_face_photo')
+    if upload:
+        if upload.size and upload.size > MAX_BYTES:
+            return None, 'Reference photo is too large (limit 2 MB).'
+        ctype = (getattr(upload, 'content_type', '') or '').lower()
+        if ctype and not ctype.startswith('image/'):
+            return None, 'Reference photo must be an image file.'
+        return upload.read(), None
+
+    dataurl = (request.POST.get('base_face_photo_dataurl') or '').strip()
+    if dataurl:
+        try:
+            header, _, b64 = dataurl.partition(',')
+            if not b64 or 'base64' not in header:
+                return None, 'Reference photo (camera) is malformed.'
+            import base64 as _b64
+            raw = _b64.b64decode(b64, validate=True)
+        except Exception:  # noqa: BLE001
+            return None, 'Reference photo (camera) could not be decoded.'
+        if len(raw) > MAX_BYTES:
+            return None, 'Reference photo is too large (limit 2 MB).'
+        return raw, None
+
+    return None, None
+
+
+def _validate_student_password(password, *, email='', username=''):
+    """Run Django's password validators against a student-creation /
+    password-set value. Returns a string error or None when OK."""
+    from django.contrib.auth.password_validation import validate_password
+    from django.core.exceptions import ValidationError
+    try:
+        validate_password(password, user=User(email=email, username=username))
+    except ValidationError as e:
+        return '; '.join(e.messages)
+    return None
+
+
 def _teacher_students_qs(request):
     """The set of students the current teacher can see.
     Superuser sees ALL students; regular teachers see only those assigned.
@@ -170,8 +238,9 @@ def teacher_login(request):
     return redirect(reverse('admin:login') + f'?next={reverse("teacher_portal")}')
 
 
-@require_http_methods(['POST', 'GET'])
+@require_http_methods(['POST'])
 def teacher_logout(request):
+    # POST-only to prevent forced logout via `<img src="/teacher/logout/">`.
     # Same Django session as /admin/ so admin's logout works too.
     # IMPORTANT: redirect to /admin/login/ WITHOUT a ?next= param. If we
     # pinned ?next=/teacher/, an admin signing in next at the same URL
@@ -228,28 +297,47 @@ def teacher_student_new(request):
 
     if request.method == 'POST':
         form = {k: (request.POST.get(k) or '').strip() for k in form.keys()}
+        photo_bytes, photo_err = _extract_base_photo(request)
         if not form['email'] or not form['username'] or not form['password']:
             error = 'Email, username, and password are required.'
         elif User.objects.filter(email__iexact=form['email']).exists():
             error = 'A user with that email already exists.'
         elif User.objects.filter(username__iexact=form['username']).exists():
             error = 'A user with that username already exists.'
+        elif photo_err:
+            error = photo_err
+        elif not photo_bytes:
+            # Required at create time so the teacher always has a
+            # reference photo on file for visual verification later.
+            error = 'A reference photo is required - upload one or take it with the camera.'
         else:
-            student = User.objects.create_user(
-                email=form['email'],
-                username=form['username'],
-                password=form['password'],
-                display_name=form['display_name'],
-                department=form['department'],
-                section=form['section'],
-                year_level=int(form['year_level']) if form['year_level'].isdigit() else None,
-                role=User.ROLE_STUDENT,
-                is_email_verified=True,  # teacher-vouched, skip the verify-email flow
+            pwd_err = _validate_student_password(
+                form['password'], email=form['email'], username=form['username'],
             )
-            if not request.user.is_superuser:
-                student.teachers.add(request.user)
-            messages.success(request, f'Student {student.email} created and assigned to you.')
-            return redirect('teacher_portal')
+            if pwd_err:
+                error = f'Password too weak: {pwd_err}'
+            else:
+                student = User.objects.create_user(
+                    email=form['email'],
+                    username=form['username'],
+                    password=form['password'],
+                    display_name=form['display_name'],
+                    department=form['department'],
+                    section=form['section'],
+                    year_level=_clamp_year_level(form['year_level']),
+                    role=User.ROLE_STUDENT,
+                    is_email_verified=True,  # teacher-vouched, skip the verify-email flow
+                )
+                student.base_face_photo = photo_bytes
+                student.base_face_photo_at = timezone.now()
+                student.save(update_fields=['base_face_photo', 'base_face_photo_at'])
+                # Always assign to the calling teacher - even for superusers
+                # who use the form for convenience - so the student isn't
+                # orphaned from every teacher portal.
+                if request.user.role == User.ROLE_TEACHER:
+                    student.teachers.add(request.user)
+                messages.success(request, f'Student {student.email} created and assigned to you.')
+                return redirect('teacher_portal')
 
     return render(request, 'teachers/student_form.html', {
         'mode': 'new',
@@ -274,6 +362,12 @@ def teacher_student_detail(request, student_id):
     total_attempts = attempts_qs.count()
     completed_attempts = attempts_qs.filter(completed=True).count()
     passed_attempts = attempts_qs.filter(completed=True, passed=True).count()
+
+    import base64 as _b64
+    if student.base_face_photo:
+        student.base_face_photo_b64 = _b64.b64encode(bytes(student.base_face_photo)).decode('ascii')
+    else:
+        student.base_face_photo_b64 = ''
 
     return render(request, 'teachers/student_detail.html', {
         'student': student,
@@ -307,8 +401,10 @@ def teacher_student_edit(request, student_id):
         student.bio = (request.POST.get('bio') or '').strip()
         student.department = (request.POST.get('department') or '').strip()
         student.section = (request.POST.get('section') or '').strip()
-        year = (request.POST.get('year_level') or '').strip()
-        student.year_level = int(year) if year.isdigit() else None
+        # Clamp to 1..4 - same rule the model choices use. A bogus
+        # value (or a malicious POST of year_level=99) resets to None
+        # rather than persisting nonsense that breaks dashboard scoping.
+        student.year_level = _clamp_year_level(request.POST.get('year_level'))
 
         # Gameplay stats - teachers can tune XP, hearts, streaks as the
         # admin does. `level` is derived from XP via Model.save() so we
@@ -328,10 +424,25 @@ def teacher_student_edit(request, student_id):
         student.is_active = bool(request.POST.get('is_active'))
         student.is_email_verified = bool(request.POST.get('is_email_verified'))
 
+        # Optional replacement of the reference photo on edit
+        photo_bytes, photo_err = _extract_base_photo(request)
+        if photo_err:
+            messages.error(request, photo_err)
+        elif photo_bytes:
+            student.base_face_photo = photo_bytes
+            student.base_face_photo_at = timezone.now()
+
         student.save()  # full save so `level` recomputes from xp
         messages.success(request, f'Updated {student.email}.')
         return redirect('teacher_student_detail', student_id=student.id)
 
+    # Provide base64 of the current reference photo so the form template
+    # can show a "current photo" thumbnail without a separate fetch.
+    import base64 as _b64
+    if student.base_face_photo:
+        student.base_face_photo_b64 = _b64.b64encode(bytes(student.base_face_photo)).decode('ascii')
+    else:
+        student.base_face_photo_b64 = ''
     return render(request, 'teachers/student_form.html', {
         'mode': 'edit',
         'student': student,
@@ -355,6 +466,37 @@ def teacher_student_edit(request, student_id):
         'error': None,
         'year_choices': User.YEAR_LEVEL_CHOICES,
     })
+
+
+@teacher_required
+@require_http_methods(['POST'])
+def teacher_student_toggle_active(request, student_id):
+    """Flip is_active on the student - matches admin's `_toggle_active`
+    flow (separate POST endpoint instead of a form checkbox). Lets
+    teachers click one bright button to disable/enable a student."""
+    student = get_object_or_404(_teacher_students_qs(request), pk=student_id)
+    student.is_active = not student.is_active
+    student.save(update_fields=['is_active'])
+    if student.is_active:
+        messages.success(request, f'{student.email} is now active.')
+    else:
+        messages.warning(request, f'{student.email} can no longer log in.')
+    return redirect('teacher_student_detail', student_id=student.id)
+
+
+@teacher_required
+@require_http_methods(['POST'])
+def teacher_student_toggle_verified(request, student_id):
+    """Flip is_email_verified. Unverifying forces the student to re-verify
+    via the email-verify flow on next login attempt."""
+    student = get_object_or_404(_teacher_students_qs(request), pk=student_id)
+    student.is_email_verified = not student.is_email_verified
+    student.save(update_fields=['is_email_verified'])
+    if student.is_email_verified:
+        messages.success(request, f'{student.email} marked verified.')
+    else:
+        messages.warning(request, f'{student.email} must verify their email again before logging in.')
+    return redirect('teacher_student_detail', student_id=student.id)
 
 
 @teacher_required
@@ -509,7 +651,24 @@ def teacher_student_quiz_report_pdf(request, student_id):
 @teacher_required
 @require_http_methods(['POST'])
 def teacher_student_reset_password(request, student_id):
-    """Send a password-reset email to the student."""
+    """Send a password-reset email to the student.
+
+    Rate-limited per teacher to prevent inbox-spamming a student or
+    burning the email-provider's sending quota. The throttle scope is
+    `teacher_reset` - see DEFAULT_THROTTLE_RATES.
+    """
+    # Lightweight rate limit via cache (DRF's throttle classes don't
+    # apply to plain Django views). 10 sends per hour per teacher.
+    from django.core.cache import cache
+    bucket_key = f'teacher_reset:{request.user.pk}'
+    count = cache.get(bucket_key, 0)
+    if count >= 10:
+        messages.error(
+            request,
+            'You have sent the max number of password-reset emails this hour.',
+        )
+        return redirect('teacher_portal')
+    cache.set(bucket_key, count + 1, 3600)
     import logging
     logger = logging.getLogger(__name__)
 

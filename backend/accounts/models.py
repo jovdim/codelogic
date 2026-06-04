@@ -150,6 +150,15 @@ class User(AbstractBaseUser, PermissionsMixin):
     last_login_face_photo = models.BinaryField(null=True, blank=True)
     last_login_face_captured_at = models.DateTimeField(null=True, blank=True)
 
+    # Reference / "base" photo of the student, supplied by the teacher
+    # at student-creation time (file upload OR webcam capture). Used
+    # purely for human-eye verification: a teacher can scroll the
+    # student detail page and compare this reference against the
+    # post-login face snapshots in LoginFaceSnapshot. No automatic
+    # matching - just a visual aid. Stored as JPEG bytes.
+    base_face_photo = models.BinaryField(null=True, blank=True)
+    base_face_photo_at = models.DateTimeField(null=True, blank=True)
+
     objects = UserManager()
     
     USERNAME_FIELD = 'email'
@@ -165,6 +174,23 @@ class User(AbstractBaseUser, PermissionsMixin):
     
     def get_display_name(self):
         return self.display_name or self.username
+
+    @property
+    def scoping_year_level(self):
+        """Year level used for content scoping rules.
+
+        Teachers / admins / superusers ALWAYS scope to None (= see all
+        years) regardless of any value on their `year_level` column.
+        Only actual students get year-level filtering. This stops a
+        teacher who happens to have year_level=2 in the DB from being
+        treated like a 2nd-year student and losing access to other-year
+        topics.
+        """
+        if self.is_superuser or self.is_staff:
+            return None
+        if self.role != self.ROLE_STUDENT:
+            return None
+        return self.year_level
     
     def can_change_display_name(self):
         """Check if user can change display name (3-day cooldown)."""

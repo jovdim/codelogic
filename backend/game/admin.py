@@ -342,8 +342,13 @@ class TopicAdmin(admin.ModelAdmin):
             'description': 'Upload icon (SVG, PNG, etc.) - if not set, uses category icon'
         }),
         ('Settings', {
-            'fields': ('total_levels', 'language_version', 'order'),
-            'description': 'Number of levels, language/spec version label (e.g. "HTML5", "CSS3", "Python 3.12"), and display order',
+            'fields': ('total_levels', 'language_version', 'target_year_levels', 'order'),
+            'description': (
+                'Number of levels, language/spec version label, year-level scoping, '
+                'and display order. <strong>target_year_levels</strong>: leave as <code>[]</code> '
+                'to show this topic to ALL years, or set to e.g. <code>[1, 2]</code> to only '
+                'show 1st- and 2nd-year students. Must be a JSON list.'
+            ),
         }),
         ('Status', {
             'fields': ('is_active',)

@@ -867,7 +867,13 @@ export default function LevelQuizPage() {
                         }}
                       >
                         {refLines.map((line, idx) => {
-                          const ok = matchedAt(idx);
+                          const isBlank = line.trim() === '';
+                          // Blank lines don't get the green highlight/check
+                          // even though they auto-count as "matched" - that
+                          // confused students who hadn't typed anything yet
+                          // but saw lines lit green. Only ACTUAL typed-match
+                          // lines turn green now.
+                          const ok = matchedAt(idx) && !isBlank;
                           return (
                             <div
                               key={idx}

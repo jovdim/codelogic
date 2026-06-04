@@ -41,8 +41,14 @@ XP_BONUS_NO_HEARTS_LOST = 25
 class CategoryListView(APIView):
     """Get all active categories with their topics."""
     permission_classes = [AllowAny]
-    
+
     def get(self, request):
+        # Scoping year_level. Teachers / admins / superusers always
+        # return None here (no year filtering), so a teacher with
+        # year_level set in the DB doesn't get treated like a student.
+        u = getattr(request, 'user', None)
+        year = u.scoping_year_level if (u and u.is_authenticated) else None
+
         categories = Category.objects.filter(is_active=True).prefetch_related(
             'topics'
         ).annotate(
@@ -55,10 +61,13 @@ class CategoryListView(APIView):
                 0
             )
         ).order_by('order', 'name')
-        
+
         result = []
         for cat in categories:
-            topics = cat.topics.filter(is_active=True).order_by('order', 'name')
+            topics = [
+                t for t in cat.topics.filter(is_active=True).order_by('order', 'name')
+                if t.is_visible_to_year_level(year)
+            ]
             topic_names = [t.name for t in topics]
             topic_count = len(topic_names)
             
@@ -93,11 +102,14 @@ class CategoryDetailView(APIView):
         except Category.DoesNotExist:
             return Response({'error': 'Category not found'}, status=status.HTTP_404_NOT_FOUND)
         
-        topics = category.topics.filter(is_active=True).annotate(
+        u = getattr(request, 'user', None)
+        year = u.scoping_year_level if (u and u.is_authenticated) else None
+        topics_qs = category.topics.filter(is_active=True).annotate(
             question_count=Count('questions', filter=Q(questions__is_active=True)),
             topic_xp=Coalesce(Sum('questions__xp_reward', filter=Q(questions__is_active=True)), 0)
         ).order_by('order', 'name')
-        
+        topics = [t for t in topics_qs if t.is_visible_to_year_level(year)]
+
         # Calculate total XP from annotated topics
         total_xp = sum(t.topic_xp for t in topics)
         
@@ -151,12 +163,20 @@ class TopicDetailView(APIView):
             )
         except Topic.DoesNotExist:
             return Response({'error': 'Topic not found'}, status=status.HTTP_404_NOT_FOUND)
-        
+
+        # Year-level scoping. A year-1 student who direct-URLs into a
+        # year-3 topic should get 404, same as if the topic didn't
+        # exist. Teachers/admins (scoping_year_level=None) pass through.
+        u = request.user
+        scoping_year = u.scoping_year_level if u.is_authenticated else None
+        if not topic.is_visible_to_year_level(scoping_year):
+            return Response({'error': 'Topic not found'}, status=status.HTTP_404_NOT_FOUND)
+
         if request.user.is_authenticated:
             serializer = TopicWithProgressSerializer(topic, context={'request': request})
         else:
             serializer = TopicSerializer(topic)
-        
+
         return Response(serializer.data)
 
 
@@ -174,8 +194,14 @@ class QuizQuestionsView(APIView):
         except Topic.DoesNotExist:
             return Response({'error': 'Topic not found'}, status=status.HTTP_404_NOT_FOUND)
 
-        # Check hearts
+        # Year-level scoping BEFORE we create a QuizAttempt or burn hearts.
+        # A year-1 student must not be able to direct-URL into a year-3
+        # quiz and farm XP on it; the dashboard would have hidden it.
         user = request.user
+        if not topic.is_visible_to_year_level(user.scoping_year_level):
+            return Response({'error': 'Topic not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Check hearts
         self._regenerate_hearts(user)
 
         if user.current_hearts <= 0:

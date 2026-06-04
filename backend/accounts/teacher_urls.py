@@ -17,4 +17,6 @@ urlpatterns = [
     path('student/<uuid:student_id>/edit/', teacher_views.teacher_student_edit, name='teacher_student_edit'),
     path('student/<uuid:student_id>/delete/', teacher_views.teacher_student_delete, name='teacher_student_delete'),
     path('student/<uuid:student_id>/reset/', teacher_views.teacher_student_reset_password, name='teacher_student_reset_password'),
+    path('student/<uuid:student_id>/toggle-active/', teacher_views.teacher_student_toggle_active, name='teacher_student_toggle_active'),
+    path('student/<uuid:student_id>/toggle-verified/', teacher_views.teacher_student_toggle_verified, name='teacher_student_toggle_verified'),
 ]

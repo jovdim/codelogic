@@ -71,6 +71,17 @@ class Topic(models.Model):
         max_length=40, blank=True, default='',
         help_text='Optional language/spec version label shown to students, e.g. "HTML5", "CSS3", "Python 3.12", "C11", ".NET 8". Leave blank to hide.',
     )
+    # Curriculum scoping. JSONField with a list of year_level ints (1-4).
+    # Empty list = visible to ALL year levels (default, so existing topics
+    # don't suddenly disappear). When the admin puts e.g. [1, 2], only
+    # 1st- and 2nd-year students see this topic on their dashboard.
+    target_year_levels = models.JSONField(
+        default=list, blank=True,
+        help_text=(
+            'Year levels this topic is for. Empty list = all years. '
+            'Example: [1, 2] means only 1st- and 2nd-year students see it.'
+        ),
+    )
 
     class Meta:
         db_table = 'topics'
@@ -79,6 +90,48 @@ class Topic(models.Model):
 
     def __str__(self):
         return f"{self.category.name} - {self.name}"
+
+    def is_visible_to_year_level(self, year_level):
+        """A topic with no `target_year_levels` (None or empty list) is
+        visible to everyone. Otherwise only users whose year_level
+        matches an entry see it.
+
+        `year_level=None` (anonymous / unscoped users) always passes -
+        the dashboard would be empty otherwise. The caller is
+        responsible for using a real student's year_level here and
+        passing None for teachers/admins/anonymous; see
+        `User.scoping_year_level`.
+
+        Malformed entries in target_year_levels are SKIPPED (not used
+        to short-circuit the whole filter). If after skipping no valid
+        targets remain we treat it as "no scoping" again. Otherwise we
+        try to match the integer year_level against the integer-coerced
+        valid entries.
+        """
+        targets_raw = self.target_year_levels or []
+        if not isinstance(targets_raw, (list, tuple)):
+            # Field corruption (e.g. a string slipped in). Be permissive
+            # rather than blocking the whole user base out.
+            return True
+        if year_level is None:
+            return True
+
+        valid_targets = []
+        for raw in targets_raw:
+            try:
+                valid_targets.append(int(raw))
+            except (TypeError, ValueError):
+                continue  # skip the bad entry; do NOT short-circuit
+
+        if not valid_targets:
+            # All entries were malformed; treat as "no scoping" so we
+            # don't accidentally hide a topic from everyone.
+            return True
+
+        try:
+            return int(year_level) in valid_targets
+        except (TypeError, ValueError):
+            return True
     
     @property
     def icon_url(self):

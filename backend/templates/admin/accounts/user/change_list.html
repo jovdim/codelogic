@@ -240,6 +240,16 @@
   </style>
 {% endblock %}
 
+{# Inject a "Import CSV" button next to the standard "Add user" button
+   in the page-header object-tools row. #}
+{% block object-tools-items %}
+  {{ block.super }}
+  <li>
+    <a href="{% url 'admin:accounts_user_import_csv' %}" class="addlink"
+       style="background:#10b981;">Import CSV</a>
+  </li>
+{% endblock %}
+
 {% block result_list %}
 {% if cl.result_list %}
 <div class="cl-user-grid">

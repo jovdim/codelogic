@@ -10,7 +10,7 @@ from django.http import HttpResponseRedirect
 from django.utils import timezone
 from django.utils.html import format_html
 from django.contrib import messages
-from django.db.models import Sum
+from django.db.models import Sum, Q
 from .models import User
 from game.admin import UserCertificateInline, _user_quiz_history_html
 
@@ -84,9 +84,13 @@ class UserAdmin(BaseUserAdmin):
             'fields': ('date_joined', 'last_active', 'last_activity_date'),
             'classes': ('collapse',),
         }),
+        ('Identity reference', {
+            'fields': ('base_face_photo_display',),
+            'description': 'Reference photo the teacher uploaded at student-create time. Used to visually verify the login snapshots below are really this user.',
+        }),
         ('Login face verification', {
             'fields': ('login_face_display',),
-            'description': 'Every face snapshot captured after this user logged in - newest first.',
+            'description': 'Every face snapshot captured after this user logged in - newest first. Compare against the reference photo above.',
         }),
         # Per-user stacked quiz history: each attempt is a section with the
         # start-of-quiz verification photo + all in-quiz monitor snapshots
@@ -112,9 +116,259 @@ class UserAdmin(BaseUserAdmin):
         }),
     )
 
-    readonly_fields = ['date_joined', 'last_active', 'quiz_history', 'login_face_display']
+    readonly_fields = ['date_joined', 'last_active', 'quiz_history', 'login_face_display', 'base_face_photo_display']
 
     inlines = [UserCertificateInline]
+
+    def get_urls(self):
+        """Add a CSV bulk-import endpoint at /admin/accounts/user/import-csv/."""
+        from django.urls import path
+        urls = super().get_urls()
+        custom = [
+            path(
+                'import-csv/',
+                self.admin_site.admin_view(self.import_csv_view),
+                name='accounts_user_import_csv',
+            ),
+        ]
+        return custom + urls
+
+    def import_csv_view(self, request):
+        """
+        Bulk-create users from a CSV upload. Header row required.
+
+        Recognized columns (case-insensitive, any subset):
+            email (required), username (required), password (required),
+            role (student|teacher|admin, default student),
+            display_name, year_level (1-4), section, department.
+
+        Each row becomes one User. Duplicates (existing email/username)
+        are SKIPPED with a row-level message. Rows missing email/
+        username/password are reported and skipped. Successes get
+        is_email_verified=True (admin-vouched).
+        """
+        from django.contrib.admin.views.decorators import staff_member_required
+        from django.shortcuts import render, redirect
+        from django.contrib import messages
+        from django.urls import reverse
+        from django.db import IntegrityError, transaction
+        from django.contrib.auth.password_validation import validate_password
+        from django.core.exceptions import ValidationError
+        import csv
+        import io
+
+        # Cap at 5 MB. A "users.csv" of 5 MB is already ~50k rows; an
+        # operator wanting more should split the file. This is the
+        # cheapest way to neutralize the OOM angle.
+        MAX_CSV_BYTES = 5 * 1024 * 1024
+
+        if not request.user.is_superuser:
+            self.message_user(
+                request,
+                'Only the superadmin can bulk-import users.',
+                level=messages.ERROR,
+            )
+            return redirect(reverse('admin:accounts_user_changelist'))
+
+        report = None
+        if request.method == 'POST' and request.FILES.get('csv_file'):
+            upload = request.FILES['csv_file']
+            if getattr(upload, 'size', 0) and upload.size > MAX_CSV_BYTES:
+                self.message_user(
+                    request,
+                    f'CSV is too large ({upload.size} bytes). Limit is {MAX_CSV_BYTES} bytes.',
+                    level=messages.ERROR,
+                )
+                return redirect(request.path)
+            try:
+                raw_bytes = upload.read(MAX_CSV_BYTES + 1)
+                if len(raw_bytes) > MAX_CSV_BYTES:
+                    self.message_user(
+                        request,
+                        'CSV exceeds the 5 MB upload cap. Split the file and re-upload.',
+                        level=messages.ERROR,
+                    )
+                    return redirect(request.path)
+                # Sniff a UTF-16 BOM so Excel "Unicode" exports work.
+                if raw_bytes.startswith(b'\xff\xfe'):
+                    raw = raw_bytes.decode('utf-16-le').lstrip('﻿')
+                elif raw_bytes.startswith(b'\xfe\xff'):
+                    raw = raw_bytes.decode('utf-16-be').lstrip('﻿')
+                else:
+                    raw = raw_bytes.decode('utf-8-sig')
+            except UnicodeDecodeError:
+                self.message_user(
+                    request,
+                    'Could not decode CSV. Please re-save as UTF-8 (or UTF-16) and re-upload.',
+                    level=messages.ERROR,
+                )
+                return redirect(request.path)
+
+            reader = csv.DictReader(io.StringIO(raw))
+            if not reader.fieldnames:
+                self.message_user(
+                    request, 'CSV looks empty (no header row).',
+                    level=messages.ERROR,
+                )
+                return redirect(request.path)
+
+            # Detect duplicate / ambiguous headers BEFORE normalization
+            # so the operator gets a clear error instead of silent data
+            # loss (the last duplicate wins in dict).
+            normalized = [(k.lower().strip(), k) for k in reader.fieldnames if k]
+            seen_norm = {}
+            duplicate_headers = []
+            for norm, original in normalized:
+                if norm in seen_norm:
+                    duplicate_headers.append(norm)
+                else:
+                    seen_norm[norm] = original
+            if duplicate_headers:
+                self.message_user(
+                    request,
+                    'Duplicate or ambiguous column headers (case-insensitive): '
+                    + ', '.join(sorted(set(duplicate_headers))),
+                    level=messages.ERROR,
+                )
+                return redirect(request.path)
+            field_map = seen_norm
+
+            def cell(row, key):
+                src = field_map.get(key)
+                if src is None:
+                    return ''
+                return (row.get(src) or '').strip()
+
+            created = []
+            skipped = []
+            errors = []
+            for i, row in enumerate(reader, start=2):  # row 1 = header
+                email = cell(row, 'email').lower()
+                username = cell(row, 'username')
+                password = cell(row, 'password')
+                if not email or not username or not password:
+                    errors.append(f'Row {i}: missing required email / username / password')
+                    continue
+                if User.objects.filter(email__iexact=email).exists():
+                    skipped.append(f'Row {i}: {email} already exists')
+                    continue
+                if User.objects.filter(username__iexact=username).exists():
+                    skipped.append(f'Row {i}: username "{username}" already taken')
+                    continue
+
+                role_raw = cell(row, 'role').lower() or User.ROLE_STUDENT
+                if role_raw not in {User.ROLE_STUDENT, User.ROLE_TEACHER, User.ROLE_ADMIN}:
+                    errors.append(f'Row {i}: invalid role "{role_raw}"')
+                    continue
+
+                yl_raw = cell(row, 'year_level')
+                year_level = None
+                if yl_raw:
+                    try:
+                        year_level = int(yl_raw)
+                        if year_level not in {1, 2, 3, 4}:
+                            errors.append(f'Row {i}: year_level "{yl_raw}" out of range 1-4')
+                            continue
+                    except ValueError:
+                        errors.append(f'Row {i}: year_level "{yl_raw}" is not a number')
+                        continue
+
+                # Apply Django's password validators - StrongPasswordValidator
+                # etc. - same as the public signup flow does. Without this,
+                # a CSV import could create users with `a` as the password.
+                try:
+                    validate_password(password, user=User(email=email, username=username))
+                except ValidationError as e:
+                    errors.append(f'Row {i}: weak password ({"; ".join(e.messages)})')
+                    continue
+
+                # Optional `teachers` column: pipe- or comma-separated list
+                # of teacher emails / usernames. Resolved here so the
+                # student lands on the right teacher's portal immediately.
+                teacher_idents = []
+                teachers_cell = cell(row, 'teachers')
+                if teachers_cell:
+                    for tok in teachers_cell.replace('|', ',').split(','):
+                        tok = tok.strip().lower()
+                        if tok:
+                            teacher_idents.append(tok)
+
+                try:
+                    with transaction.atomic():
+                        u = User.objects.create_user(
+                            email=email,
+                            username=username,
+                            password=password,
+                            display_name=cell(row, 'display_name'),
+                            role=role_raw,
+                            year_level=year_level,
+                            section=cell(row, 'section'),
+                            department=cell(row, 'department'),
+                            is_email_verified=True,
+                        )
+                        # Teachers need is_staff=True to use /admin/login/.
+                        if u.role == User.ROLE_TEACHER:
+                            u.is_staff = True
+                            u.save(update_fields=['is_staff'])
+                except IntegrityError:
+                    # TOCTOU: another concurrent import beat us to the
+                    # unique constraint. Treat as a duplicate skip.
+                    skipped.append(f'Row {i}: {email} appeared concurrently')
+                    continue
+                except Exception:  # noqa: BLE001 - generic + continue (no DB payload in msg)
+                    errors.append(f'Row {i}: import failed')
+                    continue
+
+                # Resolve + assign teachers OUTSIDE the create transaction
+                # so a bad teacher identifier doesn't roll back the user.
+                # Only meaningful for student rows; teachers don't have
+                # other teachers.
+                if teacher_idents and u.role == User.ROLE_STUDENT:
+                    lowered = [t.lower() for t in teacher_idents]
+                    matched = User.objects.filter(
+                        role=User.ROLE_TEACHER,
+                    ).filter(
+                        Q(email__in=lowered) | Q(username__in=lowered)
+                    )
+                    for t in matched:
+                        u.teachers.add(t)
+                created.append(email)
+
+            report = {
+                'created_count': len(created),
+                'skipped_count': len(skipped),
+                'error_count': len(errors),
+                'created': created[:50],
+                'skipped': skipped[:50],
+                'errors': errors[:50],
+                'total': len(created) + len(skipped) + len(errors),
+            }
+            if created:
+                self.message_user(
+                    request,
+                    f'Imported {len(created)} user{"s" if len(created) != 1 else ""}.',
+                    level=messages.SUCCESS,
+                )
+            if skipped:
+                self.message_user(
+                    request,
+                    f'Skipped {len(skipped)} duplicate row{"s" if len(skipped) != 1 else ""}.',
+                    level=messages.WARNING,
+                )
+            if errors:
+                self.message_user(
+                    request,
+                    f'{len(errors)} row{"s" if len(errors) != 1 else ""} failed - see report.',
+                    level=messages.ERROR,
+                )
+
+        ctx = {
+            **self.admin_site.each_context(request),
+            'title': 'Bulk import users',
+            'opts': self.model._meta,
+            'report': report,
+        }
+        return render(request, 'admin/accounts/user/import_csv.html', ctx)
 
     def save_model(self, request, obj, form, change):
         # Auto-verify users created through the admin. An admin adding a
@@ -131,13 +385,45 @@ class UserAdmin(BaseUserAdmin):
         # for teacher accounts. They still can't open Django admin model
         # pages (no model-level perms) - and our admin_dashboard view
         # immediately redirects them to /teacher/ anyway.
-        if obj.role == User.ROLE_TEACHER and not obj.is_superuser:
-            obj.is_staff = True
+        # We also flip is_staff back OFF when a teacher is demoted to a
+        # student role; otherwise the LeaderboardView filter (is_staff
+        # =False) silently keeps them off the board forever.
+        if not obj.is_superuser:
+            if obj.role == User.ROLE_TEACHER:
+                obj.is_staff = True
+            elif obj.role == User.ROLE_STUDENT:
+                obj.is_staff = False
         super().save_model(request, obj, form, change)
 
     def quiz_history(self, obj):
         return _user_quiz_history_html(obj)
     quiz_history.short_description = 'Quiz attempts (verification photo + monitor snapshots)'
+
+    def base_face_photo_display(self, obj):
+        """Render the teacher-uploaded reference photo on the user-edit
+        page so the admin can eyeball-compare it to login snapshots."""
+        import base64
+        if not obj.base_face_photo:
+            return format_html(
+                '<em style="color:#9ca3af">No reference photo on file. '
+                'A teacher should add one at /teacher/student/{}/edit/.</em>',
+                obj.pk,
+            )
+        b64 = base64.b64encode(bytes(obj.base_face_photo)).decode('ascii')
+        when = (
+            timezone.localtime(obj.base_face_photo_at).strftime('%b %d, %Y %I:%M %p')
+            if obj.base_face_photo_at else 'unknown'
+        )
+        return format_html(
+            '<div style="display:inline-block">'
+            '<img src="data:image/jpeg;base64,{}" '
+            'style="width:220px;height:220px;object-fit:cover;border-radius:10px;'
+            'border:1px solid #2d2d44;display:block"/>'
+            '<div style="font-size:11px;color:#9ca3af;margin-top:4px">Taken {}</div>'
+            '</div>',
+            b64, when,
+        )
+    base_face_photo_display.short_description = 'Reference photo'
 
     def login_face_display(self, obj):
         """Render the FULL login-face history as a responsive grid.
