@@ -909,7 +909,11 @@ fieldset.module .form-row.cl-form-row-open {
     0 12px 30px -10px rgba(0, 0, 0, 0.7),
     0 4px 12px -6px rgba(0, 0, 0, 0.5),
     0 0 0 1px rgba(124, 58, 237, 0.18);
-  z-index: 40;
+  /* Extremely high z-index so the menu paints above any sibling
+     form-row's content, even if some other stylesheet adds its own
+     stacking context to the rows. The form-row lift is the primary
+     fix; this is the belt-and-suspenders. */
+  z-index: 9999;
   display: none;
   animation: cl-form-menu-in 0.12s ease-out;
 }
@@ -919,7 +923,11 @@ fieldset.module .form-row.cl-form-row-open {
   to   { opacity: 1; transform: translateY(0); }
 }
 
-.cl-form-dropdown.cl-form-open .cl-form-menu {
+.cl-form-dropdown.cl-form-open .cl-form-menu,
+/* When the menu is reparented to <body> (so it floats above every
+   ancestor's stacking context), the JS sets inline position:fixed.
+   Match it here too so it shows. */
+body > .cl-form-menu {
   display: block;
 }
 
@@ -1073,21 +1081,32 @@ form#user_form > p:first-of-type,
  * live ruleset. These styles match the gamified feel of the
  * rest of the admin and the /register page's checklist UI.
  * ============================================================ */
+/* The replaced helptext sits below the input. Django's
+   `.aligned div.help` already applies `margin-left: 160px` +
+   `padding-left: 10px` so the help block lines up with the field
+   column - we MUST preserve that or the strength card will sit
+   ~10-25px to the LEFT of the input above it. Only the
+   border / callout styling from earlier needs unwinding. */
 .cl-pwd-helptext-replaced {
   background: transparent !important;
   border: 0 !important;
   border-left: 0 !important;
-  padding: 0 !important;
   color: inherit !important;
-  margin-top: 10px !important;
-  max-width: 560px !important;
+  margin-top: 8px !important;
+  /* Width = input max-width (460) + Django's padding-left (10)
+     so the inner strength card stays flush with the input's right edge. */
+  max-width: 470px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
 }
 
+/* Plain-text variant: no card surface, just the label / bar / rules
+   sitting on the page background. */
 .cl-pwd-strength {
-  background: #14142a;
-  border: 1px solid #2d2d44;
-  border-radius: 10px;
-  padding: 12px 14px;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
 .cl-pwd-strength-label {

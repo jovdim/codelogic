@@ -15,14 +15,14 @@ render_dfd(
     rows=[
         {
             "proc_num": "2.1",
-            "proc_lines": ["List Categories"],
+            "proc_lines": ["List Categories", "(Year-Scoped)"],
             "entities": [
                 ("Guest", "Category List Request", "Categories + Topic Counts"),
-                ("Student", "Category List Request", "Categories + Topic Counts"),
+                ("Student", "Category List Request", "Year-Scoped Categories + Counts"),
             ],
             "stores": [
                 ("D3", "Categories", "Read Active Categories", "Category Rows"),
-                ("D6", "Topics", "Aggregate Topic / Question Counts", "Topic Rows"),
+                ("D6", "Topics", "Filter by target_year_levels + Count", "Topic Rows"),
             ],
         },
         {
@@ -63,11 +63,12 @@ render_dfd(
             "proc_num": "2.5",
             "proc_lines": ["Admin: Manage", "Topics"],
             "entities": [
-                ("Admin", "Add / Edit / Delete Topic", "Topic Saved"),
+                ("Admin", "Edit Topic (+ language_version, year-levels)", "Topic Saved"),
             ],
             "stores": [
                 ("D6", "Topics", "Insert / Update / Delete", "Topic Row"),
                 ("D3", "Categories", "Resolve Parent Category", "Category Row"),
+                ("D12", "Certificates", "Auto-Create on New Topic (signal)", None),
             ],
         },
         {

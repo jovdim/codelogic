@@ -10,8 +10,10 @@
          class="tp-btn alt" style="text-decoration:none">Print PDF (7d)</a>
       <a href="{% url 'teacher_student_edit' student.id %}" class="tp-btn" style="text-decoration:none">Edit</a>
 
-      {# Action buttons mirror the admin's pattern: explicit POST to flip
-         status flags, clear color coding for the destructive direction. #}
+      {% comment %}
+        Action buttons mirror the admin's pattern: explicit POST to flip
+        status flags, clear color coding for the destructive direction.
+      {% endcomment %}
       <form method="post" action="{% url 'teacher_student_toggle_active' student.id %}" style="display:inline"
             onsubmit="return confirm('{% if student.is_active %}Disable {{ student.email|escapejs }}? They will no longer be able to log in.{% else %}Re-enable {{ student.email|escapejs }} and let them log in again?{% endif %}');">
         {% csrf_token %}

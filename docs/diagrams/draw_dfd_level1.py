@@ -6,7 +6,7 @@ from PIL import Image, ImageDraw, ImageFont
 HERE = Path(__file__).parent
 OUT = HERE / "04_dfd_level1.png"
 
-W, H = 1700, 2200
+W, H = 1700, 2580
 img = Image.new("RGB", (W, H), "white")
 draw = ImageDraw.Draw(img)
 

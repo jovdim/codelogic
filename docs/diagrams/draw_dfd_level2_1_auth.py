@@ -55,7 +55,8 @@ render_dfd(
             "entities": [
                 ("Guest", "Email + Password", "Access + Refresh Tokens"),
                 ("Student", "Login Request", "JWT Pair / Profile"),
-                ("Admin", "Login Request", "JWT Pair / Profile"),
+                ("Teacher", "Login Request", "Session (via /admin/login/)"),
+                ("Admin", "Login Request", "Session / JWT Pair"),
             ],
             "stores": [
                 ("D1", "Users", "Update failed_login_attempts", "Password Hash + Status"),
@@ -91,6 +92,7 @@ render_dfd(
             "proc_lines": ["Logout"],
             "entities": [
                 ("Student", "Refresh Token", "Logout Confirmation"),
+                ("Teacher", "End Session", "Logout Confirmation"),
                 ("Admin", "Refresh Token", "Logout Confirmation"),
             ],
             "stores": [

@@ -58,10 +58,12 @@
     {% endif %}
   </div>
 
-  {# ===== REFERENCE / BASE PHOTO =====
+  {% comment %}
+     ===== REFERENCE / BASE PHOTO =====
      Required at create time; optional replacement at edit time. Either
      a regular file upload OR a live webcam snapshot (data URL written
-     into the hidden field by the inline script). #}
+     into the hidden field by the inline script).
+  {% endcomment %}
   <div class="tp-card">
     <h2 style="color:#fff;font-size:14px;font-weight:700;margin:0 0 4px 0;letter-spacing:0.4px;text-transform:uppercase">
       Reference photo {% if mode == 'new' %}<span style="color:#fca5a5">*</span>{% endif %}
@@ -226,11 +228,13 @@
     </div>
   </div>
 
-  {# Status (active / email-verified) is no longer in this form. It now
+  {% comment %}
+     Status (active / email-verified) is no longer in this form. It now
      lives on the detail page as action BUTTONS (Disable / Enable user,
      Verify / Unverify) - same pattern the admin uses. Saves on this
      page do NOT change status flags. Hidden inputs preserve the
-     current values so a save doesn't accidentally clobber them. #}
+     current values so a save doesn't accidentally clobber them.
+  {% endcomment %}
   <input type="hidden" name="is_active" value="{% if form.is_active %}on{% endif %}">
   <input type="hidden" name="is_email_verified" value="{% if form.is_email_verified %}on{% endif %}">
   {% endif %}

@@ -39,10 +39,14 @@
     openDropdown.classList.remove('cl-form-open');
     var trig = openDropdown.querySelector('.cl-form-trigger');
     if (trig) trig.setAttribute('aria-expanded', 'false');
-    // Restore z-index on the parent form-row (paired with the lift
-    // applied when we opened the menu - see trigger click handler).
     var row = openDropdown.closest('.form-row');
     if (row) row.classList.remove('cl-form-row-open');
+    // Put the menu back inside its .cl-form-dropdown wrapper, clear
+    // the fixed-position styles, and detach the scroll/resize listeners.
+    if (typeof openDropdown._restoreMenu === 'function') {
+      openDropdown._restoreMenu();
+      openDropdown._restoreMenu = null;
+    }
     openDropdown = null;
   }
 
@@ -207,6 +211,27 @@
       menu.appendChild(customRow);
     }
 
+    // ---- POSITIONING ----
+    // The form has a stack of <div class="form-row"> blocks. When the
+    // dropdown opens, its menu sits absolutely positioned BELOW the
+    // trigger - but the next form-row's content has been clipping or
+    // painting over the lower options. Belt-and-suspenders approach:
+    // when opening, we REPARENT the menu to <body> and switch it to
+    // position:fixed at the trigger's viewport coordinates. That
+    // takes it out of every ancestor's stacking context and overflow
+    // clip, so it can't possibly be hidden by a sibling row.
+    function positionMenu() {
+      var rect = trigger.getBoundingClientRect();
+      menu.style.position = 'fixed';
+      menu.style.top = (rect.bottom + 6) + 'px';
+      menu.style.left = rect.left + 'px';
+      menu.style.minWidth = rect.width + 'px';
+    }
+
+    function onScrollOrResize() {
+      if (wrap.classList.contains('cl-form-open')) positionMenu();
+    }
+
     trigger.addEventListener('click', function (e) {
       e.stopPropagation();
       var wasOpen = wrap.classList.contains('cl-form-open');
@@ -214,13 +239,30 @@
       if (!wasOpen) {
         wrap.classList.add('cl-form-open');
         trigger.setAttribute('aria-expanded', 'true');
-        // Lift the parent form-row so the popover paints OVER the
-        // next form-row (Department/etc) instead of being clipped.
-        // The CSS :has() selector handles this on modern browsers
-        // but we set an explicit class too for older browsers.
+        // Lift the parent form-row z-index too (legacy fallback,
+        // mostly redundant now that the menu lives on <body>).
         var row = wrap.closest('.form-row');
         if (row) row.classList.add('cl-form-row-open');
+        // Move the menu to <body> with fixed positioning so it
+        // floats above EVERYTHING. closeOpen() puts it back.
+        if (menu.parentNode !== document.body) {
+          document.body.appendChild(menu);
+        }
+        positionMenu();
+        window.addEventListener('scroll', onScrollOrResize, true);
+        window.addEventListener('resize', onScrollOrResize);
         openDropdown = wrap;
+        openDropdown._restoreMenu = function () {
+          window.removeEventListener('scroll', onScrollOrResize, true);
+          window.removeEventListener('resize', onScrollOrResize);
+          menu.style.position = '';
+          menu.style.top = '';
+          menu.style.left = '';
+          menu.style.minWidth = '';
+          if (menu.parentNode === document.body) {
+            wrap.appendChild(menu);
+          }
+        };
         var current = menu.querySelector('.cl-form-option-selected')
           || menu.querySelector('.cl-form-option');
         if (current) current.focus();
@@ -316,7 +358,14 @@
 
     document.addEventListener('click', function (e) {
       if (!openDropdown) return;
-      if (!openDropdown.contains(e.target)) closeOpen();
+      // The menu is detached and lives on <body> while open. So
+      // "inside the dropdown" = inside the wrapper OR inside the
+      // menu (which may not be a descendant of the wrapper anymore).
+      var menuEl = openDropdown.querySelector('.cl-form-menu')
+        || document.body.querySelector('.cl-form-menu');
+      if (openDropdown.contains(e.target)) return;
+      if (menuEl && menuEl.contains(e.target)) return;
+      closeOpen();
     });
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape') closeOpen();
