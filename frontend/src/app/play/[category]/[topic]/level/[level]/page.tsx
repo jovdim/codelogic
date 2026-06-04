@@ -105,6 +105,63 @@ const highlightCode = (code: string): ReactNode[] => {
   ));
 };
 
+// Comment syntax per language, used so the type-along matcher grades the
+// CODE a student types, not the prose in comments. A student shouldn't have
+// to retype "# loop over the list" word-for-word to advance a lesson.
+type CommentStyle = "hash" | "slash" | "css" | "html";
+
+// Best-effort language -> comment style from the topic name (e.g. "Python",
+// "CSS Basics", "JavaScript"). Defaults to "slash" (// and /* */), which
+// covers JS/TS/C/C++/C#/Java - the bulk of topics. Python is detected
+// explicitly because there `//` is floor division, not a comment; CSS/HTML
+// are detected because there `#` and `//` are NOT comments.
+const commentStyleFor = (lang: string): CommentStyle => {
+  const l = (lang || "").toLowerCase();
+  if (l.includes("python")) return "hash";
+  if (l.includes("css")) return "css";
+  if (l.includes("html") || l.includes("markup") || l.includes("xml")) return "html";
+  return "slash";
+};
+
+// Strip a line's comment so only code is compared. String-aware: a marker
+// inside a quoted string ("# x", "http://") is left intact. A comment-only
+// line collapses to "" and is then treated as optional (like a blank line).
+const stripLineComment = (line: string, style: CommentStyle): string => {
+  if (style === "html") {
+    line = line.replace(/<!--[\s\S]*?-->/g, "");
+    const open = line.indexOf("<!--");
+    return open === -1 ? line : line.slice(0, open);
+  }
+  if (style === "css" || style === "slash") {
+    // Inline and dangling block comments: /* ... */
+    line = line.replace(/\/\*[\s\S]*?\*\//g, "");
+    const block = line.indexOf("/*");
+    if (block !== -1) line = line.slice(0, block);
+    if (style === "css") return line; // CSS has no line comments
+  }
+  // Line comments: # (Python) or // (C-family). Scan past string literals.
+  const marker = style === "hash" ? "#" : "//";
+  let inStr: string | null = null;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (inStr) {
+      if (c === "\\") {
+        i += 1;
+        continue;
+      }
+      if (c === inStr) inStr = null;
+      continue;
+    }
+    if (c === '"' || c === "'" || c === "`") {
+      inStr = c;
+      continue;
+    }
+    if (marker === "#" && c === "#") return line.slice(0, i);
+    if (marker === "//" && c === "/" && line[i + 1] === "/") return line.slice(0, i);
+  }
+  return line;
+};
+
 // Question types
 type QuestionType = "multiple-choice" | "find-error" | "fill-blank" | "output";
 
@@ -140,6 +197,9 @@ export default function LevelQuizPage() {
 
   // State
   const [lessons, setLessons] = useState<Lesson[]>([]);
+  // Topic name from the quiz response, used to pick the comment syntax so the
+  // type-along matcher ignores comments and grades only code.
+  const [topicName, setTopicName] = useState("");
   const [currentLesson, setCurrentLesson] = useState(0);
   const [showingLessons, setShowingLessons] = useState(true);
   // What the student has typed into the type-along editor for the current lesson.
@@ -225,6 +285,7 @@ export default function LevelQuizPage() {
       setLessonTyped("");
       setShowingLessons(lessonData.length > 0);
       setQuestions(response.data.questions);
+      setTopicName(response.data.topic || "");
       setAttemptId(response.data.attempt_id);
       setHearts(response.data.hearts);
       setError(null);
@@ -783,8 +844,19 @@ export default function LevelQuizPage() {
               // `refLines` stays FULL for display (line numbers + blank rows
               // visible). Matching uses `nonBlankRef` / `nonBlankTyped` so
               // blank lines never affect correctness.
+              const style = commentStyleFor(topicName);
+              // Canonicalize a line for comparison: drop its comment (so only
+              // CODE is graded), normalize CRLF, trim, and collapse runs of
+              // whitespace. A comment-only line canonicalizes to '' and is then
+              // treated like a blank line - optional, not required to advance.
               const canon = (s: string) =>
-                s.replace(/\r/g, '').trim().replace(/\s+/g, ' ');
+                stripLineComment(s, style)
+                  .replace(/\r/g, '')
+                  .trim()
+                  .replace(/\s+/g, ' ');
+              // A line carries code only if something survives stripping its
+              // comment. Blank AND comment-only lines are "no code".
+              const isCode = (l: string) => canon(l) !== '';
 
               const refLines = (lesson.code_example || '').replace(/\r/g, '').split('\n');
               // Trim trailing blank lines from refLines so a stray "\n" at
@@ -794,22 +866,26 @@ export default function LevelQuizPage() {
               }
               const typedLines = lessonTyped.replace(/\r/g, '').split('\n');
 
-              const nonBlankRef = refLines.filter((l) => l.trim() !== '');
-              const nonBlankTyped = typedLines.filter((l) => l.trim() !== '');
+              // Compare only code-bearing lines. Comment-only and blank lines
+              // are excluded from BOTH sides, so a student never has to retype
+              // a comment, and may add their own comments without breaking the
+              // line-by-line alignment.
+              const nonBlankRef = refLines.filter(isCode);
+              const nonBlankTyped = typedLines.filter(isCode);
 
-              // For each non-blank reference line, has the student typed
-              // the matching content (in order)?
+              // For each code reference line, has the student typed the
+              // matching code (in order)?
               const nonBlankMatch: boolean[] = nonBlankRef.map((rline, i) => {
                 const t = nonBlankTyped[i];
                 return t !== undefined && canon(t) === canon(rline);
               });
 
-              // Map every DISPLAY ref line → matched? Blank lines count as
-              // matched (nothing to type for them) so they don't drag down
-              // the visible green-check progression.
+              // Map every DISPLAY ref line → matched? Blank and comment-only
+              // lines count as matched (nothing required for them) so they
+              // don't drag down the visible green-check progression.
               let _nbIdx = 0;
               const displayMatched: boolean[] = refLines.map((rline) => {
-                if (rline.trim() === '') return true;
+                if (!isCode(rline)) return true;
                 const m = nonBlankMatch[_nbIdx];
                 _nbIdx += 1;
                 return m;
@@ -867,13 +943,12 @@ export default function LevelQuizPage() {
                         }}
                       >
                         {refLines.map((line, idx) => {
-                          const isBlank = line.trim() === '';
-                          // Blank lines don't get the green highlight/check
-                          // even though they auto-count as "matched" - that
-                          // confused students who hadn't typed anything yet
-                          // but saw lines lit green. Only ACTUAL typed-match
-                          // lines turn green now.
-                          const ok = matchedAt(idx) && !isBlank;
+                          // Blank AND comment-only lines don't get the green
+                          // highlight/check even though they auto-count as
+                          // "matched" - they're optional, so lighting them
+                          // green before the student types would mislead.
+                          const isNonCode = canon(line) === '';
+                          const ok = matchedAt(idx) && !isNonCode;
                           return (
                             <div
                               key={idx}

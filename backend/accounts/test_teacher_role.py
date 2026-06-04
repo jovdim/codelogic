@@ -175,9 +175,12 @@ class UserManagerStillCreatesValidUsers(TestCase):
         )
         self.assertTrue(su.is_staff)
         self.assertTrue(su.is_superuser)
-        # Superuser default role is still 'student' (the data field) -
-        # checks against superuser status happen via is_superuser, not role.
-        self.assertEqual(su.role, User.ROLE_STUDENT)
+        # Superusers ALWAYS get role='admin' - the User.save() hook
+        # keeps the role column in sync with is_superuser so the admin
+        # role filter / role pill / scoping checks all agree. Without
+        # this, a superuser could match the "Role: Student" filter while
+        # being labelled "Admin" in the pill, which was confusing.
+        self.assertEqual(su.role, User.ROLE_ADMIN)
 
     def test_assignment_persists_through_refresh(self):
         teacher = User.objects.create_user(

@@ -93,7 +93,15 @@
       border-radius: 10px !important;
       padding: 0 !important;
       margin-bottom: 16px !important;
-      overflow: hidden;
+      /* NOTE: NO overflow:hidden here - it would clip our custom
+         dropdown popovers when they extend past the fieldset's bottom
+         edge. Inner elements (the h2 header) handle their own rounded
+         corners via border-radius on the wrapper itself. */
+    }
+    /* Each form-row also needs overflow:visible so the dropdown menu
+       can break out of the row's clipping context. */
+    fieldset.module .form-row {
+      overflow: visible !important;
     }
     fieldset.module h2 {
       background: rgba(124,58,237,0.10) !important;

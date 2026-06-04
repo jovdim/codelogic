@@ -43,6 +43,7 @@ class UserManager(BaseUserManager):
         extra_fields.setdefault('is_superuser', True)
         extra_fields.setdefault('is_active', True)
         extra_fields.setdefault('is_email_verified', True)
+        extra_fields.setdefault('role', 'admin')
         
         if extra_fields.get('is_staff') is not True:
             raise ValueError('Superuser must have is_staff=True.')
@@ -70,6 +71,11 @@ class User(AbstractBaseUser, PermissionsMixin):
     # only used as a typing/UI hint elsewhere.
     DEPARTMENT_SUGGESTIONS = ['IT', 'Computer Engineering']
 
+    # Default options shown in the dropdown. The field itself accepts
+    # any positive integer (no `choices=` on the DB field), so the admin
+    # form's "Other..." input can post 5, 6, etc. for schools with
+    # non-standard programs. These labels are still used to render the
+    # known values nicely (1 -> "1st Year").
     YEAR_LEVEL_CHOICES = [
         (1, '1st Year'),
         (2, '2nd Year'),
@@ -98,7 +104,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     )
     year_level = models.PositiveSmallIntegerField(
         null=True, blank=True, choices=YEAR_LEVEL_CHOICES,
-        help_text='Year level for students (1-4). Optional for teachers/admin.',
+        help_text='Year level for students. Pick 1st-4th from the dropdown, or use "Other..." for non-standard programs (medical, PhD, etc.).',
     )
     section = models.CharField(
         max_length=20, blank=True, default='',
@@ -214,6 +220,14 @@ class User(AbstractBaseUser, PermissionsMixin):
     
     def save(self, *args, **kwargs):
         self.level = self.calculate_level()
+        # Superusers are treated as admins everywhere in the app; keep the
+        # `role` column in sync so admin filters / role pills / scoping
+        # checks all agree. Without this, a superuser created before the
+        # `role` field existed (or via `createsuperuser` with explicit
+        # role) can show up under the Student filter while being labelled
+        # "Admin" in the pill, which is confusing.
+        if self.is_superuser and self.role != self.ROLE_ADMIN:
+            self.role = self.ROLE_ADMIN
         super().save(*args, **kwargs)
 
 

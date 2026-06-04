@@ -390,79 +390,273 @@ body.cl-filters-collapsed #changelist #changelist-form {
   width: 100% !important;
 }
 
+/* The bar: a single subtly-elevated surface that holds the pill-style
+   filter chips. Uses a faint top-down gradient so it reads as a
+   "control surface" instead of a flat strip. */
 #cl-filter-bar {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  align-items: flex-end;
-  margin: 0 0 14px 0;
-  padding: 10px 14px;
-  background: #1a1a2e;
+  align-items: center;
+  margin: 0 0 16px 0;
+  padding: 12px 14px;
+  background: linear-gradient(180deg, #1c1c33 0%, #181828 100%);
   border: 1px solid #2d2d44;
-  border-radius: 8px;
+  border-radius: 12px;
   color: #cbd5e1;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.03) inset,
+    0 6px 18px -10px rgba(0, 0, 0, 0.6);
 }
 
+/* Optional "Filters:" leader so the row reads like a control panel,
+   not a stranded row of selects. Hidden when there are zero filters
+   (the JS never renders #cl-filter-bar in that case so it's safe). */
+#cl-filter-bar::before {
+  content: "Filters";
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 6px 0 2px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #6b7280;
+  border-right: 1px solid #2d2d44;
+  margin-right: 4px;
+  height: 32px;
+}
+
+/* Each filter is a custom dropdown widget:
+       <div .cl-filter-dropdown>
+         <button .cl-filter-trigger>
+           <span .cl-filter-label>ROLE</span>
+           <span .cl-filter-value>All</span>
+           <span .cl-filter-chevron>...</span>
+         </button>
+         <div .cl-filter-menu>
+           <a .cl-filter-option .cl-filter-option-selected>All</a>
+           <a .cl-filter-option>Student</a>
+           ...
+         </div>
+       </div>
+   We use a custom widget instead of a native <select> because the
+   native option panel is rendered by the OS shell and ignores our
+   dark theme - it always comes out light-on-white. */
 #cl-filter-bar .cl-filter-dropdown {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 140px;
+  position: relative;
+  display: inline-flex;
+}
+
+#cl-filter-bar .cl-filter-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 12px 0 14px;
+  background: #0f0f1a;
+  border: 1px solid #2d2d44;
+  border-radius: 999px;
+  color: #e2e2f0;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  outline: none;
+  white-space: nowrap;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.06s ease;
+}
+
+#cl-filter-bar .cl-filter-trigger:hover {
+  border-color: #4a4a6b;
+  background: #14142a;
+}
+
+#cl-filter-bar .cl-filter-trigger:focus-visible {
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.22);
+}
+
+#cl-filter-bar .cl-filter-dropdown.cl-filter-open .cl-filter-trigger {
+  border-color: #7c3aed;
+  background: #14142a;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.22);
 }
 
 #cl-filter-bar .cl-filter-label {
-  color: #94a3b8;
   font-size: 10px;
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: 0.7px;
   text-transform: uppercase;
-  letter-spacing: 0.6px;
+  color: #94a3b8;
+  user-select: none;
 }
 
-#cl-filter-bar .cl-filter-select {
-  background: #0f0f1a;
-  color: #e2e2f0;
+#cl-filter-bar .cl-filter-value {
+  color: #ffffff;
+  font-weight: 600;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#cl-filter-bar .cl-filter-chevron {
+  display: inline-flex;
+  color: #a78bfa;
+  margin-left: 2px;
+  transition: transform 0.18s ease;
+}
+
+#cl-filter-bar .cl-filter-dropdown.cl-filter-open .cl-filter-chevron {
+  transform: rotate(180deg);
+}
+
+/* Active (non-default) filter: purple body + a glowing dot before
+   the label so users can see at a glance which filters are constraining
+   the result set. */
+#cl-filter-bar .cl-filter-dropdown.cl-filter-active .cl-filter-trigger {
+  background: rgba(124, 58, 237, 0.14);
+  border-color: rgba(124, 58, 237, 0.55);
+}
+
+#cl-filter-bar .cl-filter-dropdown.cl-filter-active .cl-filter-label {
+  color: #c4b5fd;
+}
+
+#cl-filter-bar .cl-filter-dropdown.cl-filter-active .cl-filter-label::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #a78bfa;
+  margin-right: 6px;
+  vertical-align: middle;
+  box-shadow: 0 0 6px rgba(167, 139, 250, 0.8);
+}
+
+/* The popover panel - absolutely positioned under the trigger,
+   hidden until the trigger is clicked. */
+#cl-filter-bar .cl-filter-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 100%;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 6px;
+  background: #1a1a2e;
   border: 1px solid #2d2d44;
+  border-radius: 10px;
+  box-shadow:
+    0 12px 30px -10px rgba(0, 0, 0, 0.7),
+    0 4px 12px -6px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(124, 58, 237, 0.18);
+  z-index: 30;
+  display: none;
+  animation: cl-filter-menu-in 0.12s ease-out;
+}
+
+@keyframes cl-filter-menu-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+#cl-filter-bar .cl-filter-dropdown.cl-filter-open .cl-filter-menu {
+  display: block;
+}
+
+#cl-filter-bar .cl-filter-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px 8px 30px;
+  margin: 1px 0;
   border-radius: 6px;
-  padding: 6px 28px 6px 10px;
+  color: #cbd5e1 !important;
   font-size: 13px;
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23a1a1b5' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
-  background-repeat: no-repeat;
-  background-position: right 8px center;
-  background-size: 12px 12px;
+  font-weight: 500;
+  text-decoration: none !important;
   cursor: pointer;
-  transition: border-color 0.12s ease;
-}
-
-#cl-filter-bar .cl-filter-select:hover {
-  border-color: #4a4a6b;
-}
-
-#cl-filter-bar .cl-filter-select:focus {
-  border-color: #7c3aed;
+  white-space: nowrap;
+  position: relative;
   outline: none;
-  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.25);
+  transition: background-color 0.1s ease, color 0.1s ease;
 }
 
+#cl-filter-bar .cl-filter-option:hover,
+#cl-filter-bar .cl-filter-option:focus-visible {
+  background: rgba(124, 58, 237, 0.18);
+  color: #ffffff !important;
+}
+
+/* Currently-selected option: purple text + a checkmark in the
+   reserved left gutter. */
+#cl-filter-bar .cl-filter-option-selected {
+  color: #a78bfa !important;
+  font-weight: 700;
+}
+
+#cl-filter-bar .cl-filter-option-selected::before {
+  content: "";
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  margin-top: -6px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23a78bfa' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='20 6 9 17 4 12'/></svg>");
+  background-repeat: no-repeat;
+}
+
+/* Tighter scrollbar inside the popover. */
+#cl-filter-bar .cl-filter-menu::-webkit-scrollbar { width: 8px; }
+#cl-filter-bar .cl-filter-menu::-webkit-scrollbar-track { background: transparent; }
+#cl-filter-bar .cl-filter-menu::-webkit-scrollbar-thumb {
+  background: #2d2d44;
+  border-radius: 4px;
+}
+#cl-filter-bar .cl-filter-menu::-webkit-scrollbar-thumb:hover { background: #3d3d5c; }
+
+/* Clear-all chip mirrors the pill shape but in danger-red. */
 #cl-filter-bar #cl-filter-clear {
   margin-left: auto;
   align-self: center;
-  padding: 6px 12px;
-  background: rgba(239, 68, 68, 0.12);
-  border: 1px solid rgba(239, 68, 68, 0.35);
-  border-radius: 6px;
-  color: #f87171 !important;
-  font-size: 12px;
-  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 14px;
+  height: 32px;
+  background: rgba(239, 68, 68, 0.14);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  border-radius: 999px;
+  color: #fca5a5 !important;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
   text-decoration: none !important;
-  transition: background-color 0.12s ease;
+  transition: background-color 0.15s ease, color 0.15s ease, transform 0.06s ease;
+}
+
+#cl-filter-bar #cl-filter-clear::before {
+  content: "\00d7";
+  font-size: 16px;
+  line-height: 1;
+  font-weight: 700;
 }
 
 #cl-filter-bar #cl-filter-clear:hover {
-  background: rgba(239, 68, 68, 0.22);
-  color: #fca5a5 !important;
+  background: rgba(239, 68, 68, 0.25);
+  color: #fecaca !important;
+}
+
+#cl-filter-bar #cl-filter-clear:active {
+  transform: translateY(1px);
 }
 
 /* ---- TABLE HEADER (list view column headers) ---- */
@@ -532,3 +726,423 @@ body.cl-filters-collapsed #changelist #changelist-form {
 #user-tools form#logout-form button {
   border-bottom: 0 !important;
 }
+
+/* ============================================================
+ * ADMIN FORM PAGES - polish for change_form / add_form
+ *
+ * The Add User / Edit User forms used Django's stock layout
+ * (narrow inputs, native selects, plain-text help blurb).
+ * These rules apply globally to every admin form page and:
+ *   - widen text/password inputs so they fit the dark surface
+ *   - paint a softer focus ring
+ *   - wrap the password helptext in a callout card
+ *   - hide native <select> once JS replaces it with the
+ *     custom dropdown widget
+ *   - style the custom dropdown to match the filter bar look
+ * ============================================================ */
+
+/* Wider, prettier text/password/number/email inputs on form rows. */
+fieldset.module input[type="text"],
+fieldset.module input[type="email"],
+fieldset.module input[type="password"],
+fieldset.module input[type="number"],
+fieldset.module input[type="url"],
+fieldset.module input[type="tel"],
+fieldset.module textarea {
+  background: #0f0f1a !important;
+  border: 1px solid #2d2d44 !important;
+  color: #ffffff !important;
+  border-radius: 8px !important;
+  padding: 10px 14px !important;
+  width: 100% !important;
+  max-width: 460px !important;
+  font-size: 14px !important;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    background-color 0.15s ease !important;
+}
+
+fieldset.module input[type="text"]:hover,
+fieldset.module input[type="email"]:hover,
+fieldset.module input[type="password"]:hover,
+fieldset.module input[type="number"]:hover {
+  border-color: #4a4a6b !important;
+  background: #14142a !important;
+}
+
+fieldset.module input[type="text"]:focus,
+fieldset.module input[type="email"]:focus,
+fieldset.module input[type="password"]:focus,
+fieldset.module input[type="number"]:focus,
+fieldset.module textarea:focus {
+  border-color: #7c3aed !important;
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.22) !important;
+  background: #14142a !important;
+}
+
+/* The "Your password must..." block below the password field reads
+   as a plain wall of text by default. Turn it into a subtle callout. */
+fieldset.module .form-row.field-password1 .helptext,
+fieldset.module .form-row.field-password .helptext {
+  display: block;
+  margin-top: 8px;
+  padding: 10px 14px;
+  background: rgba(124, 58, 237, 0.06);
+  border: 1px solid rgba(124, 58, 237, 0.18);
+  border-left: 3px solid #7c3aed;
+  border-radius: 6px;
+  color: #c4b5fd !important;
+  font-size: 12px;
+  line-height: 1.55;
+  max-width: 560px;
+}
+
+fieldset.module .form-row.field-password1 .helptext ul,
+fieldset.module .form-row.field-password .helptext ul {
+  margin: 0;
+  padding-left: 18px;
+}
+fieldset.module .form-row.field-password1 .helptext li,
+fieldset.module .form-row.field-password .helptext li {
+  margin: 3px 0;
+}
+
+/* Hide the original <select> once JS upgrades it. The dataset
+   marker is set by codelogic-admin-form-selects.js, so users
+   without JS still see the plain native control. */
+fieldset.module select.cl-form-hidden-select {
+  display: none !important;
+}
+
+/* ----- Custom dropdown widget for FORM pages -----
+   Mirrors .cl-filter-dropdown but lives inside form rows, so we
+   give it its own classes (.cl-form-*). Same visual language:
+   pill trigger, dark popover panel, purple checkmark on selected. */
+.cl-form-dropdown {
+  position: relative;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.cl-form-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 220px;
+  height: 38px;
+  padding: 0 14px 0 16px;
+  background: #0f0f1a;
+  border: 1px solid #2d2d44;
+  border-radius: 999px;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  outline: none;
+  text-align: left;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.cl-form-trigger:hover {
+  border-color: #4a4a6b;
+  background: #14142a;
+}
+
+.cl-form-trigger:focus-visible {
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.22);
+}
+
+.cl-form-dropdown.cl-form-open .cl-form-trigger {
+  border-color: #7c3aed;
+  background: #14142a;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.22);
+}
+
+.cl-form-value {
+  flex: 1 1 auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cl-form-chevron {
+  display: inline-flex;
+  color: #a78bfa;
+  transition: transform 0.18s ease;
+}
+
+.cl-form-dropdown.cl-form-open .cl-form-chevron {
+  transform: rotate(180deg);
+}
+
+.cl-form-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 100%;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 6px;
+  background: #1a1a2e;
+  border: 1px solid #2d2d44;
+  border-radius: 10px;
+  box-shadow:
+    0 12px 30px -10px rgba(0, 0, 0, 0.7),
+    0 4px 12px -6px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(124, 58, 237, 0.18);
+  z-index: 40;
+  display: none;
+  animation: cl-form-menu-in 0.12s ease-out;
+}
+
+@keyframes cl-form-menu-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.cl-form-dropdown.cl-form-open .cl-form-menu {
+  display: block;
+}
+
+.cl-form-option {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 9px 14px 9px 32px;
+  margin: 1px 0;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: #cbd5e1;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  position: relative;
+  white-space: nowrap;
+  transition: background-color 0.1s ease, color 0.1s ease;
+}
+
+.cl-form-option:hover,
+.cl-form-option:focus-visible {
+  background: rgba(124, 58, 237, 0.18);
+  color: #ffffff;
+  outline: none;
+}
+
+.cl-form-option-selected {
+  color: #a78bfa;
+  font-weight: 700;
+}
+
+.cl-form-option-selected::before {
+  content: "";
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  margin-top: -6px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23a78bfa' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='20 6 9 17 4 12'/></svg>");
+  background-repeat: no-repeat;
+}
+
+/* "Other..." button for year_level - styled like a regular option
+   but with a subtle separator border on top. */
+.cl-form-option.cl-form-option-custom {
+  border-top: 1px solid #2d2d44;
+  margin-top: 4px;
+  padding-top: 11px;
+  color: #a78bfa;
+  font-style: italic;
+}
+
+.cl-form-custom-row {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px 4px 10px;
+}
+
+.cl-form-custom-row.cl-form-custom-open {
+  display: flex;
+}
+
+.cl-form-custom-input {
+  flex: 1 1 auto;
+  background: #0f0f1a !important;
+  border: 1px solid #2d2d44 !important;
+  color: #ffffff !important;
+  border-radius: 6px !important;
+  padding: 6px 10px !important;
+  font-size: 13px !important;
+  max-width: 110px !important;
+  width: 110px !important;
+}
+
+.cl-form-custom-input:focus {
+  border-color: #7c3aed !important;
+  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.22) !important;
+  outline: none !important;
+}
+
+.cl-form-custom-set {
+  background: #7c3aed;
+  color: #ffffff;
+  border: 0;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cl-form-custom-set:hover { background: #6d28d9; }
+
+.cl-form-menu::-webkit-scrollbar { width: 8px; }
+.cl-form-menu::-webkit-scrollbar-track { background: transparent; }
+.cl-form-menu::-webkit-scrollbar-thumb { background: #2d2d44; border-radius: 4px; }
+.cl-form-menu::-webkit-scrollbar-thumb:hover { background: #3d3d5c; }
+
+/* The Add User page renders its content inside <fieldset.module aligned wide>.
+   By default Django's stylesheet puts each field on a separate light strip;
+   our overrides above already paint the inputs dark, but the LABEL column
+   sits in a slightly different position. Tighten label/field alignment and
+   give each row a touch more vertical breathing room so the page reads
+   like a real form, not a stack of inputs. */
+fieldset.module .form-row {
+  padding: 16px 18px !important;
+}
+fieldset.module .form-row label {
+  color: #cbd5e1 !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+}
+fieldset.module .help, fieldset.module .helptext {
+  color: #6b7280 !important;
+  font-size: 12px !important;
+  margin-top: 6px !important;
+}
+/* The description paragraph at the top of the Add User fieldset
+   (Pick a role: Student plays... / Teacher uses...) was almost
+   invisible. Make it a proper info callout. */
+fieldset.module .description {
+  background: rgba(124, 58, 237, 0.08) !important;
+  border: 1px solid rgba(124, 58, 237, 0.22) !important;
+  border-left: 3px solid #7c3aed !important;
+  border-radius: 8px !important;
+  margin: 12px 18px 0 !important;
+  padding: 12px 16px !important;
+  color: #cbd5e1 !important;
+  font-size: 13px !important;
+  font-style: normal !important;
+  line-height: 1.55;
+}
+
+/* Add user page top tagline ("First, enter a username and password...") */
+form#user_form > p:first-of-type,
+#content-main > form > p:first-of-type {
+  color: #94a3b8;
+  font-size: 13px;
+  margin: 0 0 14px 0;
+}
+
+/* ============================================================
+ * PASSWORD STRENGTH CHECKLIST (replaces stock password helptext)
+ *
+ * The plain "Your password must..." block is replaced by
+ * codelogic-admin-password-strength.js with a strength bar +
+ * live ruleset. These styles match the gamified feel of the
+ * rest of the admin and the /register page's checklist UI.
+ * ============================================================ */
+.cl-pwd-helptext-replaced {
+  background: transparent !important;
+  border: 0 !important;
+  border-left: 0 !important;
+  padding: 0 !important;
+  color: inherit !important;
+  margin-top: 10px !important;
+  max-width: 560px !important;
+}
+
+.cl-pwd-strength {
+  background: #14142a;
+  border: 1px solid #2d2d44;
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.cl-pwd-strength-label {
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.cl-pwd-strength-bar {
+  height: 6px;
+  background: #0f0f1a;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.cl-pwd-strength-fill {
+  width: 0;
+  height: 100%;
+  background: #ef4444;
+  transition: width 0.18s ease, background-color 0.18s ease;
+  border-radius: 999px;
+}
+
+.cl-pwd-rules {
+  list-style: none !important;
+  padding: 12px 0 0 0 !important;
+  margin: 0 !important;
+}
+
+.cl-pwd-rule {
+  display: flex !important;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 0 !important;
+  margin: 0 !important;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #6b7280;
+  transition: color 0.15s ease;
+}
+
+.cl-pwd-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(107, 114, 128, 0.15);
+  color: #9ca3af;
+  flex: 0 0 18px;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.cl-pwd-icon-x   { display: block; }
+.cl-pwd-icon-check { display: none; }
+
+.cl-pwd-rule-met {
+  color: #34d399;
+}
+
+.cl-pwd-rule-met .cl-pwd-icon {
+  background: rgba(16, 185, 129, 0.18);
+  color: #34d399;
+}
+
+.cl-pwd-rule-met .cl-pwd-icon-x   { display: none; }
+.cl-pwd-rule-met .cl-pwd-icon-check { display: block; }

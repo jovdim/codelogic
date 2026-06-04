@@ -108,17 +108,39 @@ class UserAdmin(BaseUserAdmin):
                 'email', 'username', 'password1', 'password2',
                 'role', 'department', 'year_level', 'section',
             ),
-            'description': (
-                'Pick a role: <strong>Student</strong> plays the game; '
-                '<strong>Teacher</strong> uses the same admin login but is '
-                'redirected to /teacher/ to manage their students.'
-            ),
         }),
     )
 
     readonly_fields = ['date_joined', 'last_active', 'quiz_history', 'login_face_display', 'base_face_photo_display']
 
     inlines = [UserCertificateInline]
+
+    def formfield_for_dbfield(self, db_field, request, **kwargs):
+        """Render `year_level` as a dropdown with the 4 standard year options.
+
+        The model field has `choices=YEAR_LEVEL_CHOICES` so that
+        `user.get_year_level_display()` returns "2nd Year" (used in the
+        teacher portal pills + templates). But choices on a model field
+        triggers ChoiceField-level form validation, which would reject
+        the custom 5+ integer the JS "Other..." widget can post.
+
+        We override here to return a plain IntegerField (no choices
+        validation) bound to a Select widget that still displays the
+        standard 4 labels. Result: dropdown UI for the normal cases,
+        custom-integer support for the edge cases.
+        """
+        if db_field.name == 'year_level':
+            from django import forms
+            return forms.IntegerField(
+                required=False,
+                min_value=1,
+                label=db_field.verbose_name.capitalize(),
+                help_text=db_field.help_text,
+                widget=forms.Select(
+                    choices=[('', '----------')] + list(User.YEAR_LEVEL_CHOICES),
+                ),
+            )
+        return super().formfield_for_dbfield(db_field, request, **kwargs)
 
     def get_urls(self):
         """Add a CSV bulk-import endpoint at /admin/accounts/user/import-csv/."""
