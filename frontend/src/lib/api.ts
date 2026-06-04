@@ -58,9 +58,22 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+    const url: string = originalRequest?.url || "";
 
-    // If error is 401 and we haven't tried to refresh yet
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // A 401 from these endpoints means "credentials rejected" - NOT
+    // "access token expired". Letting the refresh-then-redirect path run
+    // would hard-reload the page and erase the inline error the form just
+    // rendered (e.g. "Invalid email or password. 2 attempts left").
+    const isCredentialEndpoint =
+      url.includes("/auth/login/") ||
+      url.includes("/auth/register/") ||
+      url.includes("/auth/token/refresh/");
+
+    if (
+      error.response?.status === 401 &&
+      !originalRequest._retry &&
+      !isCredentialEndpoint
+    ) {
       originalRequest._retry = true;
 
       try {
@@ -76,10 +89,17 @@ api.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${access}`;
         return api(originalRequest);
       } catch (refreshError) {
-        // Refresh failed, clear tokens and redirect to login
+        // Refresh failed, clear tokens and redirect to login - but only if
+        // we're not already on /login (avoids the hard-reload that wipes
+        // the inline error message on the login form itself).
         localStorage.removeItem("access_token");
         localStorage.removeItem("refresh_token");
-        window.location.href = "/login";
+        if (
+          typeof window !== "undefined" &&
+          !window.location.pathname.startsWith("/login")
+        ) {
+          window.location.href = "/login";
+        }
         return Promise.reject(refreshError);
       }
     }
